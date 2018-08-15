@@ -1,0 +1,6 @@
+LIBNDHCP4_1 {
+global:
+        n_dhcp4_client_new;
+local:
+       *;
+};
