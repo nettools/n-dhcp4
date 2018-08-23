@@ -12,6 +12,8 @@ libndhcp4_private = static_library(
         'ndhcp4-private',
         [
                 'n-dhcp4-client.c',
+                'n-dhcp4-network.c',
+                'util/packet.c',
         ],
         c_args: [
                 '-fvisibility=hidden',
@@ -59,6 +61,9 @@ endif
 
 test_api = executable('test-api', ['test-api.c'], link_with: libndhcp4_shared)
 test('API Symbol Visibility', test_api)
+
+test_packet = executable('test-packet', ['util/test-packet.c'], dependencies: libndhcp4_dep)
+test('Packet Utility Library', test_packet)
 
 #test_ = executable('test-', ['test-.c'], dependencies: libndhcp4_dep)
 #test('', test_)
