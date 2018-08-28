@@ -14,6 +14,27 @@ extern "C" {
 
 #include <stdlib.h>
 
+typedef struct NDhcp4Client NDhcp4Client;
+
+/*
+ * Client
+ */
+
+int n_dhcp4_client_new(NDhcp4Client **clientp);
+NDhcp4Client *n_dhcp4_client_free(NDhcp4Client *client);
+
+int n_dhcp4_client_get_fd(NDhcp4Client *client);
+int n_dhcp4_client_dispatch(NDhcp4Client *client);
+
+/*
+ * Convenience Wrappers
+ */
+
+static inline void n_dhcp4_client_freep(NDhcp4Client **clientp) {
+        if (*clientp)
+                n_dhcp4_client_free(*clientp);
+}
+
 #ifdef __cplusplus
 }
 #endif

@@ -1,7 +1,10 @@
 #pragma once
 
-#include <arpa/inet.h>
+#include <linux/if_packet.h>
+#include <netinet/ip.h>
+#include <netinet/udp.h>
 #include <inttypes.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include "n-dhcp4.h"
 
@@ -24,11 +27,19 @@ typedef struct NDhcp4Outgoing NDhcp4Outgoing;
  * Network Layers
  */
 
-#define N_DHCP4_NETWORK_IP_DEFAULT_MAX_SIZE (576) /* See RFC791 */
+#define N_DHCP_NETWORK_IP4_SIZE (sizeof(struct iphdr))
+#define N_DHCP_NETWORK_UDP_SIZE (sizeof(struct udphdr))
+#define N_DHCP4_NETWORK_MIN_SIZE (576)
 #define N_DHCP4_NETWORK_SERVER_PORT (67)
 #define N_DHCP4_NETWORK_CLIENT_PORT (68)
 
-int n_dhcp4_network_client_packet_socket_new(int *sockfdp, int ifindex, uint32_t xid);
+int n_dhcp4_network_raw_new(int ifindex,
+                            struct sockaddr_ll *addrp,
+                            uint16_t arp_type,
+                            const uint8_t *mac_addr,
+                            size_t n_mac_addr,
+                            uint32_t xid);
+int n_dhcp4_network_udp_new(uint32_t address, uint16_t port);
 
 /*
  * DHCP4 Messages
@@ -124,10 +135,6 @@ struct NDhcp4Message {
         uint8_t options[];
 } _packed_;
 
-#define N_DHCP4_MESSAGE_NULL {                          \
-                .magic = htonl(N_DHCP4_MESSAGE_MAGIC),  \
-        }
-
 int n_dhcp4_outgoing_new(NDhcp4Outgoing **outgoingp, size_t max_size, uint8_t overload);
 NDhcp4Outgoing *n_dhcp4_outgoing_free(NDhcp4Outgoing *outgoing);
 NDhcp4Header *n_dhcp4_outgoing_get_header(NDhcp4Outgoing *outgoing);
@@ -148,7 +155,7 @@ struct NDhcp4Client {
         unsigned int state;             /* current client state */
         int efd;                        /* epoll fd */
         int tfd;                        /* timer fd */
-        int pfd;                        /* packet socket */
+        int rfd;                        /* raw socket */
         int ufd;                        /* udp socket */
         uint64_t u_t1;                  /* next T1 timeout, or 0 */
         uint64_t u_t2;                  /* next T2 timeout, or 0 */
