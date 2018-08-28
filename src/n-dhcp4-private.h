@@ -6,7 +6,9 @@
 #include "n-dhcp4.h"
 
 typedef struct NDhcp4Header NDhcp4Header;
+typedef struct NDhcp4Incoming NDhcp4Incoming;
 typedef struct NDhcp4Message NDhcp4Message;
+typedef struct NDhcp4Outgoing NDhcp4Outgoing;
 
 /*
  * Macros
@@ -126,4 +128,28 @@ struct NDhcp4Message {
                 .magic = htonl(N_DHCP4_MESSAGE_MAGIC),  \
         }
 
-int n_dhcp4_network_client_packet_socket_new(int *sockfdp, int ifindex, uint32_t xid);
+int n_dhcp4_outgoing_new(NDhcp4Outgoing **outgoingp, size_t max_size, uint8_t overload);
+NDhcp4Outgoing *n_dhcp4_outgoing_free(NDhcp4Outgoing *outgoing);
+NDhcp4Header *n_dhcp4_outgoing_get_header(NDhcp4Outgoing *outgoing);
+size_t n_dhcp4_outgoing_get_raw(NDhcp4Outgoing *outgoing, const void **rawp);
+int n_dhcp4_outgoing_append(NDhcp4Outgoing *outgoing, uint8_t option, const void *data, uint8_t n_data);
+
+int n_dhcp4_incoming_new(NDhcp4Incoming **incomingp, const void *raw, size_t n_raw);
+NDhcp4Incoming *n_dhcp4_incoming_free(NDhcp4Incoming *incoming);
+NDhcp4Header *n_dhcp4_incoming_get_header(NDhcp4Incoming *incoming);
+size_t n_dhcp4_incoming_get_raw(NDhcp4Incoming *incoming, const void **rawp);
+int n_dhcp4_incoming_query(NDhcp4Incoming *incoming, uint8_t option, const void **datap, size_t *n_datap);
+
+/*
+ * Convenience Wrappers
+ */
+
+static inline void n_dhcp4_outgoing_freep(NDhcp4Outgoing **outgoing) {
+        if (*outgoing)
+                n_dhcp4_outgoing_free(*outgoing);
+}
+
+static inline void n_dhcp4_incoming_freep(NDhcp4Incoming **incoming) {
+        if (*incoming)
+                n_dhcp4_incoming_free(*incoming);
+}
