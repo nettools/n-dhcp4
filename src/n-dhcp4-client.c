@@ -14,6 +14,7 @@
 #include <unistd.h>
 #include "n-dhcp4.h"
 #include "n-dhcp4-private.h"
+#include "util/packet.h"
 
 enum {
         N_DHCP4_STATE_INIT,
@@ -275,10 +276,27 @@ static int n_dhcp4_client_dispatch_msg(NDhcp4Client *client, NDhcp4Incoming *inc
 }
 
 static int n_dhcp4_client_dispatch_pfd(NDhcp4Client *client, unsigned int events) {
+        int r;
+
         if (events & EPOLLIN) {
-                /* XXX */
-                n_dhcp4_client_dispatch_msg(client, NULL);
-                return 0;
+                _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *incoming = NULL;
+                uint8_t buf[1 << 16];
+                ssize_t len;
+
+                len = packet_recv_udp(client->pfd, buf, sizeof(buf), 0);
+                if (len == 0)
+                        return 0;
+                else if (len < 0) {
+                        if (errno == EAGAIN)
+                                return 0;
+                        return -errno;
+                }
+
+                r = n_dhcp4_incoming_new(&incoming, buf, len);
+                if (r < 0)
+                        return r;
+
+                return n_dhcp4_client_dispatch_msg(client, incoming);
         }
 
         if (events & (EPOLLHUP | EPOLLERR))
@@ -288,10 +306,27 @@ static int n_dhcp4_client_dispatch_pfd(NDhcp4Client *client, unsigned int events
 }
 
 static int n_dhcp4_client_dispatch_ufd(NDhcp4Client *client, unsigned int events) {
+        int r;
+
         if (events & EPOLLIN) {
-                /* XXX */
-                n_dhcp4_client_dispatch_msg(client, NULL);
-                return 0;
+                _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *incoming = NULL;
+                uint8_t buf[1 << 16];
+                ssize_t len;
+
+                len = recv(client->ufd, buf, sizeof(buf), 0);
+                if (len == 0)
+                        return 0;
+                else if (len < 0) {
+                        if (errno == EAGAIN)
+                                return 0;
+                        return -errno;
+                }
+
+                r = n_dhcp4_incoming_new(&incoming, buf, len);
+                if (r < 0)
+                        return r;
+
+                return n_dhcp4_client_dispatch_msg(client, incoming);
         }
 
         if (events & (EPOLLHUP | EPOLLERR))
