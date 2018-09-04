@@ -3,6 +3,7 @@
 #include <arpa/inet.h>
 #include <inttypes.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include "n-dhcp4.h"
 
 typedef struct NDhcp4Header NDhcp4Header;
@@ -167,4 +168,9 @@ static inline void n_dhcp4_outgoing_freep(NDhcp4Outgoing **outgoing) {
 static inline void n_dhcp4_incoming_freep(NDhcp4Incoming **incoming) {
         if (*incoming)
                 n_dhcp4_incoming_free(*incoming);
+}
+
+static inline void n_dhcp4_closep(int *fdp) {
+        if (*fdp >= 0)
+                close(*fdp);
 }

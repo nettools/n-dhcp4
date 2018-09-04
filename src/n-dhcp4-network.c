@@ -16,7 +16,7 @@
 #include "n-dhcp4-private.h"
 
 /**
- * n_dhcp4_network_client_packet_socket_new() - create a new DHCP4 client socket
+ * n_dhcp4_network_client_packet_socket_new() - create a new DHCP4 client packet socket
  * @sockfdp:            return argumnet for the new socket
  * @ifindex:            ifindex to bind to
  * @xid:                transaction ID to subscribe to
@@ -103,9 +103,10 @@ int n_dhcp4_network_client_packet_socket_new(int *sockfdp, int ifindex, uint32_t
                 .sll_protocol = htons(ETH_P_IP),
                 .sll_ifindex = ifindex,
         };
-        int r, sockfd, on = 1;
+        _cleanup_(n_dhcp4_closep) int sockfd = -1;
+        int r, on = 1;
 
-        sockfd = socket(AF_PACKET, SOCK_DGRAM, 0);
+        sockfd = socket(AF_PACKET, SOCK_DGRAM | SOCK_CLOEXEC | SOCK_NONBLOCK, 0);
         if (sockfd < 0)
                 return -errno;
 
@@ -125,5 +126,6 @@ int n_dhcp4_network_client_packet_socket_new(int *sockfdp, int ifindex, uint32_t
                 return -errno;
 
         *sockfdp = sockfd;
+        sockfd = -1;
         return 0;
 }
