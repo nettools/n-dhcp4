@@ -7,10 +7,12 @@
 #include <linux/if_ether.h>
 #include <linux/if_packet.h>
 #include <linux/udp.h>
+#include <net/if.h>
 #include <netinet/ip.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include "n-dhcp4-private.h"
@@ -18,11 +20,11 @@
 /**
  * n_dhcp4_network_client_packet_socket_new() - create a new DHCP4 client packet socket
  * @sockfdp:            return argumnet for the new socket
- * @ifindex:            ifindex to bind to
+ * @ifindex:            interface index to bind to
  * @xid:                transaction ID to subscribe to
  *
- * Create a new AF_PACKET/SOCK_DGRAM socket usable to listen to DHCP client packets
- * before an IP address has been configured.
+ * Create a new AF_PACKET/SOCK_DGRAM socket usable to listen to and send DHCP client
+ * packets before an IP address has been configured.
  *
  * Only unfragmented DHCP packets from a server to a client using the specified
  * transaction id and destined for the given ifindex is returned.
@@ -118,6 +120,136 @@ int n_dhcp4_network_client_packet_socket_new(int *sockfdp, int ifindex, uint32_t
          * We need the flag that tells us if the checksum is correct.
          */
         r = setsockopt(sockfd, SOL_PACKET, PACKET_AUXDATA, &on, sizeof(on));
+        if (r < 0)
+                return -errno;
+
+        r = bind(sockfd, (struct sockaddr*)&addr, sizeof(addr));
+        if (r < 0)
+                return -errno;
+
+        *sockfdp = sockfd;
+        sockfd = -1;
+        return 0;
+}
+
+/**
+ * n_dhcp4_network_client_udp_socket_new() - create a new DHCP4 client UDP socket
+ * @sockfdp:            return argumnet for the new socket
+ * @ifindex:            interface index to bind to
+ * @addr:               client address to bind to
+ *
+ * Create a new AF_INET/SOCK_DGRAM socket usable to listen to and send DHCP client
+ * packets.
+ *
+ * The client address given in @addr must be configured on the interface @ifindex
+ * before the socket is created.
+ *
+ * Return: 0 on success, or a negative error code on failure.
+ */
+int n_dhcp4_network_client_udp_socket_new(int *sockfdp, int ifindex, const struct in_addr *addr) {
+        _cleanup_(n_dhcp4_closep) int sockfd = -1;
+        struct sockaddr_in saddr = {
+                .sin_family = AF_INET,
+                .sin_addr = *addr,
+                .sin_port = htons(N_DHCP4_NETWORK_CLIENT_PORT),
+        };
+        char ifname[IF_NAMESIZE];
+        int r, tos = IPTOS_CLASS_CS6;
+
+        if (!if_indextoname(ifindex, ifname))
+                return -errno;
+
+        sockfd = socket(AF_INET, SOCK_DGRAM | SOCK_CLOEXEC | SOCK_NONBLOCK, 0);
+        if (sockfd < 0)
+                return -errno;
+
+        r = setsockopt(sockfd, SOL_SOCKET, SO_BINDTODEVICE, ifname, strlen(ifname));
+        if (r < 0)
+                return -errno;
+
+        r = setsockopt(sockfd, IPPROTO_IP, IP_TOS, &tos, sizeof(tos));
+        if (r < 0)
+                return -errno;
+
+        r = bind(sockfd, (struct sockaddr*)&saddr, sizeof(saddr));
+        if (r < 0)
+                return -errno;
+
+        *sockfdp = sockfd;
+        sockfd = -1;
+        return 0;
+}
+
+/**
+ * n_dhcp4_network_server_packet_socket_new() - create a new DHCP4 server packet socket
+ * @sockfdp:            return argumnet for the new socket
+ * @ifindex:            interface index to bind to
+ *
+ * Create a new AF_PACKET/SOCK_DGRAM socket usable to send DHCP packets to clients
+ * before they have an IP address configured, on the given interface.
+ *
+ * Return: 0 on success, or a negative error code on failure.
+ */
+int n_dhcp4_network_server_packet_socket_new(int *sockfdp, int ifindex) {
+        _cleanup_(n_dhcp4_closep) int sockfd = -1;
+        char ifname[IF_NAMESIZE];
+        int r;
+
+        if (!if_indextoname(ifindex, ifname))
+                return -errno;
+
+        sockfd = socket(AF_PACKET, SOCK_DGRAM | SOCK_CLOEXEC | SOCK_NONBLOCK, 0);
+        if (sockfd < 0)
+                return -errno;
+
+        r = setsockopt(sockfd, SOL_SOCKET, SO_BINDTODEVICE, ifname, strlen(ifname));
+        if (r < 0)
+                return -errno;
+
+        *sockfdp = sockfd;
+        sockfd = -1;
+        return 0;
+}
+
+/**
+ * n_dhcp4_network_server_udp_socket_new() - create a new DHCP4 server UDP socket
+ * @sockfdp:            return argumnet for the new socket
+ * @ifindex:            intercafe index to bind to
+ *
+ * Create a new AF_INET/SOCK_DGRAM socket usable to listen to DHCP server packets,
+ * on the given interface.
+ *
+ * Return: 0 on success, or a negative error code on failure.
+ */
+int n_dhcp4_network_server_udp_socket_new(int *sockfdp, int ifindex) {
+        _cleanup_(n_dhcp4_closep) int sockfd = -1;
+        char ifname[IF_NAMESIZE];
+        struct sockaddr_in addr = {
+                .sin_family = AF_INET,
+                .sin_addr = { INADDR_ANY },
+                .sin_port = htons(N_DHCP4_NETWORK_SERVER_PORT),
+        };
+        int r, tos = IPTOS_CLASS_CS6, on = 1;
+
+        if (!if_indextoname(ifindex, ifname))
+                return -errno;
+
+        sockfd = socket(AF_INET, SOCK_DGRAM | SOCK_CLOEXEC | SOCK_NONBLOCK, 0);
+        if (sockfd < 0)
+                return -errno;
+
+        r = setsockopt(sockfd, SOL_SOCKET, SO_BINDTODEVICE, ifname, strlen(ifname));
+        if (r < 0)
+                return -errno;
+
+        /*
+         * XXX: verify
+         */
+        r = setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
+        if (r < 0)
+                return -errno;
+
+        r = setsockopt(sockfd, IPPROTO_IP, IP_TOS, &tos, sizeof(tos));
         if (r < 0)
                 return -errno;
 

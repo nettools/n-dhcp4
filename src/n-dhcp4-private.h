@@ -30,6 +30,10 @@ typedef struct NDhcp4Outgoing NDhcp4Outgoing;
 #define N_DHCP4_NETWORK_CLIENT_PORT (68)
 
 int n_dhcp4_network_client_packet_socket_new(int *sockfdp, int ifindex, uint32_t xid);
+int n_dhcp4_network_client_udp_socket_new(int *sockfdp, int ifindex, const struct in_addr *addr);
+
+int n_dhcp4_network_server_packet_socket_new(int *sockfdp, int ifindex);
+int n_dhcp4_network_server_udp_socket_new(int *sockfdp, int ifindex);
 
 /*
  * DHCP4 Messages
