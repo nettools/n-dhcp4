@@ -2,10 +2,9 @@
  * Test for raw packet utility library
  */
 
-#include <stdio.h>
-
 #include <assert.h>
 #include <errno.h>
+#include <net/if_arp.h>
 #include <stdlib.h>
 #include "packet.h"
 #include "../test.h"
@@ -43,9 +42,9 @@ static void test_checksum(void) {
 static void test_checksum_udp_one(Blob *blob, size_t size) {
         uint16_t checksum;
 
-        checksum = packet_internet_checksum_udp(&(struct in_addr){10<<24 | 2}, &(struct in_addr){10<<24 | 1},
+        checksum = packet_internet_checksum_udp(&(struct in_addr){htonl(10<<24 | 2)}, &(struct in_addr){htonl(10<<24 | 1)},
                                                 67, 68, blob->data, sizeof(blob->data), 0) ?: 0xffff;
-        checksum = packet_internet_checksum_udp(&(struct in_addr){10<<24 | 2}, &(struct in_addr){10<<24 | 1},
+        checksum = packet_internet_checksum_udp(&(struct in_addr){htonl(10<<24 | 2)}, &(struct in_addr){htonl(10<<24 | 1)},
                                                 67, 68, blob->data, sizeof(blob->data), checksum);
         assert(!checksum);
 }
@@ -65,7 +64,202 @@ static void test_checksum_udp(void) {
         }
 }
 
+static void test_packet_packet(int ifindex_src, int ifindex_dst,
+                               const struct sockaddr_in *paddr_src,
+                               const struct sockaddr_in *paddr_dst,
+                               const struct sockaddr_ll *haddr_dst) {
+        uint8_t buf[1024];
+        int sk_src, sk_dst;
+        ssize_t len;
+        int r;
+
+        test_socket_new(&sk_src, AF_PACKET, ifindex_src);
+        test_socket_new(&sk_dst, AF_PACKET, ifindex_dst);
+
+        {
+                struct sockaddr_ll addr = *haddr_dst;
+                addr.sll_ifindex = ifindex_dst;
+
+                r = bind(sk_dst, (struct sockaddr*)&addr, sizeof(addr));
+                assert(r >= 0);
+        }
+
+        {
+                struct sockaddr_ll addr = *haddr_dst;
+                addr.sll_ifindex = ifindex_src;
+
+                /* unicast */
+
+                len = packet_sendto_udp(sk_src, buf, sizeof(buf) - 1, 0,
+                                        paddr_src, &addr, paddr_dst);
+                assert(len == sizeof(buf) - 1);
+
+                /* broadcast */
+
+                memcpy(addr.sll_addr, (char[]){ 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, }, ETH_ALEN);
+
+                len = packet_sendto_udp(sk_src, buf, sizeof(buf) - 1, 0,
+                                        paddr_src, &addr, paddr_dst);
+                assert(len == sizeof(buf) - 1);
+        }
+
+        len = packet_recvfrom_udp(sk_dst, buf, sizeof(buf), 0, NULL);
+        assert(len == sizeof(buf) - 1);
+
+        len = packet_recvfrom_udp(sk_dst, buf, sizeof(buf), 0, NULL);
+        assert(len == sizeof(buf) - 1);
+
+        close(sk_dst);
+        close(sk_src);
+}
+
+static void test_packet_udp(int ifindex_src, int ifindex_dst,
+                            const struct sockaddr_in *paddr_src,
+                            const struct sockaddr_in *paddr_dst,
+                            const struct sockaddr_ll *haddr_dst) {
+        uint8_t buf[1024];
+        int sk_src, sk_dst;
+        ssize_t len;
+        int r;
+
+        test_socket_new(&sk_src, AF_PACKET, ifindex_src);
+        test_socket_new(&sk_dst, AF_INET, ifindex_dst);
+        test_add_ip(ifindex_dst, &paddr_dst->sin_addr, 8);
+
+        r = bind(sk_dst, (struct sockaddr*)paddr_dst, sizeof(*paddr_dst));
+        assert(r >= 0);
+
+        {
+                struct sockaddr_ll addr = *haddr_dst;
+                addr.sll_ifindex = ifindex_src;
+
+                /* unicast */
+
+                len = packet_sendto_udp(sk_src, buf, sizeof(buf) - 1, 0,
+                                        paddr_src, &addr, paddr_dst);
+                assert(len == sizeof(buf) - 1);
+
+                /* broadcast */
+
+                memcpy(addr.sll_addr, (char[]){ 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, }, ETH_ALEN);
+
+                len = packet_sendto_udp(sk_src, buf, sizeof(buf) - 1, 0,
+                                        paddr_src, &addr, paddr_dst);
+                assert(len == sizeof(buf) - 1);
+        }
+
+        len = recv(sk_dst, buf, sizeof(buf), 0);
+        assert(len == sizeof(buf) - 1);
+
+        len = recv(sk_dst, buf, sizeof(buf), 0);
+        assert(len == sizeof(buf) - 1);
+
+        test_del_ip(ifindex_dst, &paddr_dst->sin_addr, 8);
+        close(sk_dst);
+        close(sk_src);
+}
+
+#if 0
+static void test_udp_packet(int ifindex_src, int ifindex_dst,
+                            const struct sockaddr_in *paddr_src,
+                            const struct sockaddr_in *paddr_dst,
+                            const struct sockaddr_ll *haddr_dst) {
+        uint8_t buf[1024];
+        int sk_src, sk_dst;
+        ssize_t len;
+        int r, on = 1;
+
+        test_socket_new(&sk_src, AF_INET, ifindex_src);
+        test_socket_new(&sk_dst, AF_PACKET, ifindex_dst);
+        test_add_ip(ifindex_src, &paddr_src->sin_addr, 8);
+        test_add_ip(ifindex_dst, &paddr_dst->sin_addr, 8);
+
+        r = setsockopt(sk_dst, SOL_PACKET, PACKET_AUXDATA, &on, sizeof(on));
+        assert(r >= 0);
+
+        {
+                struct sockaddr_ll addr = *haddr_dst;
+                addr.sll_ifindex = ifindex_dst;
+
+                r = bind(sk_dst, (struct sockaddr*)&addr, sizeof(addr));
+                assert(r >= 0);
+        }
+
+        len = sendto(sk_src, buf, sizeof(buf) - 1, 0,
+                     (struct sockaddr*)paddr_dst, sizeof(*paddr_dst));
+        assert(len == sizeof(buf) - 1);
+
+        len = packet_recvfrom_udp(sk_dst, buf, sizeof(buf), 0, NULL);
+        assert(len == sizeof(buf) - 1);
+
+        test_del_ip(ifindex_dst, &paddr_dst->sin_addr, 8);
+        test_del_ip(ifindex_src, &paddr_src->sin_addr, 8);
+        close(sk_dst);
+        close(sk_src);
+}
+
+static void test_udp_udp(int ifindex_src, int ifindex_dst,
+                         const struct sockaddr_in *paddr_src,
+                         const struct sockaddr_in *paddr_dst) {
+        uint8_t buf[1024];
+        int sk_src, sk_dst;
+        ssize_t len;
+        int r;
+
+        test_socket_new(&sk_src, AF_INET, ifindex_src);
+        test_socket_new(&sk_dst, AF_INET, ifindex_dst);
+        test_add_ip(ifindex_src, &paddr_src->sin_addr, 8);
+        test_add_ip(ifindex_dst, &paddr_dst->sin_addr, 8);
+
+        r = bind(sk_dst, (struct sockaddr*)paddr_dst, sizeof(*paddr_dst));
+        assert(r >= 0);
+
+        len = sendto(sk_src, buf, sizeof(buf) - 1, 0,
+                     (struct sockaddr*)paddr_dst, sizeof(*paddr_dst));
+        assert(len == sizeof(buf) - 1);
+
+        len = recv(sk_dst, buf, sizeof(buf), 0);
+        assert(len == sizeof(buf) - 1);
+
+        test_del_ip(ifindex_dst, &paddr_dst->sin_addr, 8);
+        test_del_ip(ifindex_src, &paddr_src->sin_addr, 8);
+        close(sk_dst);
+        close(sk_src);
+}
+#endif
+
 int main(int argc, char **argv) {
+        struct sockaddr_in paddr_src = {
+                .sin_family = AF_INET,
+                .sin_addr = (struct in_addr){ htonl(10<<24 | 1) },
+                .sin_port = htons(10),
+        };
+        struct sockaddr_in paddr_dst = {
+                .sin_family = AF_INET,
+                .sin_addr = (struct in_addr){ htonl(10<<24 | 2) },
+                .sin_port = htons(11),
+        };
+        struct sockaddr_ll haddr_dst = {
+                .sll_family = AF_PACKET,
+                .sll_protocol = htons(ETH_P_IP),
+                .sll_hatype = htons(ARPHRD_ETHER),
+                .sll_halen = ETH_ALEN,
+        };
+        int r, ifindex_src, ifindex_dst;
+
         test_checksum();
         test_checksum_udp();
+
+        r = test_setup();
+        if (r)
+                return r;
+
+        test_veth_new(&ifindex_src, NULL, &ifindex_dst, (struct ether_addr*)haddr_dst.sll_addr);
+
+        test_packet_packet(ifindex_src, ifindex_dst, &paddr_src, &paddr_dst, &haddr_dst);
+        test_packet_udp(ifindex_src, ifindex_dst, &paddr_src, &paddr_dst, &haddr_dst);
+//        test_udp_packet(ifindex_src, ifindex_dst, &paddr_src, &paddr_dst, &haddr_dst);
+//        test_udp_udp(ifindex_src, ifindex_dst, &paddr_src, &paddr_dst);
+
+        return 0;
 }
