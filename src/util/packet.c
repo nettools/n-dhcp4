@@ -193,7 +193,7 @@ ssize_t packet_sendto_udp(int sockfd, void *buf, size_t len, int flags,
                 return pktlen;
 
         /* Return the length sent, excluding the headers. */
-        assert(pktlen >= sizeof(ip_hdr) + sizeof(udp_hdr));
+        assert((size_t)pktlen >= sizeof(ip_hdr) + sizeof(udp_hdr));
         return pktlen - sizeof(ip_hdr) - sizeof(udp_hdr);
 }
 
@@ -253,7 +253,7 @@ ssize_t packet_recvfrom_udp(int sockfd, void *buf, size_t len, int flags,
         if (pktlen < 0)
                 return pktlen;
 
-        if (pktlen < sizeof(ip_hdr.hdr)) {
+        if ((size_t)pktlen < sizeof(ip_hdr.hdr)) {
                 /*
                  * Received packet is smaller than the minimal IP header length,
                  * discard it.
@@ -308,12 +308,12 @@ ssize_t packet_recvfrom_udp(int sockfd, void *buf, size_t len, int flags,
 
         /* Bounds checks */
 
-        if (pktlen < hdrlen + sizeof(udp_hdr))
+        if ((size_t)pktlen < hdrlen + sizeof(udp_hdr))
                 /*
                  * The packet is too small to contain an UDP header, discard it.
                  */
                 return 0;
-        else if (pktlen < hdrlen + ntohs(udp_hdr.len))
+        else if ((size_t)pktlen < hdrlen + ntohs(udp_hdr.len))
                 /*
                  * The received packet is smaller than the declared size, discard it.
                  */
