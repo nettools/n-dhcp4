@@ -23,7 +23,7 @@ typedef struct NDhcp4Client NDhcp4Client;
 int n_dhcp4_client_new(NDhcp4Client **clientp);
 NDhcp4Client *n_dhcp4_client_free(NDhcp4Client *client);
 
-int n_dhcp4_client_get_fd(NDhcp4Client *client);
+void n_dhcp4_client_get_fd(NDhcp4Client *client, int *fdp);
 int n_dhcp4_client_dispatch(NDhcp4Client *client);
 
 /*

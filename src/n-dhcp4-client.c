@@ -85,8 +85,8 @@ _public_ NDhcp4Client *n_dhcp4_client_free(NDhcp4Client *client) {
         return NULL;
 }
 
-_public_ int n_dhcp4_client_get_fd(NDhcp4Client *client) {
-        return client->efd;
+_public_ void n_dhcp4_client_get_fd(NDhcp4Client *client, int *fdp) {
+        *fdp = client->efd;
 }
 
 static int n_dhcp4_client_transition_t1(NDhcp4Client *client) {

@@ -9,13 +9,12 @@
 
 static void test_api(void) {
         NDhcp4Client *client;
-        int r;
+        int r, fd;
 
         r = n_dhcp4_client_new(&client);
         assert(!r);
 
-        r = n_dhcp4_client_get_fd(client);
-        assert(r >= 0);
+        n_dhcp4_client_get_fd(client, &fd);
 
         r = n_dhcp4_client_dispatch(client);
         assert(!r);
