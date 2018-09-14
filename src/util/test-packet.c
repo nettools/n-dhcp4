@@ -65,17 +65,13 @@ static void test_checksum_udp(void) {
         }
 }
 
-static void test_packet_socket_new(int ns, int *skp, int ifindex, const struct ether_addr *haddr) {
+static void test_packet_socket_new(int ns, int *skp, int ifindex) {
         struct sockaddr_ll addr = {
                 .sll_family = AF_PACKET,
                 .sll_protocol = htons(ETH_P_IP),
                 .sll_ifindex = ifindex,
-                .sll_hatype = htons(ARPHRD_ETHER),
-                .sll_halen = ETH_ALEN,
         };
         int r, on = 1;
-
-        memcpy(addr.sll_addr, haddr, ETH_ALEN);
 
         test_socket_new(ns, skp, AF_PACKET, ifindex);
 
@@ -94,7 +90,6 @@ static void test_packet_unicast(int ifindex, int sk, void *buf, size_t n_buf,
                 .sll_family = AF_PACKET,
                 .sll_protocol = htons(ETH_P_IP),
                 .sll_ifindex = ifindex,
-                .sll_hatype = htons(ARPHRD_ETHER),
                 .sll_halen = ETH_ALEN,
         };
         ssize_t len;
@@ -112,7 +107,6 @@ static void test_packet_broadcast(int ifindex, int sk, void *buf, size_t n_buf,
                 .sll_family = AF_PACKET,
                 .sll_protocol = htons(ETH_P_IP),
                 .sll_ifindex = ifindex,
-                .sll_hatype = htons(ARPHRD_ETHER),
                 .sll_halen = ETH_ALEN,
         };
         ssize_t len;
@@ -133,7 +127,7 @@ static void test_packet_packet(int ns_src, int ifindex_src,
         ssize_t len;
 
         test_socket_new(ns_src, &sk_src, AF_PACKET, ifindex_src);
-        test_packet_socket_new(ns_dst, &sk_dst, ifindex_dst, haddr_dst);
+        test_packet_socket_new(ns_dst, &sk_dst, ifindex_dst);
 
         test_packet_unicast(ifindex_src, sk_src, buf, sizeof(buf) - 1, paddr_src, paddr_dst, haddr_dst);
         test_packet_broadcast(ifindex_src, sk_src, buf, sizeof(buf) - 1, paddr_src, paddr_dst);
@@ -182,14 +176,13 @@ static void test_packet_udp(int ns_src, int ifindex_src,
 static void test_udp_packet(int ns_src, int ifindex_src,
                             int ns_dst, int ifindex_dst,
                             const struct sockaddr_in *paddr_src,
-                            const struct sockaddr_in *paddr_dst,
-                            const struct ether_addr *haddr_dst) {
+                            const struct sockaddr_in *paddr_dst) {
         uint8_t buf[1024];
         int sk_src, sk_dst;
         ssize_t len;
 
         test_socket_new(ns_src, &sk_src, AF_INET, ifindex_src);
-        test_packet_socket_new(ns_dst, &sk_dst, ifindex_dst, haddr_dst);
+        test_packet_socket_new(ns_dst, &sk_dst, ifindex_dst);
         test_add_ip(ns_src, ifindex_src, &paddr_src->sin_addr, 8);
         test_add_ip(ns_dst, ifindex_dst, &paddr_dst->sin_addr, 8);
 
@@ -261,7 +254,7 @@ int main(int argc, char **argv) {
 
         test_packet_packet(ns_src, ifindex_src, ns_dst, ifindex_dst, &paddr_src, &paddr_dst, &haddr_dst);
         test_packet_udp(ns_src, ifindex_src, ns_dst, ifindex_dst, &paddr_src, &paddr_dst, &haddr_dst);
-        test_udp_packet(ns_src, ifindex_src, ns_dst, ifindex_dst, &paddr_src, &paddr_dst, &haddr_dst);
+        test_udp_packet(ns_src, ifindex_src, ns_dst, ifindex_dst, &paddr_src, &paddr_dst);
         test_udp_udp(ns_src, ifindex_src, ns_dst, ifindex_dst, &paddr_src, &paddr_dst);
 
         return 0;
