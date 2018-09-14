@@ -229,6 +229,73 @@ static void test_udp_udp(int ns_src, int ifindex_src,
         close(sk_src);
 }
 
+static void test_shutdown(int ns_src, int ifindex_src,
+                          int ns_dst, int ifindex_dst,
+                          const struct sockaddr_in *paddr_src,
+                          const struct sockaddr_in *paddr_dst) {
+        uint8_t buf[1024];
+        int r, sk_src, sk_dst1, sk_dst2;
+        ssize_t len;
+
+        test_socket_new(ns_src, &sk_src, AF_INET, ifindex_src);
+        test_packet_socket_new(ns_dst, &sk_dst1, ifindex_dst);
+        test_add_ip(ns_src, ifindex_src, &paddr_src->sin_addr, 8);
+        test_add_ip(ns_dst, ifindex_dst, &paddr_dst->sin_addr, 8);
+
+        /* 1 - send only to the packet socket */
+        len = sendto(sk_src, buf, sizeof(buf), 0,
+                     (struct sockaddr*)paddr_dst, sizeof(*paddr_dst));
+        assert(len == sizeof(buf));
+
+        /* create a UDP socket */
+        test_socket_new(ns_dst, &sk_dst2, AF_INET, ifindex_dst);
+
+        r = bind(sk_dst2, (struct sockaddr*)paddr_dst, sizeof(*paddr_dst));
+        assert(r >= 0);
+
+        /* 2 - send to both sockets */
+        len = sendto(sk_src, buf, sizeof(buf), 0,
+                     (struct sockaddr*)paddr_dst, sizeof(*paddr_dst));
+        assert(len == sizeof(buf));
+
+        /* shut down the packet socket */
+        r = packet_shutdown(sk_dst1);
+        assert(r >= 0);
+
+        /* 3 - send only to the UDP socket */
+        len = sendto(sk_src, buf, sizeof(buf), 0,
+                     (struct sockaddr*)paddr_dst, sizeof(*paddr_dst));
+        assert(len == sizeof(buf));
+
+        /* receive 1 and 2 on the packet socket */
+        len = packet_recvfrom_udp(sk_dst1, buf, sizeof(buf), 0, NULL);
+        assert(len == sizeof(buf));
+        len = packet_recvfrom_udp(sk_dst1, buf, sizeof(buf), 0, NULL);
+        assert(len == sizeof(buf));
+
+        /* make sure there is nothing more pending on the packet socket */
+        len = packet_recvfrom_udp(sk_dst1, buf, sizeof(buf), MSG_DONTWAIT, NULL);
+        assert(len < 0);
+        assert(errno == EAGAIN);
+
+        /* receive 2 and 3 on the UDP socket */
+        len = recv(sk_dst2, buf, sizeof(buf), 0);
+        assert(len == sizeof(buf));
+        len = recv(sk_dst2, buf, sizeof(buf), 0);
+        assert(len == sizeof(buf));
+
+        /* make sure there is nothing more pending on the UDP socket */
+        len = recv(sk_dst2, buf, sizeof(buf), MSG_DONTWAIT);
+        assert(len < 0);
+        assert(errno == EAGAIN);
+
+        test_del_ip(ns_dst, ifindex_dst, &paddr_dst->sin_addr, 8);
+        test_del_ip(ns_src, ifindex_src, &paddr_src->sin_addr, 8);
+        close(sk_dst2);
+        close(sk_dst1);
+        close(sk_src);
+}
+
 int main(int argc, char **argv) {
         struct sockaddr_in paddr_src = {
                 .sin_family = AF_INET,
@@ -256,6 +323,8 @@ int main(int argc, char **argv) {
         test_packet_udp(ns_src, ifindex_src, ns_dst, ifindex_dst, &paddr_src, &paddr_dst, &haddr_dst);
         test_udp_packet(ns_src, ifindex_src, ns_dst, ifindex_dst, &paddr_src, &paddr_dst);
         test_udp_udp(ns_src, ifindex_src, ns_dst, ifindex_dst, &paddr_src, &paddr_dst);
+
+        test_shutdown(ns_src, ifindex_src, ns_dst, ifindex_dst, &paddr_src, &paddr_dst);
 
         return 0;
 }
