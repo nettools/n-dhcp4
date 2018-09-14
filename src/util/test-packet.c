@@ -256,7 +256,7 @@ int main(int argc, char **argv) {
         if (r)
                 return r;
 
-        test_veth_setup(&ns_src, &ifindex_src, NULL, &ns_dst, &ifindex_dst, (struct ether_addr*)haddr_dst.sll_addr);
+        test_veth_new(&ns_src, &ifindex_src, NULL, &ns_dst, &ifindex_dst, (struct ether_addr*)haddr_dst.sll_addr);
 
         test_packet_packet(ns_src, ifindex_src, ns_dst, ifindex_dst, &paddr_src, &paddr_dst, &haddr_dst);
         test_packet_udp(ns_src, ifindex_src, ns_dst, ifindex_dst, &paddr_src, &paddr_dst, &haddr_dst);

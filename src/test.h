@@ -129,12 +129,12 @@ static inline void test_if_query(const char *name, int *indexp, struct ether_add
         }
 }
 
-static inline void test_veth_setup(int *parent_nsp,
-                                   int *parent_indexp,
-                                   struct ether_addr *parent_macp,
-                                   int *child_nsp,
-                                   int *child_indexp,
-                                   struct ether_addr *child_macp) {
+static inline void test_veth_new(int *parent_nsp,
+                                 int *parent_indexp,
+                                 struct ether_addr *parent_macp,
+                                 int *child_nsp,
+                                 int *child_indexp,
+                                 struct ether_addr *child_macp) {
         int r, oldns;
 
         /*
@@ -155,6 +155,9 @@ static inline void test_veth_setup(int *parent_nsp,
         test_if_query("veth-parent", parent_indexp, parent_macp);
         test_set_netns(oldns, NULL);
 
+        r = system("ip netns del ns-parent");
+        assert(r == 0);
+
         r = system("ip netns add ns-child");
         assert(r == 0);
         *child_nsp = open("/run/netns/ns-child", O_RDONLY);
@@ -165,6 +168,9 @@ static inline void test_veth_setup(int *parent_nsp,
         test_set_netns(*child_nsp, &oldns);
         test_if_query("veth-child", child_indexp, child_macp);
         test_set_netns(oldns, NULL);
+
+        r = system("ip netns del ns-child");
+        assert(r == 0);
 }
 
 static inline int test_setup(void) {
