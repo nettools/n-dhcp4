@@ -249,7 +249,7 @@ ssize_t packet_recvfrom_udp(int sockfd, void *buf, size_t len, int flags,
         size_t hdrlen;
 
         /* Peek packet to obtain the real IP header length */
-        pktlen = recv(sockfd, &ip_hdr.hdr, sizeof(ip_hdr.hdr), MSG_PEEK);
+        pktlen = recv(sockfd, &ip_hdr.hdr, sizeof(ip_hdr.hdr), MSG_PEEK | flags);
         if (pktlen < 0)
                 return pktlen;
 
