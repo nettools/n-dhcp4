@@ -65,45 +65,78 @@ static void test_checksum_udp(void) {
         }
 }
 
+static void test_packet_socket_new(int ns, int *skp, int ifindex, const struct ether_addr *haddr) {
+        struct sockaddr_ll addr = {
+                .sll_family = AF_PACKET,
+                .sll_protocol = htons(ETH_P_IP),
+                .sll_ifindex = ifindex,
+                .sll_hatype = htons(ARPHRD_ETHER),
+                .sll_halen = ETH_ALEN,
+        };
+        int r, on = 1;
+
+        memcpy(addr.sll_addr, haddr, ETH_ALEN);
+
+        test_socket_new(ns, skp, AF_PACKET, ifindex);
+
+        r = setsockopt(*skp, SOL_PACKET, PACKET_AUXDATA, &on, sizeof(on));
+        assert(r >= 0);
+
+        r = bind(*skp, (struct sockaddr*)&addr, sizeof(addr));
+        assert(r >= 0);
+}
+
+static void test_packet_unicast(int ifindex, int sk, void *buf, size_t n_buf,
+                                const struct sockaddr_in *paddr_src,
+                                const struct sockaddr_in *paddr_dst,
+                                const struct ether_addr *haddr_dst) {
+        struct sockaddr_ll addr = {
+                .sll_family = AF_PACKET,
+                .sll_protocol = htons(ETH_P_IP),
+                .sll_ifindex = ifindex,
+                .sll_hatype = htons(ARPHRD_ETHER),
+                .sll_halen = ETH_ALEN,
+        };
+        ssize_t len;
+
+        memcpy(addr.sll_addr, haddr_dst, ETH_ALEN);
+
+        len = packet_sendto_udp(sk, buf, n_buf, 0, paddr_src, &addr, paddr_dst);
+        assert(len == (ssize_t)n_buf);
+}
+
+static void test_packet_broadcast(int ifindex, int sk, void *buf, size_t n_buf,
+                                  const struct sockaddr_in *paddr_src,
+                                  const struct sockaddr_in *paddr_dst) {
+        struct sockaddr_ll addr = {
+                .sll_family = AF_PACKET,
+                .sll_protocol = htons(ETH_P_IP),
+                .sll_ifindex = ifindex,
+                .sll_hatype = htons(ARPHRD_ETHER),
+                .sll_halen = ETH_ALEN,
+        };
+        ssize_t len;
+
+        memcpy(addr.sll_addr, (char[]){ 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, }, ETH_ALEN);
+
+        len = packet_sendto_udp(sk, buf, n_buf, 0, paddr_src, &addr, paddr_dst);
+        assert(len == (ssize_t)n_buf);
+}
+
 static void test_packet_packet(int ns_src, int ifindex_src,
                                int ns_dst, int ifindex_dst,
                                const struct sockaddr_in *paddr_src,
                                const struct sockaddr_in *paddr_dst,
-                               const struct sockaddr_ll *haddr_dst) {
+                               const struct ether_addr *haddr_dst) {
         uint8_t buf[1024];
         int sk_src, sk_dst;
         ssize_t len;
-        int r;
 
         test_socket_new(ns_src, &sk_src, AF_PACKET, ifindex_src);
-        test_socket_new(ns_dst, &sk_dst, AF_PACKET, ifindex_dst);
+        test_packet_socket_new(ns_dst, &sk_dst, ifindex_dst, haddr_dst);
 
-        {
-                struct sockaddr_ll addr = *haddr_dst;
-                addr.sll_ifindex = ifindex_dst;
-
-                r = bind(sk_dst, (struct sockaddr*)&addr, sizeof(addr));
-                assert(r >= 0);
-        }
-
-        {
-                struct sockaddr_ll addr = *haddr_dst;
-                addr.sll_ifindex = ifindex_src;
-
-                /* unicast */
-
-                len = packet_sendto_udp(sk_src, buf, sizeof(buf) - 1, 0,
-                                        paddr_src, &addr, paddr_dst);
-                assert(len == sizeof(buf) - 1);
-
-                /* broadcast */
-
-                memcpy(addr.sll_addr, (char[]){ 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, }, ETH_ALEN);
-
-                len = packet_sendto_udp(sk_src, buf, sizeof(buf) - 1, 0,
-                                        paddr_src, &addr, paddr_dst);
-                assert(len == sizeof(buf) - 1);
-        }
+        test_packet_unicast(ifindex_src, sk_src, buf, sizeof(buf) - 1, paddr_src, paddr_dst, haddr_dst);
+        test_packet_broadcast(ifindex_src, sk_src, buf, sizeof(buf) - 1, paddr_src, paddr_dst);
 
         len = packet_recvfrom_udp(sk_dst, buf, sizeof(buf), 0, NULL);
         assert(len == sizeof(buf) - 1);
@@ -119,7 +152,7 @@ static void test_packet_udp(int ns_src, int ifindex_src,
                             int ns_dst, int ifindex_dst,
                             const struct sockaddr_in *paddr_src,
                             const struct sockaddr_in *paddr_dst,
-                            const struct sockaddr_ll *haddr_dst) {
+                            const struct ether_addr *haddr_dst) {
         uint8_t buf[1024];
         int sk_src, sk_dst;
         ssize_t len;
@@ -132,24 +165,8 @@ static void test_packet_udp(int ns_src, int ifindex_src,
         r = bind(sk_dst, (struct sockaddr*)paddr_dst, sizeof(*paddr_dst));
         assert(r >= 0);
 
-        {
-                struct sockaddr_ll addr = *haddr_dst;
-                addr.sll_ifindex = ifindex_src;
-
-                /* unicast */
-
-                len = packet_sendto_udp(sk_src, buf, sizeof(buf) - 1, 0,
-                                        paddr_src, &addr, paddr_dst);
-                assert(len == sizeof(buf) - 1);
-
-                /* broadcast */
-
-                memcpy(addr.sll_addr, (char[]){ 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, }, ETH_ALEN);
-
-                len = packet_sendto_udp(sk_src, buf, sizeof(buf) - 1, 0,
-                                        paddr_src, &addr, paddr_dst);
-                assert(len == sizeof(buf) - 1);
-        }
+        test_packet_unicast(ifindex_src, sk_src, buf, sizeof(buf) - 1, paddr_src, paddr_dst, haddr_dst);
+        test_packet_broadcast(ifindex_src, sk_src, buf, sizeof(buf) - 1, paddr_src, paddr_dst);
 
         len = recv(sk_dst, buf, sizeof(buf), 0);
         assert(len == sizeof(buf) - 1);
@@ -166,27 +183,15 @@ static void test_udp_packet(int ns_src, int ifindex_src,
                             int ns_dst, int ifindex_dst,
                             const struct sockaddr_in *paddr_src,
                             const struct sockaddr_in *paddr_dst,
-                            const struct sockaddr_ll *haddr_dst) {
+                            const struct ether_addr *haddr_dst) {
         uint8_t buf[1024];
         int sk_src, sk_dst;
         ssize_t len;
-        int r, on = 1;
 
         test_socket_new(ns_src, &sk_src, AF_INET, ifindex_src);
-        test_socket_new(ns_dst, &sk_dst, AF_PACKET, ifindex_dst);
+        test_packet_socket_new(ns_dst, &sk_dst, ifindex_dst, haddr_dst);
         test_add_ip(ns_src, ifindex_src, &paddr_src->sin_addr, 8);
         test_add_ip(ns_dst, ifindex_dst, &paddr_dst->sin_addr, 8);
-
-        r = setsockopt(sk_dst, SOL_PACKET, PACKET_AUXDATA, &on, sizeof(on));
-        assert(r >= 0);
-
-        {
-                struct sockaddr_ll addr = *haddr_dst;
-                addr.sll_ifindex = ifindex_dst;
-
-                r = bind(sk_dst, (struct sockaddr*)&addr, sizeof(addr));
-                assert(r >= 0);
-        }
 
         len = sendto(sk_src, buf, sizeof(buf) - 1, 0,
                      (struct sockaddr*)paddr_dst, sizeof(*paddr_dst));
@@ -242,12 +247,7 @@ int main(int argc, char **argv) {
                 .sin_addr = (struct in_addr){ htonl(10<<24 | 2) },
                 .sin_port = htons(11),
         };
-        struct sockaddr_ll haddr_dst = {
-                .sll_family = AF_PACKET,
-                .sll_protocol = htons(ETH_P_IP),
-                .sll_hatype = htons(ARPHRD_ETHER),
-                .sll_halen = ETH_ALEN,
-        };
+        struct ether_addr haddr_dst;
         int r, ifindex_src, ifindex_dst, ns_src, ns_dst;
 
         test_checksum();
@@ -257,7 +257,7 @@ int main(int argc, char **argv) {
         if (r)
                 return r;
 
-        test_veth_new(&ns_src, &ifindex_src, NULL, &ns_dst, &ifindex_dst, (struct ether_addr*)haddr_dst.sll_addr);
+        test_veth_new(&ns_src, &ifindex_src, NULL, &ns_dst, &ifindex_dst, &haddr_dst);
 
         test_packet_packet(ns_src, ifindex_src, ns_dst, ifindex_dst, &paddr_src, &paddr_dst, &haddr_dst);
         test_packet_udp(ns_src, ifindex_src, ns_dst, ifindex_dst, &paddr_src, &paddr_dst, &haddr_dst);
