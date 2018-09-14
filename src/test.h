@@ -9,6 +9,7 @@
 #include <assert.h>
 #include <endian.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <net/ethernet.h>
 #include <net/if.h>
 #include <sys/socket.h>
@@ -21,12 +22,29 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/ioctl.h>
+#include <sys/mount.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <unistd.h>
 
-static inline void test_socket_new(int *sockfdp, int family, int ifindex) {
+static inline void test_set_netns(int netns, int *oldnsp) {
+        int r;
+
+        if (oldnsp) {
+                *oldnsp = open("/proc/self/ns/net", O_RDONLY);
+                assert(*oldnsp >= 0);
+        }
+
+        r = setns(netns, CLONE_NEWNET);
+        assert(!r);
+}
+
+static inline void test_socket_new(int netns, int *sockfdp, int family, int ifindex) {
         char ifname[IF_NAMESIZE];
         char *p;
-        int r, sockfd;
+        int r, sockfd, oldns;
+
+        test_set_netns(netns, &oldns);
 
         p = if_indextoname(ifindex, ifname);
         assert(p);
@@ -37,13 +55,17 @@ static inline void test_socket_new(int *sockfdp, int family, int ifindex) {
         r = setsockopt(sockfd, SOL_SOCKET, SO_BINDTODEVICE, ifname, strlen(ifname));
         assert(r >= 0);
 
+        test_set_netns(oldns, NULL);
+
         *sockfdp = sockfd;
 }
 
-static inline void test_add_ip(int ifindex, const struct in_addr *addr, unsigned int prefix) {
+static inline void test_add_ip(int netns, int ifindex, const struct in_addr *addr, unsigned int prefix) {
         char ifname[IF_NAMESIZE];
         char *p;
-        int r;
+        int r, oldns;
+
+        test_set_netns(netns, &oldns);
 
         p = if_indextoname(ifindex, ifname);
         assert(p);
@@ -54,13 +76,17 @@ static inline void test_add_ip(int ifindex, const struct in_addr *addr, unsigned
         r = system(p);
         assert(r == 0);
 
+        test_set_netns(oldns, NULL);
+
         free(p);
 }
 
-static inline void test_del_ip(int ifindex, const struct in_addr *addr, unsigned int prefix) {
+static inline void test_del_ip(int netns, int ifindex, const struct in_addr *addr, unsigned int prefix) {
         char ifname[IF_NAMESIZE];
         char *p;
-        int r;
+        int r, oldns;
+
+        test_set_netns(netns, &oldns);
 
         p = if_indextoname(ifindex, ifname);
         assert(p);
@@ -70,6 +96,8 @@ static inline void test_del_ip(int ifindex, const struct in_addr *addr, unsigned
 
         r = system(p);
         assert(r == 0);
+
+        test_set_netns(oldns, NULL);
 
         free(p);
 }
@@ -101,32 +129,69 @@ static inline void test_if_query(const char *name, int *indexp, struct ether_add
         }
 }
 
-static inline void test_veth_new(int *parent_indexp,
-                                 struct ether_addr *parent_macp,
-                                 int *child_indexp,
-                                 struct ether_addr *child_macp) {
-        int r;
+static inline void test_veth_setup(int *parent_nsp,
+                                   int *parent_indexp,
+                                   struct ether_addr *parent_macp,
+                                   int *child_nsp,
+                                   int *child_indexp,
+                                   struct ether_addr *child_macp) {
+        int r, oldns;
 
-        /* Eww... but it works. */
-        r = system("ip link add test-veth0 type veth peer name test-veth1");
-        assert(r == 0);
-        r = system("ip link set test-veth0 up addrgenmode none");
-        assert(r == 0);
-        r = system("ip link set test-veth1 up addrgenmode none");
+        /*
+         * Create a new veth pair, with each end in a different network namespace.
+         */
+
+        r = system("ip link add veth-parent type veth peer name veth-child");
         assert(r == 0);
 
-        test_if_query("test-veth0", parent_indexp, parent_macp);
-        test_if_query("test-veth1", child_indexp, child_macp);
+        r = system("ip netns add ns-parent");
+        assert(r == 0);
+        *parent_nsp = open("/run/netns/ns-parent", O_RDONLY);
+        assert(*parent_nsp >= 0);
+
+        r = system("ip link set veth-parent up addrgenmode none netns ns-parent");
+        assert(r == 0);
+        test_set_netns(*parent_nsp, &oldns);
+        test_if_query("veth-parent", parent_indexp, parent_macp);
+        test_set_netns(oldns, NULL);
+
+        r = system("ip netns add ns-child");
+        assert(r == 0);
+        *child_nsp = open("/run/netns/ns-child", O_RDONLY);
+        assert(*child_nsp >= 0);
+
+        r = system("ip link set veth-child up addrgenmode none netns ns-child");
+        assert(r == 0);
+        test_set_netns(*child_nsp, &oldns);
+        test_if_query("veth-child", child_indexp, child_macp);
+        test_set_netns(oldns, NULL);
 }
 
 static inline int test_setup(void) {
         int r;
 
-        r = unshare(CLONE_NEWNET);
+        /*
+         * Move into a new network and mount namespace, and create
+         * a private instance of /run/netns. This ensures that any
+         * network devices or network namespaces are private to the
+         * test process.
+         */
+
+        r = unshare(CLONE_NEWNET | CLONE_NEWNS);
         if (r < 0) {
                 assert(errno == EPERM);
                 return 77;
         }
+
+        r = mount(NULL, "/run", NULL, MS_PRIVATE, NULL);
+        assert(r >= 0);
+
+        r = mkdir("/run/netns", 0755);
+        if (r < 0)
+                assert(errno == EEXIST);
+
+        r = mount(NULL, "/run/netns", "tmpfs", 0, NULL);
+        assert(r >= 0);
 
         return 0;
 }
