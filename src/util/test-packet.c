@@ -6,6 +6,7 @@
 #include <errno.h>
 #include <net/if_arp.h>
 #include <stdlib.h>
+#include <string.h>
 #include "packet.h"
 #include "../test.h"
 

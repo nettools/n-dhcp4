@@ -63,7 +63,7 @@ endif
 test_api = executable('test-api', ['test-api.c'], link_with: libndhcp4_shared)
 test('API Symbol Visibility', test_api)
 
-test_packet = executable('test-packet', ['util/test-packet.c'], dependencies: libndhcp4_dep)
+test_packet = executable('test-packet', ['test.c', 'util/test-packet.c'], dependencies: libndhcp4_dep)
 test('Packet Utility Library', test_packet)
 
 test_message = executable('test-message', ['test-message.c'], dependencies: libndhcp4_dep)
