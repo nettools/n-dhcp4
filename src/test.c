@@ -232,6 +232,47 @@ void test_veth_new(int parent_ns,
         test_if_query(child_ns, "veth-child", child_indexp, child_macp);
 }
 
+void test_bridge_new(int netns,
+                     int *indexp,
+                     struct ether_addr *macp) {
+        int r, oldns;
+
+        test_netns_get(&oldns);
+        test_netns_set(netns);
+        r = system("ip link add test-bridge type bridge");
+        assert(r == 0);
+        r = system("ip link set test-bridge up addrgenmode none");
+        assert(r == 0);
+        test_netns_set(oldns);
+
+        test_if_query(netns, "test-bridge", indexp, macp);
+}
+
+void test_enslave_link(int netns, int master, int slave) {
+        char ifname_master[IF_NAMESIZE], ifname_slave[IF_NAMESIZE];
+        char *p;
+        int r, oldns;
+
+        test_netns_get(&oldns);
+        test_netns_set(netns);
+
+        p = if_indextoname(master, ifname_master);
+        assert(p);
+
+        p = if_indextoname(slave, ifname_slave);
+        assert(p);
+
+        r = asprintf(&p, "ip link set %s master %s", ifname_slave, ifname_master);
+        assert(r > 0);
+
+        r = system(p);
+        assert(r == 0);
+
+        test_netns_set(oldns);
+
+        free(p);
+}
+
 int test_setup(void) {
         int r;
 
