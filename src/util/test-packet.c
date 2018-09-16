@@ -317,7 +317,10 @@ int main(int argc, char **argv) {
         if (r)
                 return r;
 
-        test_veth_new(&ns_src, &ifindex_src, NULL, &ns_dst, &ifindex_dst, &haddr_dst);
+        test_netns_new(&ns_src);
+        test_netns_new(&ns_dst);
+
+        test_veth_new(ns_src, &ifindex_src, NULL, ns_dst, &ifindex_dst, &haddr_dst);
 
         test_packet_packet(ns_src, ifindex_src, ns_dst, ifindex_dst, &paddr_src, &paddr_dst, &haddr_dst);
         test_packet_udp(ns_src, ifindex_src, ns_dst, ifindex_dst, &paddr_src, &paddr_dst, &haddr_dst);
@@ -325,6 +328,9 @@ int main(int argc, char **argv) {
         test_udp_udp(ns_src, ifindex_src, ns_dst, ifindex_dst, &paddr_src, &paddr_dst);
 
         test_shutdown(ns_src, ifindex_src, ns_dst, ifindex_dst, &paddr_src, &paddr_dst);
+
+        close(ns_dst);
+        close(ns_src);
 
         return 0;
 }
