@@ -29,7 +29,6 @@ enum {
 
 _public_ int n_dhcp4_client_new(NDhcp4Client **clientp) {
         _cleanup_(n_dhcp4_client_freep) NDhcp4Client *client = NULL;
-        struct epoll_event ev;
         int r;
 
         assert(clientp);
@@ -52,8 +51,11 @@ _public_ int n_dhcp4_client_new(NDhcp4Client **clientp) {
         if (client->tfd < 0)
                 return -errno;
 
-        ev = (struct epoll_event){ .events = EPOLLIN, .data.fd = client->tfd };
-        r = epoll_ctl(client->efd, EPOLL_CTL_ADD, client->tfd, &ev);
+        r = epoll_ctl(client->efd, EPOLL_CTL_ADD, client->tfd,
+                      &(struct epoll_event){
+                                .events = EPOLLIN,
+                                .data.fd = client->tfd,
+                      });
         if (r < 0)
                 return -errno;
 
