@@ -21,17 +21,16 @@
  * n_dhcp4_network_client_packet_socket_new() - create a new DHCP4 client packet socket
  * @sockfdp:            return argumnet for the new socket
  * @ifindex:            interface index to bind to
- * @xid:                transaction ID to subscribe to
  *
  * Create a new AF_PACKET/SOCK_DGRAM socket usable to listen to and send DHCP client
  * packets before an IP address has been configured.
  *
- * Only unfragmented DHCP packets from a server to a client using the specified
- * transaction id and destined for the given ifindex is returned.
+ * Only unfragmented DHCP packets from a server to a client destined for the given
+ * ifindex is returned.
  *
  * Return: 0 on success, or a negative error code on failure.
  */
-int n_dhcp4_network_client_packet_socket_new(int *sockfdp, int ifindex, uint32_t xid) {
+int n_dhcp4_network_client_packet_socket_new(int *sockfdp, int ifindex) {
         struct sock_filter filter[] = {
                 /*
                  * IP
@@ -79,15 +78,10 @@ int n_dhcp4_network_client_packet_socket_new(int *sockfdp, int ifindex, uint32_t
                  *
                  * Check
                  *  - BOOTREPLY (from server to client)
-                 *  - Current transaction id
                  *  - DHCP magic cookie
                  */
                 BPF_STMT(BPF_LD + BPF_B + BPF_IND, offsetof(NDhcp4Header, op)),                                 /* A <- DHCP op */
                 BPF_JUMP(BPF_JMP + BPF_JEQ + BPF_K, N_DHCP4_OP_BOOTREPLY, 1, 0),                                /* op == BOOTREPLY ? */
-                BPF_STMT(BPF_RET + BPF_K, 0),                                                                   /* ignore */
-
-                BPF_STMT(BPF_LD + BPF_W + BPF_IND, offsetof(NDhcp4Header, xid)),                                /* A <- transaction identifier */
-                BPF_JUMP(BPF_JMP + BPF_JEQ + BPF_K, xid, 1, 0),                                                 /* transaction identifier == xid ? */
                 BPF_STMT(BPF_RET + BPF_K, 0),                                                                   /* ignore */
 
                 BPF_STMT(BPF_LD + BPF_W + BPF_IND, offsetof(NDhcp4Message, magic)),                             /* A <- DHCP magic cookie */
