@@ -11,6 +11,8 @@
 #include <stdlib.h>
 
 void test_netns_new(int *netnsp);
+void test_netns_get(int *netnsp);
+void test_netns_set(int netns);
 
 void test_socket_new(int netns, int *sockfdp, int family, int ifindex);
 

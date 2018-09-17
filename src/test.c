@@ -25,18 +25,6 @@
 #include <unistd.h>
 #include "test.h"
 
-static void test_netns_get(int *netnsp) {
-        *netnsp = open("/proc/self/ns/net", O_RDONLY);
-        assert(*netnsp >= 0);
-}
-
-static void test_netns_set(int netns) {
-        int r;
-
-        r = setns(netns, CLONE_NEWNET);
-        assert(!r);
-}
-
 void test_netns_new(int *netnsp) {
         int r, oldns;
 
@@ -48,6 +36,18 @@ void test_netns_new(int *netnsp) {
         test_netns_get(netnsp);
 
         test_netns_set(oldns);
+}
+
+void test_netns_get(int *netnsp) {
+        *netnsp = open("/proc/self/ns/net", O_RDONLY);
+        assert(*netnsp >= 0);
+}
+
+void test_netns_set(int netns) {
+        int r;
+
+        r = setns(netns, CLONE_NEWNET);
+        assert(!r);
 }
 
 void test_socket_new(int netns, int *sockfdp, int family, int ifindex) {
