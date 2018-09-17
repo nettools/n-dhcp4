@@ -265,6 +265,21 @@ static void test_server_client_udp(int ns_server, int ns_client, int ifindex_ser
         test_del_ip(ns_client, ifindex_client, &addr_client, 8);
 }
 
+static void test_multiple_servers(void) {
+        int netns, ifindex1, ifindex2, sk1, sk2;
+
+        test_netns_new(&netns);
+
+        test_veth_new(netns, &ifindex1, NULL, netns, &ifindex2, NULL);
+
+        test_server_udp_socket_new(netns, &sk1, ifindex1);
+        test_server_udp_socket_new(netns, &sk2, ifindex2);
+
+        close(sk2);
+        close(sk1);
+        close(netns);
+}
+
 int main(int argc, char **argv) {
         int r, ns_server, ns_client, ifindex_server, ifindex_client;
         struct ether_addr mac_client;
@@ -285,6 +300,8 @@ int main(int argc, char **argv) {
 
         close(ns_client);
         close(ns_server);
+
+        test_multiple_servers();
 
         return 0;
 }
