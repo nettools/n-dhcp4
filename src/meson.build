@@ -69,5 +69,8 @@ test('Packet Utility Library', test_packet)
 test_message = executable('test-message', ['test-message.c'], dependencies: libndhcp4_dep)
 test('Message Handling', test_message)
 
+test_network = executable('test-network', ['test.c', 'test-network.c'], dependencies: libndhcp4_dep)
+test('Network Handling', test_network)
+
 #test_ = executable('test-', ['test-.c'], dependencies: libndhcp4_dep)
 #test('', test_)
