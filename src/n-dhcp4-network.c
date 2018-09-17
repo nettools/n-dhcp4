@@ -213,27 +213,17 @@ int n_dhcp4_network_client_udp_socket_new(int *sockfdp, int ifindex, const struc
 /**
  * n_dhcp4_network_server_packet_socket_new() - create a new DHCP4 server packet socket
  * @sockfdp:            return argumnet for the new socket
- * @ifindex:            interface index to bind to
  *
  * Create a new AF_PACKET/SOCK_DGRAM socket usable to send DHCP packets to clients
  * before they have an IP address configured, on the given interface.
  *
  * Return: 0 on success, or a negative error code on failure.
  */
-int n_dhcp4_network_server_packet_socket_new(int *sockfdp, int ifindex) {
+int n_dhcp4_network_server_packet_socket_new(int *sockfdp) {
         _cleanup_(n_dhcp4_closep) int sockfd = -1;
-        char ifname[IF_NAMESIZE];
-        int r;
-
-        if (!if_indextoname(ifindex, ifname))
-                return -errno;
 
         sockfd = socket(AF_PACKET, SOCK_DGRAM | SOCK_CLOEXEC | SOCK_NONBLOCK, 0);
         if (sockfd < 0)
-                return -errno;
-
-        r = setsockopt(sockfd, SOL_SOCKET, SO_BINDTODEVICE, ifname, strlen(ifname));
-        if (r < 0)
                 return -errno;
 
         *sockfdp = sockfd;

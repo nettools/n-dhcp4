@@ -46,13 +46,13 @@ static void test_client_udp_socket_new(int netns, int *skp, int ifindex, const s
         test_netns_set(oldns);
 }
 
-static void test_server_packet_socket_new(int netns, int *skp, int ifindex) {
+static void test_server_packet_socket_new(int netns, int *skp) {
         int r, oldns;
 
         test_netns_get(&oldns);
         test_netns_set(netns);
 
-        r = n_dhcp4_network_server_packet_socket_new(skp, ifindex);
+        r = n_dhcp4_network_server_packet_socket_new(skp);
         assert(r >= 0);
 
         test_netns_set(oldns);
@@ -210,7 +210,7 @@ static void test_server_client_packet(int ns_server, int ns_client, int ifindex_
         test_add_ip(ns_server, ifindex_server, &addr_server, 8);
 
         test_client_packet_socket_new(ns_client, &sk_client, ifindex_client);
-        test_server_packet_socket_new(ns_server, &sk_server, ifindex_server);
+        test_server_packet_socket_new(ns_server, &sk_server);
 
         message_out.header.op = N_DHCP4_OP_BOOTREPLY;
 

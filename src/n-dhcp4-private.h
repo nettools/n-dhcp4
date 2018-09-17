@@ -32,7 +32,7 @@ typedef struct NDhcp4Outgoing NDhcp4Outgoing;
 int n_dhcp4_network_client_packet_socket_new(int *sockfdp, int ifindex);
 int n_dhcp4_network_client_udp_socket_new(int *sockfdp, int ifindex, const struct in_addr *addr);
 
-int n_dhcp4_network_server_packet_socket_new(int *sockfdp, int ifindex);
+int n_dhcp4_network_server_packet_socket_new(int *sockfdp);
 int n_dhcp4_network_server_udp_socket_new(int *sockfdp, int ifindex);
 
 /*
