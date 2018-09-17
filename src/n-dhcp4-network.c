@@ -31,6 +31,7 @@
  * Return: 0 on success, or a negative error code on failure.
  */
 int n_dhcp4_network_client_packet_socket_new(int *sockfdp, int ifindex) {
+        _cleanup_(n_dhcp4_closep) int sockfd = -1;
         struct sock_filter filter[] = {
                 /*
                  * IP
@@ -99,7 +100,6 @@ int n_dhcp4_network_client_packet_socket_new(int *sockfdp, int ifindex) {
                 .sll_protocol = htons(ETH_P_IP),
                 .sll_ifindex = ifindex,
         };
-        _cleanup_(n_dhcp4_closep) int sockfd = -1;
         int r, on = 1;
 
         sockfd = socket(AF_PACKET, SOCK_DGRAM | SOCK_CLOEXEC | SOCK_NONBLOCK, 0);
@@ -142,6 +142,38 @@ int n_dhcp4_network_client_packet_socket_new(int *sockfdp, int ifindex) {
  */
 int n_dhcp4_network_client_udp_socket_new(int *sockfdp, int ifindex, const struct in_addr *addr) {
         _cleanup_(n_dhcp4_closep) int sockfd = -1;
+        struct sock_filter filter[] = {
+                /*
+                 * IP/UDP
+                 *
+                 * Set X to the size of IP and UDP headers, for future indirect reads.
+                 */
+                BPF_STMT(BPF_LDX + BPF_B + BPF_MSH, 0),                                                         /* X <- IP header length */
+                BPF_STMT(BPF_LD + BPF_W + BPF_K, sizeof(struct udphdr)),                                        /* A <- size of UDP header */
+                BPF_STMT(BPF_ALU + BPF_ADD + BPF_X, 0),                                                         /* A += X */
+                BPF_STMT(BPF_MISC + BPF_TAX, 0),                                                                /* X <- A */
+
+                /*
+                 * DHCP
+                 *
+                 * Check
+                 *  - BOOTREPLY (from server to client)
+                 *  - DHCP magic cookie
+                 */
+                BPF_STMT(BPF_LD + BPF_B + BPF_IND, offsetof(NDhcp4Header, op)),                                 /* A <- DHCP op */
+                BPF_JUMP(BPF_JMP + BPF_JEQ + BPF_K, N_DHCP4_OP_BOOTREPLY, 1, 0),                                /* op == BOOTREPLY ? */
+                BPF_STMT(BPF_RET + BPF_K, 0),                                                                   /* ignore */
+
+                BPF_STMT(BPF_LD + BPF_W + BPF_IND, offsetof(NDhcp4Message, magic)),                             /* A <- DHCP magic cookie */
+                BPF_JUMP(BPF_JMP + BPF_JEQ + BPF_K, N_DHCP4_MESSAGE_MAGIC, 1, 0),                               /* cookie == DHCP magic cookie ? */
+                BPF_STMT(BPF_RET + BPF_K, 0),                                                                   /* ignore */
+
+                BPF_STMT(BPF_RET + BPF_K, 65535),                                                               /* return all */
+        };
+        struct sock_fprog fprog = {
+                .filter = filter,
+                .len = sizeof(filter) / sizeof(filter[0]),
+        };
         struct sockaddr_in saddr = {
                 .sin_family = AF_INET,
                 .sin_addr = *addr,
@@ -155,6 +187,10 @@ int n_dhcp4_network_client_udp_socket_new(int *sockfdp, int ifindex, const struc
 
         sockfd = socket(AF_INET, SOCK_DGRAM | SOCK_CLOEXEC | SOCK_NONBLOCK, 0);
         if (sockfd < 0)
+                return -errno;
+
+        r = setsockopt(sockfd, SOL_SOCKET, SO_ATTACH_FILTER, &fprog, sizeof(fprog));
+        if (r < 0)
                 return -errno;
 
         r = setsockopt(sockfd, SOL_SOCKET, SO_BINDTODEVICE, ifname, strlen(ifname));
@@ -217,12 +253,45 @@ int n_dhcp4_network_server_packet_socket_new(int *sockfdp, int ifindex) {
  */
 int n_dhcp4_network_server_udp_socket_new(int *sockfdp, int ifindex) {
         _cleanup_(n_dhcp4_closep) int sockfd = -1;
-        char ifname[IF_NAMESIZE];
+        struct sock_filter filter[] = {
+                /*
+                 * IP/UDP
+                 *
+                 * Set X to the size of IP and UDP headers, for future indirect reads.
+                 */
+                BPF_STMT(BPF_LDX + BPF_B + BPF_MSH, 0),                                                         /* X <- IP header length */
+                BPF_STMT(BPF_LD + BPF_W + BPF_K, sizeof(struct udphdr)),                                        /* A <- size of UDP header */
+                BPF_STMT(BPF_ALU + BPF_ADD + BPF_X, 0),                                                         /* A += X */
+                BPF_STMT(BPF_MISC + BPF_TAX, 0),                                                                /* X <- A */
+
+                /*
+                 * DHCP
+                 *
+                 * Check
+                 *  - BOOTREQUEST (from client to server)
+                 *  - DHCP magic cookie
+                 */
+
+                BPF_STMT(BPF_LD + BPF_B + BPF_IND, offsetof(NDhcp4Header, op)),                                 /* A <- DHCP op */
+                BPF_JUMP(BPF_JMP + BPF_JEQ + BPF_K, N_DHCP4_OP_BOOTREQUEST, 1, 0),                              /* op == BOOTREQUEST ? */
+                BPF_STMT(BPF_RET + BPF_K, 0),                                                                   /* ignore */
+
+                BPF_STMT(BPF_LD + BPF_W + BPF_IND, offsetof(NDhcp4Message, magic)),                             /* A <- DHCP magic cookie */
+                BPF_JUMP(BPF_JMP + BPF_JEQ + BPF_K, N_DHCP4_MESSAGE_MAGIC, 1, 0),                               /* cookie == DHCP magic cookie ? */
+                BPF_STMT(BPF_RET + BPF_K, 0),                                                                   /* ignore */
+
+                BPF_STMT(BPF_RET + BPF_K, 65535),                                                               /* return all */
+        };
+        struct sock_fprog fprog = {
+                .filter = filter,
+                .len = sizeof(filter) / sizeof(filter[0]),
+        };
         struct sockaddr_in addr = {
                 .sin_family = AF_INET,
                 .sin_addr = { INADDR_ANY },
                 .sin_port = htons(N_DHCP4_NETWORK_SERVER_PORT),
         };
+        char ifname[IF_NAMESIZE];
         int r, tos = IPTOS_CLASS_CS6, on = 1;
 
         if (!if_indextoname(ifindex, ifname))
@@ -230,6 +299,10 @@ int n_dhcp4_network_server_udp_socket_new(int *sockfdp, int ifindex) {
 
         sockfd = socket(AF_INET, SOCK_DGRAM | SOCK_CLOEXEC | SOCK_NONBLOCK, 0);
         if (sockfd < 0)
+                return -errno;
+
+        r = setsockopt(sockfd, SOL_SOCKET, SO_ATTACH_FILTER, &fprog, sizeof(fprog));
+        if (r < 0)
                 return -errno;
 
         r = setsockopt(sockfd, SOL_SOCKET, SO_BINDTODEVICE, ifname, strlen(ifname));
