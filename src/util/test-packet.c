@@ -111,7 +111,7 @@ static void test_packet_broadcast(int ifindex, int sk, void *buf, size_t n_buf,
         };
         ssize_t len;
 
-        memcpy(addr.sll_addr, (char[]){ 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, }, ETH_ALEN);
+        memcpy(addr.sll_addr, (unsigned char[]){ 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, }, ETH_ALEN);
 
         len = packet_sendto_udp(sk, buf, n_buf, 0, paddr_src, &addr, paddr_dst);
         assert(len == (ssize_t)n_buf);
