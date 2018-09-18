@@ -81,7 +81,7 @@ static void test_client_packet_send(int sk, void *buf, size_t n_buf, int ifindex
                 .sin_addr = { INADDR_ANY },
                 .sin_port =  htons(N_DHCP4_NETWORK_SERVER_PORT),
         };
-        struct sockaddr_ll haddr_dst = {
+        struct sockaddr_ll2 haddr_dst = {
                 .sll_family = AF_PACKET,
                 .sll_protocol = htons(ETH_P_IP),
                 .sll_ifindex = ifindex,
@@ -118,7 +118,7 @@ static void test_server_packet_send(int sk, void *buf, size_t n_buf, int ifindex
                 .sin_addr = *dst,
                 .sin_port =  htons(N_DHCP4_NETWORK_CLIENT_PORT),
         };
-        struct sockaddr_ll haddr_dst = {
+        struct sockaddr_ll2 haddr_dst = {
                 .sll_family = AF_PACKET,
                 .sll_protocol = htons(ETH_P_IP),
                 .sll_ifindex = ifindex,

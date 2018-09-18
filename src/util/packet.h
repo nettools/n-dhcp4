@@ -6,6 +6,22 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+/*
+ * `struct sockaddr_ll` is too small to fit the Infiniband
+ * hardware address, introduce `struct sockaddr_ll2` which
+ * is the same as the original, except the `sl_addr` field
+ * is extended to fit all the supported hardware addresses.
+ */
+struct sockaddr_ll2 {
+        unsigned short  sll_family;
+        __be16          sll_protocol;
+        int             sll_ifindex;
+        unsigned short  sll_hatype;
+        unsigned char   sll_pkttype;
+        unsigned char   sll_halen;
+        unsigned char   sll_addr[20];
+};
+
 uint16_t packet_internet_checksum(uint8_t *data, size_t len);
 uint16_t packet_internet_checksum_udp(const struct in_addr *src_addr, const struct in_addr *dst_addr,
                                       uint16_t src_port, uint16_t dst_port,
@@ -13,7 +29,7 @@ uint16_t packet_internet_checksum_udp(const struct in_addr *src_addr, const stru
 
 ssize_t packet_sendto_udp(int sockfd, void *buf, size_t len, int flags,
                           const struct sockaddr_in *src_paddr,
-                          const struct sockaddr_ll *dest_haddr,
+                          const struct sockaddr_ll2 *dest_haddr,
                           const struct sockaddr_in *dest_paddr);
 ssize_t packet_recvfrom_udp(int sockfd, void *buf, size_t len, int flags,
                             struct sockaddr_in *src);

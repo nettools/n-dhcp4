@@ -138,7 +138,7 @@ uint16_t packet_internet_checksum_udp(const struct in_addr *src_addr, const stru
  */
 ssize_t packet_sendto_udp(int sockfd, void *buf, size_t len, int flags,
                           const struct sockaddr_in *src_paddr,
-                          const struct sockaddr_ll *dest_haddr,
+                          const struct sockaddr_ll2 *dest_haddr,
                           const struct sockaddr_in *dest_paddr) {
         struct udphdr udp_hdr = {
                 .source = src_paddr->sin_port,

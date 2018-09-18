@@ -86,7 +86,7 @@ static void test_packet_unicast(int ifindex, int sk, void *buf, size_t n_buf,
                                 const struct sockaddr_in *paddr_src,
                                 const struct sockaddr_in *paddr_dst,
                                 const struct ether_addr *haddr_dst) {
-        struct sockaddr_ll addr = {
+        struct sockaddr_ll2 addr = {
                 .sll_family = AF_PACKET,
                 .sll_protocol = htons(ETH_P_IP),
                 .sll_ifindex = ifindex,
@@ -103,7 +103,7 @@ static void test_packet_unicast(int ifindex, int sk, void *buf, size_t n_buf,
 static void test_packet_broadcast(int ifindex, int sk, void *buf, size_t n_buf,
                                   const struct sockaddr_in *paddr_src,
                                   const struct sockaddr_in *paddr_dst) {
-        struct sockaddr_ll addr = {
+        struct sockaddr_ll2 addr = {
                 .sll_family = AF_PACKET,
                 .sll_protocol = htons(ETH_P_IP),
                 .sll_ifindex = ifindex,
