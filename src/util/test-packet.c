@@ -133,10 +133,10 @@ static void test_packet_packet(int ns_src, int ifindex_src,
         test_packet_broadcast(ifindex_src, sk_src, buf, sizeof(buf) - 1, paddr_src, paddr_dst);
 
         len = packet_recvfrom_udp(sk_dst, buf, sizeof(buf), 0, NULL);
-        assert(len == sizeof(buf) - 1);
+        assert(len == (ssize_t)sizeof(buf) - 1);
 
         len = packet_recvfrom_udp(sk_dst, buf, sizeof(buf), 0, NULL);
-        assert(len == sizeof(buf) - 1);
+        assert(len == (ssize_t)sizeof(buf) - 1);
 
         close(sk_dst);
         close(sk_src);
@@ -163,10 +163,10 @@ static void test_packet_udp(int ns_src, int ifindex_src,
         test_packet_broadcast(ifindex_src, sk_src, buf, sizeof(buf) - 1, paddr_src, paddr_dst);
 
         len = recv(sk_dst, buf, sizeof(buf), 0);
-        assert(len == sizeof(buf) - 1);
+        assert(len == (ssize_t)sizeof(buf) - 1);
 
         len = recv(sk_dst, buf, sizeof(buf), 0);
-        assert(len == sizeof(buf) - 1);
+        assert(len == (ssize_t)sizeof(buf) - 1);
 
         test_del_ip(ns_dst, ifindex_dst, &paddr_dst->sin_addr, 8);
         close(sk_dst);
@@ -188,10 +188,10 @@ static void test_udp_packet(int ns_src, int ifindex_src,
 
         len = sendto(sk_src, buf, sizeof(buf) - 1, 0,
                      (struct sockaddr*)paddr_dst, sizeof(*paddr_dst));
-        assert(len == sizeof(buf) - 1);
+        assert(len == (ssize_t)sizeof(buf) - 1);
 
         len = packet_recvfrom_udp(sk_dst, buf, sizeof(buf), 0, NULL);
-        assert(len == sizeof(buf) - 1);
+        assert(len == (ssize_t)sizeof(buf) - 1);
 
         test_del_ip(ns_dst, ifindex_dst, &paddr_dst->sin_addr, 8);
         test_del_ip(ns_src, ifindex_src, &paddr_src->sin_addr, 8);
@@ -218,10 +218,10 @@ static void test_udp_udp(int ns_src, int ifindex_src,
 
         len = sendto(sk_src, buf, sizeof(buf) - 1, 0,
                      (struct sockaddr*)paddr_dst, sizeof(*paddr_dst));
-        assert(len == sizeof(buf) - 1);
+        assert(len == (ssize_t)sizeof(buf) - 1);
 
         len = recv(sk_dst, buf, sizeof(buf), 0);
-        assert(len == sizeof(buf) - 1);
+        assert(len == (ssize_t)sizeof(buf) - 1);
 
         test_del_ip(ns_dst, ifindex_dst, &paddr_dst->sin_addr, 8);
         test_del_ip(ns_src, ifindex_src, &paddr_src->sin_addr, 8);
@@ -245,7 +245,7 @@ static void test_shutdown(int ns_src, int ifindex_src,
         /* 1 - send only to the packet socket */
         len = sendto(sk_src, buf, sizeof(buf), 0,
                      (struct sockaddr*)paddr_dst, sizeof(*paddr_dst));
-        assert(len == sizeof(buf));
+        assert(len == (ssize_t)sizeof(buf));
 
         /* create a UDP socket */
         test_socket_new(ns_dst, &sk_dst2, AF_INET, ifindex_dst);
@@ -256,7 +256,7 @@ static void test_shutdown(int ns_src, int ifindex_src,
         /* 2 - send to both sockets */
         len = sendto(sk_src, buf, sizeof(buf), 0,
                      (struct sockaddr*)paddr_dst, sizeof(*paddr_dst));
-        assert(len == sizeof(buf));
+        assert(len == (ssize_t)sizeof(buf));
 
         /* shut down the packet socket */
         r = packet_shutdown(sk_dst1);
@@ -265,13 +265,13 @@ static void test_shutdown(int ns_src, int ifindex_src,
         /* 3 - send only to the UDP socket */
         len = sendto(sk_src, buf, sizeof(buf), 0,
                      (struct sockaddr*)paddr_dst, sizeof(*paddr_dst));
-        assert(len == sizeof(buf));
+        assert(len == (ssize_t)sizeof(buf));
 
         /* receive 1 and 2 on the packet socket */
         len = packet_recvfrom_udp(sk_dst1, buf, sizeof(buf), 0, NULL);
-        assert(len == sizeof(buf));
+        assert(len == (ssize_t)sizeof(buf));
         len = packet_recvfrom_udp(sk_dst1, buf, sizeof(buf), 0, NULL);
-        assert(len == sizeof(buf));
+        assert(len == (ssize_t)sizeof(buf));
 
         /* make sure there is nothing more pending on the packet socket */
         len = packet_recvfrom_udp(sk_dst1, buf, sizeof(buf), MSG_DONTWAIT, NULL);
@@ -280,9 +280,9 @@ static void test_shutdown(int ns_src, int ifindex_src,
 
         /* receive 2 and 3 on the UDP socket */
         len = recv(sk_dst2, buf, sizeof(buf), 0);
-        assert(len == sizeof(buf));
+        assert(len == (ssize_t)sizeof(buf));
         len = recv(sk_dst2, buf, sizeof(buf), 0);
-        assert(len == sizeof(buf));
+        assert(len == (ssize_t)sizeof(buf));
 
         /* make sure there is nothing more pending on the UDP socket */
         len = recv(sk_dst2, buf, sizeof(buf), MSG_DONTWAIT);
