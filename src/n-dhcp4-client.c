@@ -36,15 +36,10 @@ _public_ int n_dhcp4_client_new(NDhcp4Client **clientp) {
 
         assert(clientp);
 
-        client = calloc(1, sizeof(*client));
+        client = malloc(sizeof(*client));
         if (!client)
                 return -ENOMEM;
-
-        client->state = N_DHCP4_STATE_INIT;
-        client->efd = -1;
-        client->tfd = -1;
-        client->pfd = -1;
-        client->ufd = -1;
+        *client = (NDhcp4Client)N_DHCP4_CLIENT_NULL(*client);
 
         client->efd = epoll_create1(EPOLL_CLOEXEC);
         if (client->efd < 0)
@@ -54,7 +49,7 @@ _public_ int n_dhcp4_client_new(NDhcp4Client **clientp) {
         if (client->tfd < 0)
                 return -errno;
 
-        ev.data.fd = client->tfd;
+        ev.data.u32 = N_DHCP4_CLIENT_EPOLL_TIMER;
         r = epoll_ctl(client->efd, EPOLL_CTL_ADD, client->tfd, &ev);
         if (r < 0)
                 return -errno;
@@ -68,20 +63,16 @@ _public_ NDhcp4Client *n_dhcp4_client_free(NDhcp4Client *client) {
         if (!client)
                 return NULL;
 
-        if (client->ufd >= 0) {
-                epoll_ctl(client->efd, EPOLL_CTL_DEL, client->ufd, NULL);
-                close(client->ufd);
-        }
-        if (client->pfd >= 0) {
-                epoll_ctl(client->efd, EPOLL_CTL_DEL, client->pfd, NULL);
-                close(client->pfd);
-        }
+        n_dhcp4_c_connection_deinit(&client->connection);
+
         if (client->tfd >= 0) {
                 epoll_ctl(client->efd, EPOLL_CTL_DEL, client->tfd, NULL);
                 close(client->tfd);
         }
+
         if (client->efd >= 0)
                 close(client->efd);
+
         free(client);
 
         return NULL;
@@ -277,56 +268,19 @@ static int n_dhcp4_client_dispatch_msg(NDhcp4Client *client, NDhcp4Incoming *inc
         }
 }
 
-static int n_dhcp4_client_dispatch_pfd(NDhcp4Client *client, unsigned int events) {
+static int n_dhcp4_client_dispatch_connection(NDhcp4Client *client, unsigned int events) {
         int r;
 
         if (events & EPOLLIN) {
                 _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *incoming = NULL;
-                uint8_t buf[1 << 16];
-                ssize_t len;
 
-                len = packet_recv_udp(client->pfd, buf, sizeof(buf), 0);
-                if (len == 0)
+                r = n_dhcp4_c_connection_dispatch(&client->connection, &incoming);
+                if (r == -EAGAIN)
                         return 0;
-                else if (len < 0) {
-                        if (errno == EAGAIN)
-                                return 0;
-                        return -errno;
-                }
-
-                r = n_dhcp4_incoming_new(&incoming, buf, len);
-                if (r < 0)
+                else if (r < 0)
                         return r;
-
-                return n_dhcp4_client_dispatch_msg(client, incoming);
-        }
-
-        if (events & (EPOLLHUP | EPOLLERR))
-                return -EIO;
-
-        return 0;
-}
-
-static int n_dhcp4_client_dispatch_ufd(NDhcp4Client *client, unsigned int events) {
-        int r;
-
-        if (events & EPOLLIN) {
-                _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *incoming = NULL;
-                uint8_t buf[1 << 16];
-                ssize_t len;
-
-                len = recv(client->ufd, buf, sizeof(buf), 0);
-                if (len == 0)
+                else if (!incoming)
                         return 0;
-                else if (len < 0) {
-                        if (errno == EAGAIN)
-                                return 0;
-                        return -errno;
-                }
-
-                r = n_dhcp4_incoming_new(&incoming, buf, len);
-                if (r < 0)
-                        return r;
 
                 return n_dhcp4_client_dispatch_msg(client, incoming);
         }
@@ -347,15 +301,18 @@ _public_ int n_dhcp4_client_dispatch(NDhcp4Client *client) {
                 goto exit;
         }
 
+
         if (r > 0) {
-                if (ev.data.fd == client->tfd)
+                switch (ev.data.u32) {
+                case N_DHCP4_CLIENT_EPOLL_TIMER:
                         r = n_dhcp4_client_dispatch_tfd(client, ev.events);
-                else if (ev.data.fd == client->pfd)
-                        r = n_dhcp4_client_dispatch_pfd(client, ev.events);
-                else if (ev.data.fd == client->ufd)
-                        r = n_dhcp4_client_dispatch_ufd(client, ev.events);
-                else
+                        break;
+                case N_DHCP4_CLIENT_EPOLL_CONNECTION:
+                        r = n_dhcp4_client_dispatch_connection(client, ev.events);
+                        break;
+                default:
                         r = 0;
+                }
         }
 
 exit:

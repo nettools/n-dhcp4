@@ -11,6 +11,7 @@ libndhcp4_deps = [
 libndhcp4_private = static_library(
         'ndhcp4-private',
         [
+                'n-dhcp4-c-connection.c',
                 'n-dhcp4-client.c',
                 'n-dhcp4-message.c',
                 'n-dhcp4-network.c',

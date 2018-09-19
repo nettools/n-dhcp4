@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include "n-dhcp4.h"
 
+typedef struct NDhcp4CConnection NDhcp4CConnection;
 typedef struct NDhcp4Header NDhcp4Header;
 typedef struct NDhcp4Incoming NDhcp4Incoming;
 typedef struct NDhcp4Message NDhcp4Message;
@@ -28,6 +29,7 @@ typedef struct NDhcp4Outgoing NDhcp4Outgoing;
  */
 
 #define N_DHCP4_NETWORK_IP_DEFAULT_MAX_SIZE (576) /* See RFC791 */
+#define N_DHCP4_NETWORK_UDP_MAX_SIZE (1U << 15) /* See RFC768 */
 #define N_DHCP4_NETWORK_SERVER_PORT (67)
 #define N_DHCP4_NETWORK_CLIENT_PORT (68)
 
@@ -162,31 +164,83 @@ size_t n_dhcp4_incoming_get_raw(NDhcp4Incoming *incoming, const void **rawp);
 int n_dhcp4_incoming_query(NDhcp4Incoming *incoming, uint8_t option, const void **datap, size_t *n_datap);
 
 /*
- * DHCP4 Client
+ * DHCP4 Client Connection
  */
-
-struct NDhcp4Client {
-        unsigned int state;             /* current client state */
-        int efd;                        /* epoll fd */
-        int tfd;                        /* timer fd */
+struct NDhcp4CConnection {
+        unsigned int state;             /* current connection state */
+        int *efdp;                      /* epoll fd */
+        int ifindex;                    /* interface index */
         int pfd;                        /* packet socket */
         int ufd;                        /* udp socket */
-        uint64_t u_t1;                  /* next T1 timeout, or 0 */
-        uint64_t u_t2;                  /* next T2 timeout, or 0 */
-        uint64_t u_lifetime;            /* next lifetime timeout, or 0 */
 
         uint8_t htype;                  /* APR hardware type */
         uint8_t hlen;                   /* hardware address length */
         uint8_t chaddr[MAX_ADDR_LEN];   /* client hardware address */
         uint8_t bhaddr[MAX_ADDR_LEN];   /* broadcast hardware address */
-        bool broadcast : 1;             /* request broadcast from server */
+        bool request_broadcast : 1;     /* request broadcast from server */
+        bool send_chaddr : 1;           /* send chaddr to server */
+
+        uint32_t ciaddr;                /* client IP address, or 0 */
+        uint16_t mtu;                   /* client mtu, or 0 */
+
+        size_t idlen;                   /* client identifier length */
+        uint8_t id[];                   /* client identifier */
+};
+
+#define N_DHCP4_C_CONNECTION_NULL(_efdp) {              \
+                .efdp = (_efdp),                        \
+                .pfd = -1,                              \
+                .ufd = -1,                              \
+        }
+
+int n_dhcp4_c_connection_init(NDhcp4CConnection *connection, int ifindex, uint8_t htype,
+                              uint8_t hlen, const uint8_t *chaddr, const uint8_t *bhaddr,
+                              size_t idlen, const uint8_t *id,
+                              bool request_broadcast);
+void n_dhcp4_c_connection_deinit(NDhcp4CConnection *connection);
+
+int n_dhcp4_c_connection_listen(NDhcp4CConnection *connection);
+int n_dhcp4_c_connection_dispatch(NDhcp4CConnection *connection, NDhcp4Incoming **messagep);
+
+int n_dhcp4_c_connection_discover(NDhcp4CConnection *connection, uint32_t xid, uint32_t secs);
+int n_dhcp4_c_connection_select(NDhcp4CConnection *connection, const struct in_addr *client, const struct in_addr *server, uint32_t xid, uint32_t secs);
+int n_dhcp4_c_connection_reboot(NDhcp4CConnection *connection, const struct in_addr *client, uint32_t xid, uint32_t secs);
+int n_dhcp4_c_connection_renew(NDhcp4CConnection *connection, uint32_t xid, uint32_t secs);
+int n_dhcp4_c_connection_rebind(NDhcp4CConnection *connection, uint32_t xid, uint32_t secs);
+int n_dhcp4_c_connection_decline(NDhcp4CConnection *connection, const char *error, const struct in_addr *client, const struct in_addr *server);
+int n_dhcp4_c_connection_inform(NDhcp4CConnection *connection, uint32_t xid, uint32_t secs);
+int n_dhcp4_c_connection_release(NDhcp4CConnection *connection, const char *error, const struct in_addr *server);
+
+/*
+ * DHCP4 Client
+ */
+
+enum {
+        N_DHCP4_CLIENT_EPOLL_TIMER,
+        N_DHCP4_CLIENT_EPOLL_CONNECTION,
+};
+
+struct NDhcp4Client {
+        unsigned int state;             /* current client state */
+        int efd;                        /* epoll fd */
+        int tfd;                        /* timer fd */
+        uint64_t u_t1;                  /* next T1 timeout, or 0 */
+        uint64_t u_t2;                  /* next T2 timeout, or 0 */
+        uint64_t u_lifetime;            /* next lifetime timeout, or 0 */
 
         uint32_t xid;                   /* transaction id, or 0 */
         uint64_t u_starttime;           /* transaction start time, or 0 */
         uint32_t secs;                  /* seconds since start of transaction, or 0 */
 
-        uint32_t ciaddr;                /* client IP address, or 0 */
+        NDhcp4CConnection connection;   /* client connection wrapper */
+        /* @connection must be last, as it contains a VLA */
 };
+
+#define N_DHCP4_CLIENT_NULL(_x) {                                       \
+                .efd = -1,                                              \
+                .tfd = -1,                                              \
+                .connection = N_DHCP4_C_CONNECTION_NULL(&(_x).efd),     \
+        }
 
 /*
  * Convenience Wrappers
