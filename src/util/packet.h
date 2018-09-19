@@ -2,6 +2,7 @@
 
 #include <inttypes.h>
 #include <linux/if_packet.h>
+#include <linux/netdevice.h>
 #include <netinet/in.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -19,7 +20,7 @@ struct sockaddr_ll2 {
         unsigned short  sll_hatype;
         unsigned char   sll_pkttype;
         unsigned char   sll_halen;
-        unsigned char   sll_addr[20];
+        unsigned char   sll_addr[MAX_ADDR_LEN];
 };
 
 uint16_t packet_internet_checksum(uint8_t *data, size_t len);
