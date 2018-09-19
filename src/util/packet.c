@@ -33,20 +33,22 @@
  *
  * Return: the checksum.
  */
-uint16_t packet_internet_checksum(uint8_t *data, size_t size) {
-        uint32_t *data32 = (uint32_t*)data;
-        uint32_t *end32 = data32 + (size / sizeof(uint32_t));
+uint16_t packet_internet_checksum(const uint8_t *data, size_t size) {
         uint64_t acc = 0;
+        uint32_t local;
 
-        while (data32 < end32)
-                acc += *(data32++);
+        while (size >= sizeof(local)) {
+                memcpy(&local, data, sizeof(local));
+                acc += local;
 
-        if (size % sizeof(uint32_t)) {
-                uint32_t data_tail = 0;
+                data += sizeof(local);
+                size -= sizeof(local);
+        }
 
-                memcpy(&data_tail, data32, size % sizeof(uint32_t));
-
-                acc += data_tail;
+        if (size) {
+                local = 0;
+                memcpy(&local, data, size);
+                acc += local;
         }
 
         while (acc >> 16)
@@ -74,7 +76,7 @@ uint16_t packet_internet_checksum(uint8_t *data, size_t size) {
  */
 uint16_t packet_internet_checksum_udp(const struct in_addr *src_addr, const struct in_addr *dst_addr,
                                       uint16_t src_port, uint16_t dst_port,
-                                      uint8_t *data, size_t size, uint16_t checksum) {
+                                      const uint8_t *data, size_t size, uint16_t checksum) {
         struct {
                 struct in_addr src;
                 struct in_addr dst;
@@ -94,22 +96,32 @@ uint16_t packet_internet_checksum_udp(const struct in_addr *src_addr, const stru
                         .check = checksum,
                 },
         };
-        uint32_t *data32 = (uint32_t*)data;
-        uint32_t *end32 = data32 + (size / sizeof(uint32_t));
+        const uint8_t *iter;
         uint64_t acc = 0;
+        uint32_t local;
 
-        for (size_t i = 0; i < sizeof(udp_phdr) / sizeof(uint32_t); ++i)
-                acc += ((uint32_t*)&udp_phdr)[i];
+        _Static_assert(!(sizeof(udp_phdr) % sizeof(local)),
+                       "UDP header structure size is not a multiple of 4");
 
-        while (data32 < end32)
-                acc += *(data32++);
+        for (iter = (const uint8_t *)&udp_phdr;
+             iter < (const uint8_t *)(&udp_phdr + 1);
+             iter += sizeof(local)) {
+                memcpy(&local, iter, sizeof(local));
+                acc += local;
+        }
 
-        if (size % sizeof(uint32_t)) {
-                uint32_t data_tail = 0;
+        while (size >= sizeof(local)) {
+                memcpy(&local, data, sizeof(local));
+                acc += local;
 
-                memcpy(&data_tail, data32, size % sizeof(uint32_t));
+                data += sizeof(local);
+                size -= sizeof(local);
+        }
 
-                acc += data_tail;
+        if (size) {
+                local = 0;
+                memcpy(&local, data, size);
+                acc += local;
         }
 
         while (acc >> 16)
