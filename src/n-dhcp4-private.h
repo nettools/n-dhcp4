@@ -2,6 +2,8 @@
 
 #include <arpa/inet.h>
 #include <inttypes.h>
+#include <linux/netdevice.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include "n-dhcp4.h"
@@ -56,6 +58,8 @@ enum {
         N_DHCP4_OP_BOOTREQUEST                          = 1,
         N_DHCP4_OP_BOOTREPLY                            = 2,
 };
+
+#define N_DHCP4_MESSAGE_FLAG_BROADCAST (htons(0x8000))
 
 enum {
         N_DHCP4_OPTION_PAD                              = 0,
@@ -169,6 +173,18 @@ struct NDhcp4Client {
         uint64_t u_t1;                  /* next T1 timeout, or 0 */
         uint64_t u_t2;                  /* next T2 timeout, or 0 */
         uint64_t u_lifetime;            /* next lifetime timeout, or 0 */
+
+        uint8_t htype;                  /* APR hardware type */
+        uint8_t hlen;                   /* hardware address length */
+        uint8_t chaddr[MAX_ADDR_LEN];   /* client hardware address */
+        uint8_t bhaddr[MAX_ADDR_LEN];   /* broadcast hardware address */
+        bool broadcast : 1;             /* request broadcast from server */
+
+        uint32_t xid;                   /* transaction id, or 0 */
+        uint64_t u_starttime;           /* transaction start time, or 0 */
+        uint32_t secs;                  /* seconds since start of transaction, or 0 */
+
+        uint32_t ciaddr;                /* client IP address, or 0 */
 };
 
 /*
