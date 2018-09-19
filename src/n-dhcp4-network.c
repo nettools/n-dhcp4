@@ -4,12 +4,9 @@
 
 #include <errno.h>
 #include <linux/filter.h>
-#include <net/if.h> /* must be included before linux/if_arp.h */
-#include <linux/if_arp.h>
-#include <linux/if_ether.h>
-#include <linux/if_infiniband.h>
 #include <linux/if_packet.h>
 #include <linux/udp.h>
+#include <net/if.h>
 #include <netinet/ip.h>
 #include <stddef.h>
 #include <stdlib.h>
@@ -339,33 +336,9 @@ static int n_dhcp4_network_packet_send(int sockfd, int ifindex,
         return 0;
 }
 
-static int n_dhcp4_network_packet_broadcast(int sockfd, int ifindex, unsigned short hatype,
-                                            const struct sockaddr_in *src_paddr,
-                                            const struct sockaddr_in *dest_paddr,
-                                            void *buf, size_t n_buf) {
-
-        switch (hatype) {
-        case ARPHRD_ETHER:
-                return n_dhcp4_network_packet_send(sockfd, ifindex,
-                                                   src_paddr,
-                                                   (unsigned char[]){0xff, 0xff, 0xff, 0xff, 0xff, 0xff}, ETH_ALEN,
-                                                   dest_paddr,
-                                                   buf, n_buf);
-        case ARPHRD_INFINIBAND:
-                return n_dhcp4_network_packet_send(sockfd, ifindex,
-                                                   src_paddr,
-                                                   (unsigned char[]){0x00, 0xff, 0xff, 0xff,
-                                                                     0xff, 0x12, 0x40, 0x1b, 0x00, 0x00, 0x00, 0x00,
-                                                                     0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff}, INFINIBAND_ALEN,
-                                                   dest_paddr,
-                                                   buf, n_buf);
-        default:
-                return -EPROTONOSUPPORT;
-        }
-
-}
-
-int n_dhcp4_network_client_packet_broadcast(int sockfd, int ifindex, unsigned short hatype, void *buf, size_t n_buf) {
+int n_dhcp4_network_client_packet_send(int sockfd, int ifindex,
+                                       const unsigned char *dest_haddr, unsigned char halen,
+                                       void *buf, size_t n_buf) {
         struct sockaddr_in src_paddr = {
                 .sin_family = AF_INET,
                 .sin_port = htons(N_DHCP4_NETWORK_CLIENT_PORT),
@@ -374,10 +347,10 @@ int n_dhcp4_network_client_packet_broadcast(int sockfd, int ifindex, unsigned sh
         struct sockaddr_in dest_paddr = {
                 .sin_family = AF_INET,
                 .sin_port = htons(N_DHCP4_NETWORK_SERVER_PORT),
-                .sin_addr = { INADDR_ANY },
+                .sin_addr = { INADDR_ANY }
         };
 
-        return n_dhcp4_network_packet_broadcast(sockfd, ifindex, hatype, &src_paddr, &dest_paddr, buf, n_buf);
+        return n_dhcp4_network_packet_send(sockfd, ifindex, &src_paddr, dest_haddr, halen, &dest_paddr, buf, n_buf);
 }
 
 int n_dhcp4_network_client_udp_send(int sockfd, const struct in_addr *inaddr_dest, void *buf, size_t n_buf) {
@@ -414,24 +387,6 @@ int n_dhcp4_network_server_packet_send(int sockfd, int ifindex,
         };
 
         return n_dhcp4_network_packet_send(sockfd, ifindex, &src_paddr, dest_haddr, halen, &dest_paddr, buf, n_buf);
-}
-
-int n_dhcp4_network_server_packet_broadcast(int sockfd, int ifindex, unsigned short hatype,
-                                            const struct in_addr *src_inaddr,
-                                            const struct in_addr *dest_inaddr,
-                                            void *buf, size_t n_buf) {
-        struct sockaddr_in src_paddr = {
-                .sin_family = AF_INET,
-                .sin_port = htons(N_DHCP4_NETWORK_SERVER_PORT),
-                .sin_addr = *src_inaddr,
-        };
-        struct sockaddr_in dest_paddr = {
-                .sin_family = AF_INET,
-                .sin_port = htons(N_DHCP4_NETWORK_CLIENT_PORT),
-                .sin_addr = *dest_inaddr,
-        };
-
-        return n_dhcp4_network_packet_broadcast(sockfd, ifindex, hatype, &src_paddr, &dest_paddr, buf, n_buf);
 }
 
 int n_dhcp4_network_server_udp_send(int sockfd, const struct in_addr *inaddr_dest, void *buf, size_t n_buf) {

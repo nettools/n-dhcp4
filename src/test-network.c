@@ -7,7 +7,6 @@
 #include <endian.h>
 #include <errno.h>
 #include <poll.h>
-#include <linux/if_arp.h>
 #include <linux/if_packet.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -82,7 +81,7 @@ static void test_client_server_packet(int ns_server, int ns_client, int ifindex_
 
         message_out.header.op = N_DHCP4_OP_BOOTREQUEST;
 
-        r = n_dhcp4_network_client_packet_broadcast(sk_client, ifindex_client, ARPHRD_ETHER, &message_out, sizeof(message_out));
+        r = n_dhcp4_network_client_packet_send(sk_client, ifindex_client, (const unsigned char[]){0xff, 0xff, 0xff, 0xff, 0xff, 0xff}, ETH_ALEN, &message_out, sizeof(message_out));
         assert(r >= 0);
 
         test_poll(sk_server);
@@ -146,7 +145,10 @@ static void test_server_client_packet(int ns_server, int ns_client, int ifindex_
                                                &addr_client,
                                                &message_out, sizeof(message_out));
         assert(r >= 0);
-        r = n_dhcp4_network_server_packet_broadcast(sk_server, ifindex_server, ARPHRD_ETHER, &addr_server, &addr_client, &message_out, sizeof(message_out));
+        r = n_dhcp4_network_server_packet_send(sk_server, ifindex_server, &addr_server,
+                                                    (const unsigned char[]){0xff, 0xff, 0xff, 0xff, 0xff, 0xff}, ETH_ALEN,
+                                                    &addr_client,
+                                                    &message_out, sizeof(message_out));
         assert(r >= 0);
 
         test_poll(sk_client);
