@@ -32,21 +32,22 @@ typedef struct NDhcp4Outgoing NDhcp4Outgoing;
 #define N_DHCP4_NETWORK_CLIENT_PORT (68)
 
 int n_dhcp4_network_client_packet_socket_new(int *sockfdp, int ifindex);
-int n_dhcp4_network_client_udp_socket_new(int *sockfdp, int ifindex, const struct in_addr *addr);
+int n_dhcp4_network_client_udp_socket_new(int *sockfdp, int ifindex, const struct in_addr *client_addr, const struct in_addr *server_addr);
 
 int n_dhcp4_network_server_packet_socket_new(int *sockfdp);
 int n_dhcp4_network_server_udp_socket_new(int *sockfdp, int ifindex);
 
 int n_dhcp4_network_client_packet_send(int sockfd, int ifindex,
                                        const unsigned char *dest_haddr, unsigned char halen,
-                                       void *buf, size_t n_buf);
-int n_dhcp4_network_client_udp_send(int sockfd, const struct in_addr *inaddr_dest, void *buf, size_t n_buf);
+                                       const void *buf, size_t n_buf);
+int n_dhcp4_network_client_udp_send(int sockfd, const void *buf, size_t n_buf);
+int n_dhcp4_network_client_udp_broadcast(int sockfd, const void *buf, size_t n_buf);
 int n_dhcp4_network_server_packet_send(int sockfd, int ifindex,
                                        const struct in_addr *src_inaddr,
                                        const unsigned char *dest_haddr, unsigned char halen,
                                        const struct in_addr *dest_inaddr,
-                                       void *buf, size_t n_buf);
-int n_dhcp4_network_server_udp_send(int sockfd, const struct in_addr *inaddr_dest, void *buf, size_t n_buf);
+                                       const void *buf, size_t n_buf);
+int n_dhcp4_network_server_udp_send(int sockfd, const struct in_addr *inaddr_dest, const void *buf, size_t n_buf);
 
 /*
  * DHCP4 Messages

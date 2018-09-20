@@ -28,7 +28,7 @@ uint16_t packet_internet_checksum_udp(const struct in_addr *src_addr, const stru
                                       uint16_t src_port, uint16_t dst_port,
                                       const uint8_t *data, size_t size, uint16_t checksum);
 
-ssize_t packet_sendto_udp(int sockfd, void *buf, size_t len, int flags,
+ssize_t packet_sendto_udp(int sockfd, const void *buf, size_t len, int flags,
                           const struct sockaddr_in *src_paddr,
                           const struct sockaddr_ll2 *dest_haddr,
                           const struct sockaddr_in *dest_paddr);

@@ -34,13 +34,13 @@ static void test_client_packet_socket_new(int netns, int *skp, int ifindex) {
         test_netns_set(oldns);
 }
 
-static void test_client_udp_socket_new(int netns, int *skp, int ifindex, const struct in_addr *addr) {
+static void test_client_udp_socket_new(int netns, int *skp, int ifindex, const struct in_addr *addr_client, const struct in_addr *addr_server) {
         int r, oldns;
 
         test_netns_get(&oldns);
         test_netns_set(netns);
 
-        r = n_dhcp4_network_client_udp_socket_new(skp, ifindex, addr);
+        r = n_dhcp4_network_client_udp_socket_new(skp, ifindex, addr_client, addr_server);
         assert(r >= 0);
 
         test_netns_set(oldns);
@@ -104,12 +104,12 @@ static void test_client_server_udp(int ns_server, int ns_client, int ifindex_ser
         test_add_ip(ns_client, ifindex_client, &addr_client, 8);
         test_add_ip(ns_server, ifindex_server, &addr_server, 8);
 
-        test_client_udp_socket_new(ns_client, &sk_client, ifindex_client, &addr_client);
+        test_client_udp_socket_new(ns_client, &sk_client, ifindex_client, &addr_client, &addr_server);
         test_server_udp_socket_new(ns_server, &sk_server, ifindex_server);
 
         message_out.header.op = N_DHCP4_OP_BOOTREQUEST;
 
-        r = n_dhcp4_network_client_udp_send(sk_client, &addr_server, &message_out, sizeof(message_out));
+        r = n_dhcp4_network_client_udp_send(sk_client, &message_out, sizeof(message_out));
         assert(r >= 0);
 
         test_poll(sk_server);
@@ -180,7 +180,7 @@ static void test_server_client_udp(int ns_server, int ns_client, int ifindex_ser
         test_add_ip(ns_client, ifindex_client, &addr_client, 8);
         test_add_ip(ns_server, ifindex_server, &addr_server, 8);
 
-        test_client_udp_socket_new(ns_client, &sk_client, ifindex_client, &addr_client);
+        test_client_udp_socket_new(ns_client, &sk_client, ifindex_client, &addr_client, &addr_server);
         test_server_udp_socket_new(ns_server, &sk_server, ifindex_server);
 
         message_out.header.op = N_DHCP4_OP_BOOTREPLY;
