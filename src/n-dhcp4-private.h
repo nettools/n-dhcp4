@@ -181,6 +181,7 @@ struct NDhcp4CConnection {
         bool send_chaddr : 1;           /* send chaddr to server */
 
         uint32_t ciaddr;                /* client IP address, or 0 */
+        uint32_t siaddr;                /* server IP address, or 0 */
         uint16_t mtu;                   /* client mtu, or 0 */
 
         size_t idlen;                   /* client identifier length */
@@ -211,7 +212,7 @@ int n_dhcp4_c_connection_renew(NDhcp4CConnection *connection, uint32_t xid, uint
 int n_dhcp4_c_connection_rebind(NDhcp4CConnection *connection, uint32_t xid, uint32_t secs);
 int n_dhcp4_c_connection_decline(NDhcp4CConnection *connection, const char *error, const struct in_addr *client, const struct in_addr *server);
 int n_dhcp4_c_connection_inform(NDhcp4CConnection *connection, uint32_t xid, uint32_t secs);
-int n_dhcp4_c_connection_release(NDhcp4CConnection *connection, const char *error, const struct in_addr *server);
+int n_dhcp4_c_connection_release(NDhcp4CConnection *connection, const char *error);
 
 /*
  * DHCP4 Client

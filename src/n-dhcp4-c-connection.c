@@ -106,6 +106,7 @@ int n_dhcp4_c_connection_connect(NDhcp4CConnection *connection, const struct in_
                 return r;
 
         connection->ciaddr = client->s_addr;
+        connection->siaddr = server->s_addr;
         connection->state = N_DHCP4_CONNECTION_STATE_DRAINING;
 
         return 0;
@@ -676,7 +677,7 @@ int n_dhcp4_c_connection_inform(NDhcp4CConnection *connection, uint32_t xid, uin
  *      DHCPRELEASE message to the server.  Note that the correct operation
  *      of DHCP does not depend on the transmission of DHCPRELEASE messages.
  */
-int n_dhcp4_c_connection_release(NDhcp4CConnection *connection, const char *error, const struct in_addr *server) {
+int n_dhcp4_c_connection_release(NDhcp4CConnection *connection, const char *error) {
         _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *message = NULL;
         int r;
 
@@ -684,7 +685,7 @@ int n_dhcp4_c_connection_release(NDhcp4CConnection *connection, const char *erro
         if (r < 0)
                 return r;
 
-        r = n_dhcp4_outgoing_append(message, N_DHCP4_OPTION_SERVER_IDENTIFIER, server, sizeof(*server));
+        r = n_dhcp4_outgoing_append(message, N_DHCP4_OPTION_SERVER_IDENTIFIER, &connection->siaddr, sizeof(connection->siaddr));
         if (r < 0)
                 return r;
 
