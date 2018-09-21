@@ -101,11 +101,11 @@ static void test_client_server_udp(int ns_server, int ns_client, int ifindex_ser
         int r, sk_server, sk_client;
         ssize_t len;
 
-        test_add_ip(ns_client, ifindex_client, &addr_client, 8);
-        test_add_ip(ns_server, ifindex_server, &addr_server, 8);
 
+        test_add_ip(ns_client, ifindex_client, &addr_client, 8);
         test_client_udp_socket_new(ns_client, &sk_client, ifindex_client, &addr_client, &addr_server);
         test_server_udp_socket_new(ns_server, &sk_server, ifindex_server);
+        test_add_ip(ns_server, ifindex_server, &addr_server, 8);
 
         message_out.header.op = N_DHCP4_OP_BOOTREQUEST;
 
@@ -133,10 +133,9 @@ static void test_server_client_packet(int ns_server, int ns_client, int ifindex_
         ssize_t len;
         int r;
 
-        test_add_ip(ns_server, ifindex_server, &addr_server, 8);
-
         test_client_packet_socket_new(ns_client, &sk_client, ifindex_client);
         test_server_packet_socket_new(ns_server, &sk_server);
+        test_add_ip(ns_server, ifindex_server, &addr_server, 8);
 
         message_out.header.op = N_DHCP4_OP_BOOTREPLY;
 
@@ -178,10 +177,9 @@ static void test_server_client_udp(int ns_server, int ns_client, int ifindex_ser
         int r;
 
         test_add_ip(ns_client, ifindex_client, &addr_client, 8);
-        test_add_ip(ns_server, ifindex_server, &addr_server, 8);
-
         test_client_udp_socket_new(ns_client, &sk_client, ifindex_client, &addr_client, &addr_server);
         test_server_udp_socket_new(ns_server, &sk_server, ifindex_server);
+        test_add_ip(ns_server, ifindex_server, &addr_server, 8);
 
         message_out.header.op = N_DHCP4_OP_BOOTREPLY;
 
