@@ -186,7 +186,7 @@ int n_dhcp4_network_client_udp_socket_new(int *sockfdp, int ifindex, const struc
                 .sin_port = htons(N_DHCP4_NETWORK_SERVER_PORT),
         };
         char ifname[IF_NAMESIZE];
-        int r, tos = IPTOS_CLASS_CS6;
+        int r, tos = IPTOS_CLASS_CS6, on = 1;
 
         if (!if_indextoname(ifindex, ifname))
                 return -errno;
@@ -200,6 +200,10 @@ int n_dhcp4_network_client_udp_socket_new(int *sockfdp, int ifindex, const struc
                 return -errno;
 
         r = setsockopt(sockfd, SOL_SOCKET, SO_BINDTODEVICE, ifname, strlen(ifname));
+        if (r < 0)
+                return -errno;
+
+        r = setsockopt(sockfd, SOL_SOCKET, SO_BROADCAST, &on, sizeof(on));
         if (r < 0)
                 return -errno;
 
@@ -292,7 +296,7 @@ int n_dhcp4_network_server_udp_socket_new(int *sockfdp, int ifindex) {
                 .sin_port = htons(N_DHCP4_NETWORK_SERVER_PORT),
         };
         char ifname[IF_NAMESIZE];
-        int r, tos = IPTOS_CLASS_CS6;
+        int r, tos = IPTOS_CLASS_CS6, on = 1;
 
         if (!if_indextoname(ifindex, ifname))
                 return -errno;
@@ -306,6 +310,10 @@ int n_dhcp4_network_server_udp_socket_new(int *sockfdp, int ifindex) {
                 return -errno;
 
         r = setsockopt(sockfd, SOL_SOCKET, SO_BINDTODEVICE, ifname, strlen(ifname));
+        if (r < 0)
+                return -errno;
+
+        r = setsockopt(sockfd, SOL_SOCKET, SO_BROADCAST, &on, sizeof(on));
         if (r < 0)
                 return -errno;
 
