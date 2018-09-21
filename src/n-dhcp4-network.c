@@ -365,7 +365,7 @@ int n_dhcp4_network_client_packet_send(int sockfd, int ifindex,
         struct sockaddr_in dest_paddr = {
                 .sin_family = AF_INET,
                 .sin_port = htons(N_DHCP4_NETWORK_SERVER_PORT),
-                .sin_addr = { INADDR_ANY }
+                .sin_addr = { INADDR_BROADCAST }
         };
 
         return n_dhcp4_network_packet_send(sockfd, ifindex, &src_paddr, dest_haddr, halen, &dest_paddr, buf, n_buf);
@@ -387,7 +387,7 @@ int n_dhcp4_network_client_udp_broadcast(int sockfd, const void *buf, size_t n_b
         struct sockaddr_in sockaddr_dest = {
                 .sin_family = AF_INET,
                 .sin_port = htons(N_DHCP4_NETWORK_SERVER_PORT),
-                .sin_addr = { INADDR_ANY},
+                .sin_addr = { INADDR_BROADCAST },
         };
         ssize_t len;
 
