@@ -73,5 +73,8 @@ test('Message Handling', test_message)
 test_network = executable('test-network', ['test.c', 'test-network.c'], dependencies: libndhcp4_dep)
 test('Network Handling', test_network)
 
+test_connection = executable('test-connection', ['test.c', 'test-connection.c'], dependencies: libndhcp4_dep)
+test('Connection Handling', test_connection)
+
 #test_ = executable('test-', ['test-.c'], dependencies: libndhcp4_dep)
 #test('', test_)
