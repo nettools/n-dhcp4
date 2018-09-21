@@ -97,7 +97,7 @@ int n_dhcp4_c_connection_connect(NDhcp4CConnection *connection, const struct in_
                 return r;
 
         ev.data.u32 = N_DHCP4_CLIENT_EPOLL_CONNECTION;
-        r = epoll_ctl(*connection->efdp, EPOLL_CTL_ADD, connection->pfd, &ev);
+        r = epoll_ctl(*connection->efdp, EPOLL_CTL_ADD, connection->ufd, &ev);
         if (r < 0)
                 return -errno;
 
