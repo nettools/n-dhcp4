@@ -200,6 +200,8 @@ int n_dhcp4_c_connection_init(NDhcp4CConnection *connection, int ifindex, uint8_
 void n_dhcp4_c_connection_deinit(NDhcp4CConnection *connection);
 
 int n_dhcp4_c_connection_listen(NDhcp4CConnection *connection);
+int n_dhcp4_c_connection_connect(NDhcp4CConnection *connection, const struct in_addr *client, const struct in_addr *server);
+
 int n_dhcp4_c_connection_dispatch(NDhcp4CConnection *connection, NDhcp4Incoming **messagep);
 
 int n_dhcp4_c_connection_discover(NDhcp4CConnection *connection, uint32_t xid, uint32_t secs);

@@ -62,7 +62,7 @@ void n_dhcp4_c_connection_deinit(NDhcp4CConnection *connection) {
         *connection = (NDhcp4CConnection)N_DHCP4_C_CONNECTION_NULL(connection->efdp);
 }
 
-int n_dhcp_c_connection_listen(NDhcp4CConnection *connection) {
+int n_dhcp4_c_connection_listen(NDhcp4CConnection *connection) {
         struct epoll_event ev = {
                 .events = EPOLLIN,
         };
@@ -80,6 +80,33 @@ int n_dhcp_c_connection_listen(NDhcp4CConnection *connection) {
                 return -errno;
 
         connection->state = N_DHCP4_CONNECTION_STATE_PACKET;
+
+        return 0;
+}
+
+int n_dhcp4_c_connection_connect(NDhcp4CConnection *connection, const struct in_addr *client, const struct in_addr *server) {
+        struct epoll_event ev = {
+                .events = EPOLLIN,
+        };
+        int r;
+
+        assert(connection->state == N_DHCP4_CONNECTION_STATE_PACKET);
+
+        r = n_dhcp4_network_client_udp_socket_new(&connection->ufd, connection->ifindex, client, server);
+        if (r < 0)
+                return r;
+
+        ev.data.u32 = N_DHCP4_CLIENT_EPOLL_CONNECTION;
+        r = epoll_ctl(*connection->efdp, EPOLL_CTL_ADD, connection->pfd, &ev);
+        if (r < 0)
+                return -errno;
+
+        r = packet_shutdown(connection->pfd);
+        if (r < 0)
+                return r;
+
+        connection->ciaddr = client->s_addr;
+        connection->state = N_DHCP4_CONNECTION_STATE_DRAINING;
 
         return 0;
 }
