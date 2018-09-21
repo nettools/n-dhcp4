@@ -289,7 +289,7 @@ int test_setup(void) {
                 return 77;
         }
 
-        r = mount(NULL, "/run", NULL, MS_PRIVATE, NULL);
+        r = mount(NULL, "/run", NULL, MS_PRIVATE | MS_REC, NULL);
         assert(r >= 0);
 
         r = mkdir("/run/netns", 0755);
