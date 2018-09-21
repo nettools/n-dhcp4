@@ -589,7 +589,7 @@ int n_dhcp4_c_connection_decline(NDhcp4CConnection *connection, const char *erro
                         return r;
         }
 
-        r = n_dhcp4_c_connection_udp_broadcast(connection, message);
+        r = n_dhcp4_c_connection_packet_broadcast(connection, message);
         if (r < 0)
                 return r;
 
