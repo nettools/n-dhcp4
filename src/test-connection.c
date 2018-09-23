@@ -1,5 +1,5 @@
 /*
- * Tests for DHCP4 Network Helpers
+ * Tests for DHCP4 Client Connections
  */
 
 #undef NDEBUG
@@ -30,7 +30,7 @@ static void test_server_packet_socket_new(int netns, int *skp) {
         test_netns_get(&oldns);
         test_netns_set(netns);
 
-        r = n_dhcp4_network_server_packet_socket_new(skp);
+        r = n_dhcp4_s_socket_packet_new(skp);
         assert(r >= 0);
 
         test_netns_set(oldns);
@@ -42,7 +42,7 @@ static void test_server_udp_socket_new(int netns, int *skp, int ifindex) {
         test_netns_get(&oldns);
         test_netns_set(netns);
 
-        r = n_dhcp4_network_server_udp_socket_new(skp, ifindex);
+        r = n_dhcp4_s_socket_udp_new(skp, ifindex);
         assert(r >= 0);
 
         test_netns_set(oldns);

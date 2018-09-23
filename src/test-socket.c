@@ -1,5 +1,5 @@
 /*
- * Tests for DHCP4 Network Helpers
+ * Tests for DHCP4 Socket Helpers
  */
 
 #undef NDEBUG
@@ -28,19 +28,23 @@ static void test_client_packet_socket_new(int netns, int *skp, int ifindex) {
         test_netns_get(&oldns);
         test_netns_set(netns);
 
-        r = n_dhcp4_network_client_packet_socket_new(skp, ifindex);
+        r = n_dhcp4_c_socket_packet_new(skp, ifindex);
         assert(r >= 0);
 
         test_netns_set(oldns);
 }
 
-static void test_client_udp_socket_new(int netns, int *skp, int ifindex, const struct in_addr *addr_client, const struct in_addr *addr_server) {
+static void test_client_udp_socket_new(int netns,
+                                       int *skp,
+                                       int ifindex,
+                                       const struct in_addr *addr_client,
+                                       const struct in_addr *addr_server) {
         int r, oldns;
 
         test_netns_get(&oldns);
         test_netns_set(netns);
 
-        r = n_dhcp4_network_client_udp_socket_new(skp, ifindex, addr_client, addr_server);
+        r = n_dhcp4_c_socket_udp_new(skp, ifindex, addr_client, addr_server);
         assert(r >= 0);
 
         test_netns_set(oldns);
@@ -52,7 +56,7 @@ static void test_server_packet_socket_new(int netns, int *skp) {
         test_netns_get(&oldns);
         test_netns_set(netns);
 
-        r = n_dhcp4_network_server_packet_socket_new(skp);
+        r = n_dhcp4_s_socket_packet_new(skp);
         assert(r >= 0);
 
         test_netns_set(oldns);
@@ -64,13 +68,16 @@ static void test_server_udp_socket_new(int netns, int *skp, int ifindex) {
         test_netns_get(&oldns);
         test_netns_set(netns);
 
-        r = n_dhcp4_network_server_udp_socket_new(skp, ifindex);
+        r = n_dhcp4_s_socket_udp_new(skp, ifindex);
         assert(r >= 0);
 
         test_netns_set(oldns);
 }
 
-static void test_client_server_packet(int ns_server, int ns_client, int ifindex_server, int ifindex_client) {
+static void test_client_server_packet(int ns_server,
+                                      int ns_client,
+                                      int ifindex_server,
+                                      int ifindex_client) {
         NDhcp4Message message_out = N_DHCP4_MESSAGE_NULL, message_in = {};
         int sk_server, sk_client;
         ssize_t len;
@@ -81,7 +88,12 @@ static void test_client_server_packet(int ns_server, int ns_client, int ifindex_
 
         message_out.header.op = N_DHCP4_OP_BOOTREQUEST;
 
-        r = n_dhcp4_network_client_packet_send(sk_client, ifindex_client, (const unsigned char[]){0xff, 0xff, 0xff, 0xff, 0xff, 0xff}, ETH_ALEN, &message_out, sizeof(message_out));
+        r = n_dhcp4_c_socket_packet_send(sk_client,
+                                         ifindex_client,
+                                         (const unsigned char[]){0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
+                                         ETH_ALEN,
+                                         &message_out,
+                                         sizeof(message_out));
         assert(r >= 0);
 
         test_poll(sk_server);
@@ -94,7 +106,10 @@ static void test_client_server_packet(int ns_server, int ns_client, int ifindex_
         close(sk_client);
 }
 
-static void test_client_server_udp(int ns_server, int ns_client, int ifindex_server, int ifindex_client) {
+static void test_client_server_udp(int ns_server,
+                                   int ns_client,
+                                   int ifindex_server,
+                                   int ifindex_client) {
         NDhcp4Message message_out = N_DHCP4_MESSAGE_NULL, message_in = {};
         struct in_addr addr_client = (struct in_addr){ htonl(10 << 24 | 2) };
         struct in_addr addr_server = (struct in_addr){ htonl(10 << 24 | 1) };
@@ -109,7 +124,7 @@ static void test_client_server_udp(int ns_server, int ns_client, int ifindex_ser
 
         message_out.header.op = N_DHCP4_OP_BOOTREQUEST;
 
-        r = n_dhcp4_network_client_udp_send(sk_client, &message_out, sizeof(message_out));
+        r = n_dhcp4_c_socket_udp_send(sk_client, &message_out, sizeof(message_out));
         assert(r >= 0);
 
         test_poll(sk_server);
@@ -125,7 +140,11 @@ static void test_client_server_udp(int ns_server, int ns_client, int ifindex_ser
         test_del_ip(ns_client, ifindex_client, &addr_client, 8);
 }
 
-static void test_server_client_packet(int ns_server, int ns_client, int ifindex_server, int ifindex_client, const struct ether_addr *mac_client) {
+static void test_server_client_packet(int ns_server,
+                                      int ns_client,
+                                      int ifindex_server,
+                                      int ifindex_client,
+                                      const struct ether_addr *mac_client) {
         NDhcp4Message message_out = N_DHCP4_MESSAGE_NULL, message_in = {};
         struct in_addr addr_client = (struct in_addr){ htonl(10 << 24 | 2) };
         struct in_addr addr_server = (struct in_addr){ htonl(10 << 24 | 1) };
@@ -139,15 +158,23 @@ static void test_server_client_packet(int ns_server, int ns_client, int ifindex_
 
         message_out.header.op = N_DHCP4_OP_BOOTREPLY;
 
-        r = n_dhcp4_network_server_packet_send(sk_server, ifindex_server, &addr_server,
-                                               mac_client->ether_addr_octet, ETH_ALEN,
-                                               &addr_client,
-                                               &message_out, sizeof(message_out));
+        r = n_dhcp4_s_socket_packet_send(sk_server,
+                                         ifindex_server,
+                                         &addr_server,
+                                         mac_client->ether_addr_octet,
+                                         ETH_ALEN,
+                                         &addr_client,
+                                         &message_out,
+                                         sizeof(message_out));
         assert(r >= 0);
-        r = n_dhcp4_network_server_packet_send(sk_server, ifindex_server, &addr_server,
-                                                    (const unsigned char[]){0xff, 0xff, 0xff, 0xff, 0xff, 0xff}, ETH_ALEN,
-                                                    &addr_client,
-                                                    &message_out, sizeof(message_out));
+        r = n_dhcp4_s_socket_packet_send(sk_server,
+                                         ifindex_server,
+                                         &addr_server,
+                                         (const unsigned char[]){0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
+                                         ETH_ALEN,
+                                         &addr_client,
+                                         &message_out,
+                                         sizeof(message_out));
         assert(r >= 0);
 
         test_poll(sk_client);
@@ -168,7 +195,10 @@ static void test_server_client_packet(int ns_server, int ns_client, int ifindex_
         test_del_ip(ns_server, ifindex_server, &addr_server, 8);
 }
 
-static void test_server_client_udp(int ns_server, int ns_client, int ifindex_server, int ifindex_client) {
+static void test_server_client_udp(int ns_server,
+                                   int ns_client,
+                                   int ifindex_server,
+                                   int ifindex_client) {
         NDhcp4Message message_out = N_DHCP4_MESSAGE_NULL, message_in = {};
         struct in_addr addr_client = (struct in_addr){ htonl(10 << 24 | 2) };
         struct in_addr addr_server = (struct in_addr){ htonl(10 << 24 | 1) };
@@ -183,7 +213,10 @@ static void test_server_client_udp(int ns_server, int ns_client, int ifindex_ser
 
         message_out.header.op = N_DHCP4_OP_BOOTREPLY;
 
-        r = n_dhcp4_network_server_udp_send(sk_server, &addr_client, &message_out, sizeof(message_out));
+        r = n_dhcp4_s_socket_udp_send(sk_server,
+                                      &addr_client,
+                                      &message_out,
+                                      sizeof(message_out));
         assert(r >= 0);
 
         test_poll(sk_client);

@@ -1,5 +1,5 @@
 /*
- * DHCP specific low-level network helpers
+ * DHCP specific low-level socket helpers
  */
 
 #include <errno.h>
@@ -18,7 +18,7 @@
 #include "util/packet.h"
 
 /**
- * n_dhcp4_network_client_packet_socket_new() - create a new DHCP4 client packet socket
+ * n_dhcp4_c_socket_packet_new() - create a new DHCP4 client packet socket
  * @sockfdp:            return argumnet for the new socket
  * @ifindex:            interface index to bind to
  *
@@ -30,7 +30,7 @@
  *
  * Return: 0 on success, or a negative error code on failure.
  */
-int n_dhcp4_network_client_packet_socket_new(int *sockfdp, int ifindex) {
+int n_dhcp4_c_socket_packet_new(int *sockfdp, int ifindex) {
         _cleanup_(n_dhcp4_closep) int sockfd = -1;
         struct sock_filter filter[] = {
                 /*
@@ -127,7 +127,7 @@ int n_dhcp4_network_client_packet_socket_new(int *sockfdp, int ifindex) {
 }
 
 /**
- * n_dhcp4_network_client_udp_socket_new() - create a new DHCP4 client UDP socket
+ * n_dhcp4_c_socket_udp_new() - create a new DHCP4 client UDP socket
  * @sockfdp:            return argumnet for the new socket
  * @ifindex:            interface index to bind to
  * @client_addr:        client address to bind to
@@ -141,7 +141,10 @@ int n_dhcp4_network_client_packet_socket_new(int *sockfdp, int ifindex) {
  *
  * Return: 0 on success, or a negative error code on failure.
  */
-int n_dhcp4_network_client_udp_socket_new(int *sockfdp, int ifindex, const struct in_addr *client_addr, const struct in_addr *server_addr) {
+int n_dhcp4_c_socket_udp_new(int *sockfdp,
+                             int ifindex,
+                             const struct in_addr *client_addr,
+                             const struct in_addr *server_addr) {
         _cleanup_(n_dhcp4_closep) int sockfd = -1;
         struct sock_filter filter[] = {
                 /*
@@ -225,7 +228,7 @@ int n_dhcp4_network_client_udp_socket_new(int *sockfdp, int ifindex, const struc
 }
 
 /**
- * n_dhcp4_network_server_packet_socket_new() - create a new DHCP4 server packet socket
+ * n_dhcp4_s_socket_packet_new() - create a new DHCP4 server packet socket
  * @sockfdp:            return argumnet for the new socket
  *
  * Create a new AF_PACKET/SOCK_DGRAM socket usable to send DHCP packets to clients
@@ -233,7 +236,7 @@ int n_dhcp4_network_client_udp_socket_new(int *sockfdp, int ifindex, const struc
  *
  * Return: 0 on success, or a negative error code on failure.
  */
-int n_dhcp4_network_server_packet_socket_new(int *sockfdp) {
+int n_dhcp4_s_socket_packet_new(int *sockfdp) {
         _cleanup_(n_dhcp4_closep) int sockfd = -1;
 
         sockfd = socket(AF_PACKET, SOCK_DGRAM | SOCK_CLOEXEC | SOCK_NONBLOCK, 0);
@@ -246,7 +249,7 @@ int n_dhcp4_network_server_packet_socket_new(int *sockfdp) {
 }
 
 /**
- * n_dhcp4_network_server_udp_socket_new() - create a new DHCP4 server UDP socket
+ * n_dhcp4_s_socket_udp_new() - create a new DHCP4 server UDP socket
  * @sockfdp:            return argumnet for the new socket
  * @ifindex:            intercafe index to bind to
  *
@@ -255,7 +258,7 @@ int n_dhcp4_network_server_packet_socket_new(int *sockfdp) {
  *
  * Return: 0 on success, or a negative error code on failure.
  */
-int n_dhcp4_network_server_udp_socket_new(int *sockfdp, int ifindex) {
+int n_dhcp4_s_socket_udp_new(int *sockfdp, int ifindex) {
         _cleanup_(n_dhcp4_closep) int sockfd = -1;
         struct sock_filter filter[] = {
                 /*
@@ -330,11 +333,14 @@ int n_dhcp4_network_server_udp_socket_new(int *sockfdp, int ifindex) {
         return 0;
 }
 
-static int n_dhcp4_network_packet_send(int sockfd, int ifindex,
-                                       const struct sockaddr_in *src_paddr,
-                                       const unsigned char *dest_haddr, unsigned char halen,
-                                       const struct sockaddr_in *dest_paddr,
-                                       const void *buf, size_t n_buf) {
+static int n_dhcp4_socket_packet_send(int sockfd,
+                                      int ifindex,
+                                      const struct sockaddr_in *src_paddr,
+                                      const unsigned char *dest_haddr,
+                                      unsigned char halen,
+                                      const struct sockaddr_in *dest_paddr,
+                                      const void *buf,
+                                      size_t n_buf) {
         struct sockaddr_ll2 haddr = {
                 .sll_family = AF_PACKET,
                 .sll_protocol = htons(ETH_P_IP),
@@ -354,9 +360,15 @@ static int n_dhcp4_network_packet_send(int sockfd, int ifindex,
         return 0;
 }
 
-int n_dhcp4_network_client_packet_send(int sockfd, int ifindex,
-                                       const unsigned char *dest_haddr, unsigned char halen,
-                                       const void *buf, size_t n_buf) {
+/**
+ * n_dhcp4_c_socket_packet_send() - XXX
+ */
+int n_dhcp4_c_socket_packet_send(int sockfd,
+                                 int ifindex,
+                                 const unsigned char *dest_haddr,
+                                 unsigned char halen,
+                                 const void *buf,
+                                 size_t n_buf) {
         struct sockaddr_in src_paddr = {
                 .sin_family = AF_INET,
                 .sin_port = htons(N_DHCP4_NETWORK_CLIENT_PORT),
@@ -368,10 +380,20 @@ int n_dhcp4_network_client_packet_send(int sockfd, int ifindex,
                 .sin_addr = { INADDR_BROADCAST }
         };
 
-        return n_dhcp4_network_packet_send(sockfd, ifindex, &src_paddr, dest_haddr, halen, &dest_paddr, buf, n_buf);
+        return n_dhcp4_socket_packet_send(sockfd,
+                                          ifindex,
+                                          &src_paddr,
+                                          dest_haddr,
+                                          halen,
+                                          &dest_paddr,
+                                          buf,
+                                          n_buf);
 }
 
-int n_dhcp4_network_client_udp_send(int sockfd, const void *buf, size_t n_buf) {
+/**
+ * n_dhcp4_c_socket_udp_send() - XXX
+ */
+int n_dhcp4_c_socket_udp_send(int sockfd, const void *buf, size_t n_buf) {
         ssize_t len;
 
         len = send(sockfd, buf, n_buf, 0);
@@ -383,7 +405,10 @@ int n_dhcp4_network_client_udp_send(int sockfd, const void *buf, size_t n_buf) {
         return 0;
 }
 
-int n_dhcp4_network_client_udp_broadcast(int sockfd, const void *buf, size_t n_buf) {
+/**
+ * n_dhcp4_c_socket_udp_broadcast() - XXX
+ */
+int n_dhcp4_c_socket_udp_broadcast(int sockfd, const void *buf, size_t n_buf) {
         struct sockaddr_in sockaddr_dest = {
                 .sin_family = AF_INET,
                 .sin_port = htons(N_DHCP4_NETWORK_SERVER_PORT),
@@ -391,7 +416,12 @@ int n_dhcp4_network_client_udp_broadcast(int sockfd, const void *buf, size_t n_b
         };
         ssize_t len;
 
-        len = sendto(sockfd, buf, n_buf, 0, (struct sockaddr*)&sockaddr_dest, sizeof(sockaddr_dest));
+        len = sendto(sockfd,
+                     buf,
+                     n_buf,
+                     0,
+                     (struct sockaddr*)&sockaddr_dest,
+                     sizeof(sockaddr_dest));
         if (len < 0)
                 return -errno;
         else if ((size_t)len != n_buf)
@@ -400,11 +430,17 @@ int n_dhcp4_network_client_udp_broadcast(int sockfd, const void *buf, size_t n_b
         return 0;
 }
 
-int n_dhcp4_network_server_packet_send(int sockfd, int ifindex,
-                                       const struct in_addr *src_inaddr,
-                                       const unsigned char *dest_haddr, unsigned char halen,
-                                       const struct in_addr *dest_inaddr,
-                                       const void *buf, size_t n_buf) {
+/**
+ * n_dhcp4_s_socket_packet_send() - XXX
+ */
+int n_dhcp4_s_socket_packet_send(int sockfd,
+                                 int ifindex,
+                                 const struct in_addr *src_inaddr,
+                                 const unsigned char *dest_haddr,
+                                 unsigned char halen,
+                                 const struct in_addr *dest_inaddr,
+                                 const void *buf,
+                                 size_t n_buf) {
         struct sockaddr_in src_paddr = {
                 .sin_family = AF_INET,
                 .sin_port = htons(N_DHCP4_NETWORK_SERVER_PORT),
@@ -416,10 +452,23 @@ int n_dhcp4_network_server_packet_send(int sockfd, int ifindex,
                 .sin_addr = *dest_inaddr,
         };
 
-        return n_dhcp4_network_packet_send(sockfd, ifindex, &src_paddr, dest_haddr, halen, &dest_paddr, buf, n_buf);
+        return n_dhcp4_socket_packet_send(sockfd,
+                                          ifindex,
+                                          &src_paddr,
+                                          dest_haddr,
+                                          halen,
+                                          &dest_paddr,
+                                          buf,
+                                          n_buf);
 }
 
-int n_dhcp4_network_server_udp_send(int sockfd, const struct in_addr *inaddr_dest, const void *buf, size_t n_buf) {
+/**
+ * n_dhcp4_s_socket_udp_send() - XXX
+ */
+int n_dhcp4_s_socket_udp_send(int sockfd,
+                              const struct in_addr *inaddr_dest,
+                              const void *buf,
+                              size_t n_buf) {
         struct sockaddr_in sockaddr_dest = {
                 .sin_family = AF_INET,
                 .sin_port = htons(N_DHCP4_NETWORK_CLIENT_PORT),
@@ -427,7 +476,12 @@ int n_dhcp4_network_server_udp_send(int sockfd, const struct in_addr *inaddr_des
         };
         ssize_t len;
 
-        len = sendto(sockfd, buf, n_buf, 0, (struct sockaddr*)&sockaddr_dest, sizeof(sockaddr_dest));
+        len = sendto(sockfd,
+                     buf,
+                     n_buf,
+                     0,
+                     (struct sockaddr*)&sockaddr_dest,
+                     sizeof(sockaddr_dest));
         if (len < 0)
                 return -errno;
         else if ((size_t)len != n_buf)

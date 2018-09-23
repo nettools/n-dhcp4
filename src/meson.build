@@ -14,7 +14,7 @@ libndhcp4_private = static_library(
                 'n-dhcp4-c-connection.c',
                 'n-dhcp4-client.c',
                 'n-dhcp4-message.c',
-                'n-dhcp4-network.c',
+                'n-dhcp4-socket.c',
                 'util/packet.c',
         ],
         c_args: [
@@ -70,8 +70,8 @@ test('Packet Utility Library', test_packet)
 test_message = executable('test-message', ['test-message.c'], dependencies: libndhcp4_dep)
 test('Message Handling', test_message)
 
-test_network = executable('test-network', ['test.c', 'test-network.c'], dependencies: libndhcp4_dep)
-test('Network Handling', test_network)
+test_socket = executable('test-socket', ['test.c', 'test-socket.c'], dependencies: libndhcp4_dep)
+test('Socket Handling', test_socket)
 
 test_connection = executable('test-connection', ['test.c', 'test-connection.c'], dependencies: libndhcp4_dep)
 test('Connection Handling', test_connection)

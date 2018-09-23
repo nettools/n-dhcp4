@@ -84,7 +84,7 @@ int n_dhcp4_c_connection_listen(NDhcp4CConnection *connection) {
 
         assert(connection->state == N_DHCP4_CONNECTION_STATE_INIT);
 
-        r = n_dhcp4_network_client_packet_socket_new(&connection->pfd, connection->ifindex);
+        r = n_dhcp4_c_socket_packet_new(&connection->pfd, connection->ifindex);
         if (r < 0)
                 return r;
 
@@ -106,7 +106,7 @@ int n_dhcp4_c_connection_connect(NDhcp4CConnection *connection, const struct in_
 
         assert(connection->state == N_DHCP4_CONNECTION_STATE_PACKET);
 
-        r = n_dhcp4_network_client_udp_socket_new(&connection->ufd, connection->ifindex, client, server);
+        r = n_dhcp4_c_socket_udp_new(&connection->ufd, connection->ifindex, client, server);
         if (r < 0)
                 return r;
 
@@ -246,9 +246,12 @@ static int n_dhcp4_c_connection_packet_broadcast(NDhcp4CConnection *connection, 
 
         n_buf = n_dhcp4_outgoing_get_raw(message, &buf);
 
-        r = n_dhcp4_network_client_packet_send(connection->pfd, connection->ifindex,
-                                               connection->bhaddr, connection->hlen,
-                                               buf, n_buf);
+        r = n_dhcp4_c_socket_packet_send(connection->pfd,
+                                         connection->ifindex,
+                                         connection->bhaddr,
+                                         connection->hlen,
+                                         buf,
+                                         n_buf);
         if (r < 0)
                 return r;
 
@@ -264,7 +267,7 @@ static int n_dhcp4_c_connection_udp_broadcast(NDhcp4CConnection *connection, NDh
 
         n_buf = n_dhcp4_outgoing_get_raw(message, &buf);
 
-        r = n_dhcp4_network_client_udp_broadcast(connection->ufd, buf, n_buf);
+        r = n_dhcp4_c_socket_udp_broadcast(connection->ufd, buf, n_buf);
         if (r < 0)
                 return r;
 
@@ -280,7 +283,7 @@ static int n_dhcp4_c_connection_udp_send(NDhcp4CConnection *connection, NDhcp4Ou
 
         n_buf = n_dhcp4_outgoing_get_raw(message, &buf);
 
-        r = n_dhcp4_network_client_udp_send(connection->ufd, buf, n_buf);
+        r = n_dhcp4_c_socket_udp_send(connection->ufd, buf, n_buf);
         if (r < 0)
                 return r;
 
