@@ -322,6 +322,16 @@ static int n_dhcp4_c_connection_new_message(NDhcp4CConnection *connection,
         NDhcp4Header *header;
         int r;
 
+        /*
+         * We explicitly pass 0 as maximum message size, which makes
+         * NDhcp4Outgoing use the mandated default value from the spec (see its
+         * implementation). We could theoretically increase this, in case we
+         * know more properties about the server, but this is first of all not
+         * necessary (so far clients have no reason to send big packets, there
+         * is simply no data to send), but also might break theoretical
+         * use-cases like anycast-DHCP-servers, or whatever crazy setups
+         * network-vendors come up with.
+         */
         r = n_dhcp4_outgoing_new(&message, 0, N_DHCP4_OVERLOAD_FILE | N_DHCP4_OVERLOAD_SNAME);
         if (r < 0)
                 return r;
@@ -329,6 +339,11 @@ static int n_dhcp4_c_connection_new_message(NDhcp4CConnection *connection,
         header = n_dhcp4_outgoing_get_header(message);
         n_dhcp4_c_connection_init_header(connection, header);
 
+        /*
+         * Note that some implementations expect the MESSAGE_TYPE option to be
+         * the first option, and possibly even hard-code access to it. Hence,
+         * we really should make sure to pass it first as well.
+         */
         r = n_dhcp4_outgoing_append(message, N_DHCP4_OPTION_MESSAGE_TYPE, &type, sizeof(type));
         if (r < 0)
                 return r;
@@ -372,8 +387,8 @@ static void n_dhcp4_c_connection_outgoing_set_xid(NDhcp4Outgoing *message, uint3
         NDhcp4Header *header = n_dhcp4_outgoing_get_header(message);
 
         /*
-         * Some DHCP servers will reject DISCOVER or REQUEST messages if 'secs' is
-         * not est.
+         * Some DHCP servers will reject DISCOVER or REQUEST messages if 'secs'
+         * is not set (i.e., set to 0), even though the spec allows it.
          */
         assert(secs != 0);
 
