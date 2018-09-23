@@ -276,10 +276,6 @@ static void n_dhcp4_incoming_linearize(NDhcp4Incoming *incoming) {
         uint8_t *m, o, l, overload;
         size_t i, pos, end, offset;
 
-        overload = 0;
-        m = (uint8_t *)&incoming->message;
-        offset = incoming->n_message;
-
         /*
          * Linearize all OPTIONs of the incoming message. We know that
          * @incoming->message is preallocated to be big enough to hold the
@@ -287,7 +283,28 @@ static void n_dhcp4_incoming_linearize(NDhcp4Incoming *incoming) {
          * to do is walk the raw message in @incoming->message and for each
          * option we find, copy it into the trailing space, concatenating all
          * instances we find.
+         *
+         * Before we can copy the individual options, we must scan for the
+         * OVERLOAD option. This is required so our prefetcher knows which data
+         * arrays to scan for prefetching.
+         *
+         * So far, we require the OVERLOAD option to be present in the
+         * options-array (which is obvious and a given). However, if the option
+         * occurs multiple times outside of the options-array (i.e., SNAME or
+         * FILE), we silently ignore them. The specification does not allow
+         * multiple OVERLOAD options, anyway. Hence, this behavior only defines
+         * what we do when we see broken implementations, and we currently seem
+         * to support all styles we saw in the wild so far.
          */
+
+        m = (uint8_t *)&incoming->message;
+        offset = incoming->n_message;
+
+        n_dhcp4_incoming_merge(incoming, &offset, 0, N_DHCP4_OPTION_OVERLOAD);
+        if (incoming->options[N_DHCP4_OPTION_OVERLOAD].size >= 1)
+                overload = *incoming->options[N_DHCP4_OPTION_OVERLOAD].value;
+        else
+                overload = 0;
 
         for (i = 0; i < 3; ++i) {
                 if (i == 0) { /* walk OPTIONS */
@@ -320,13 +337,8 @@ static void n_dhcp4_incoming_linearize(NDhcp4Incoming *incoming) {
                         if (l > end || pos > end - l)
                                 break;
 
-                        if (!incoming->options[o].value) {
+                        if (!incoming->options[o].value)
                                 n_dhcp4_incoming_merge(incoming, &offset, overload, o);
-
-                                /* fetch OVERLOAD value if we just parsed it */
-                                if (o == N_DHCP4_OPTION_OVERLOAD && incoming->options[o].size == 1)
-                                        overload = *incoming->options[o].value;
-                        }
 
                         pos += l;
                 }
