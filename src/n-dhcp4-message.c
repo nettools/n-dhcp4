@@ -16,9 +16,18 @@
 #include <string.h>
 #include "n-dhcp4-private.h"
 
-#define N_DHCP4_MESSAGE_DEFAULT_MAX_SIZE (N_DHCP4_NETWORK_IP_DEFAULT_MAX_SIZE -         \
-                                          sizeof(struct udphdr) -                       \
-                                          sizeof(struct iphdr))
+/**
+ * N_DHCP4_MESSAGE_MAX_PHDR - maximum protocol header size
+ *
+ * All DHCP4 messages-limits specify the size of the entire packet including
+ * the protocol layer (i.e., including the IP headers and UDP headers). To
+ * calculate the size we have remaining for the actual DHCP message, we need to
+ * substract the maximum possible header-length the linux-kernel might prepend
+ * to our messages. This turns out to be the maximum IP-header size (including
+ * optional IP headers, hence 60 bytes) plus the UDP header size (i.e., 8
+ * bytes).
+ */
+#define N_DHCP4_MESSAGE_MAX_PHDR (N_DHCP4_NETWORK_IP_MAXIMUM_HEADER_SIZE + sizeof(struct udphdr))
 
 struct NDhcp4Outgoing {
         NDhcp4Message *message;
@@ -45,19 +54,24 @@ int n_dhcp4_outgoing_new(NDhcp4Outgoing **outgoingp, size_t max_size, uint8_t ov
 
         assert(outgoingp);
         assert(!(overload & ~(N_DHCP4_OVERLOAD_FILE | N_DHCP4_OVERLOAD_SNAME)));
-        static_assert(N_DHCP4_MESSAGE_DEFAULT_MAX_SIZE >= sizeof(NDhcp4Message) + 1, "Invalid default max message size");
+
+        /*
+         * Make sure the minimum limit is bigger than the maximum protocol
+         * header plus the DHCP-message-header plus a single OPTION_END byte.
+         */
+        static_assert(N_DHCP4_NETWORK_IP_MINIMUM_MAX_SIZE >= N_DHCP4_MESSAGE_MAX_PHDR + sizeof(NDhcp4Message) + 1, "Invalid minimum IP packet limit");
 
         outgoing = calloc(1, sizeof(*outgoing));
         if (!outgoing)
                 return -ENOMEM;
 
-        outgoing->n_message = N_DHCP4_MESSAGE_DEFAULT_MAX_SIZE;
+        outgoing->n_message = N_DHCP4_NETWORK_IP_MINIMUM_MAX_SIZE - N_DHCP4_MESSAGE_MAX_PHDR;
         outgoing->i_message = offsetof(NDhcp4Message, options);
-        outgoing->max_size = N_DHCP4_MESSAGE_DEFAULT_MAX_SIZE;
+        outgoing->max_size = outgoing->n_message;
         outgoing->overload = overload;
 
-        if (max_size > N_DHCP4_NETWORK_IP_DEFAULT_MAX_SIZE)
-                outgoing->max_size = max_size - sizeof(struct udphdr) - sizeof(struct iphdr);
+        if (max_size > N_DHCP4_NETWORK_IP_MINIMUM_MAX_SIZE)
+                outgoing->max_size = max_size - N_DHCP4_MESSAGE_MAX_PHDR;
 
         outgoing->message = calloc(1, outgoing->n_message);
         if (!outgoing->message)

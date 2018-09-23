@@ -29,8 +29,8 @@ typedef struct NDhcp4Outgoing NDhcp4Outgoing;
  * Spec Constants
  */
 
-#define N_DHCP4_NETWORK_IP_DEFAULT_MAX_SIZE (576) /* See RFC791 */
-#define N_DHCP4_NETWORK_UDP_MAX_SIZE (UINT16_MAX) /* See RFC768 */
+#define N_DHCP4_NETWORK_IP_MAXIMUM_HEADER_SIZE (60) /* See RFC791 */
+#define N_DHCP4_NETWORK_IP_MINIMUM_MAX_SIZE (576) /* See RFC791 */
 #define N_DHCP4_NETWORK_SERVER_PORT (67)
 #define N_DHCP4_NETWORK_CLIENT_PORT (68)
 
