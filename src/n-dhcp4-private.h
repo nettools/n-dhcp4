@@ -2,6 +2,7 @@
 
 #include <arpa/inet.h>
 #include <inttypes.h>
+#include <limits.h>
 #include <linux/netdevice.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -29,7 +30,7 @@ typedef struct NDhcp4Outgoing NDhcp4Outgoing;
  */
 
 #define N_DHCP4_NETWORK_IP_DEFAULT_MAX_SIZE (576) /* See RFC791 */
-#define N_DHCP4_NETWORK_UDP_MAX_SIZE (1U << 15) /* See RFC768 */
+#define N_DHCP4_NETWORK_UDP_MAX_SIZE (UINT16_MAX) /* See RFC768 */
 #define N_DHCP4_NETWORK_SERVER_PORT (67)
 #define N_DHCP4_NETWORK_CLIENT_PORT (68)
 
