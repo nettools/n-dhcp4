@@ -6,6 +6,7 @@
 
 #include <assert.h>
 #include <errno.h>
+#include <limits.h>
 #include <net/if_arp.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -357,23 +358,41 @@ static int n_dhcp4_c_connection_new_message(NDhcp4CConnection *connection,
         switch (type) {
         case N_DHCP4_MESSAGE_DISCOVER:
         case N_DHCP4_MESSAGE_REQUEST:
-        case N_DHCP4_MESSAGE_INFORM:
-                if (connection->state <= N_DHCP4_CONNECTION_STATE_PACKET) {
-                        if (connection->mtu > 0) {
-                                uint16_t mtu = htons(connection->mtu);
+        case N_DHCP4_MESSAGE_INFORM: {
+                uint16_t mtu;
 
+                if (connection->state <= N_DHCP4_CONNECTION_STATE_PACKET) {
+                        /*
+                         * In case of packet sockets, we do not support
+                         * fragmentation. Hence, our maximum message size
+                         * equals the transport MTU. In case no mtu is given,
+                         * we omit the option and rely on both sides to share
+                         * the same MTU.
+                         */
+                        if (connection->mtu > 0) {
+                                mtu = htons(connection->mtu);
                                 r = n_dhcp4_outgoing_append(message, N_DHCP4_OPTION_MAXIMUM_MESSAGE_SIZE, &mtu, sizeof(mtu));
                                 if (r < 0)
                                         return r;
                         }
                 } else {
-                        uint16_t mtu = htons(N_DHCP4_NETWORK_UDP_MAX_SIZE);
-
+                        /*
+                         * Once we use UDP sockets, we support fragmentation
+                         * through the kernel IP stack. This means, the biggest
+                         * message we can receive is the maximum UDP size plus
+                         * the possible IP header. This would sum up to
+                         * 2^16-1 + 20 (or even 2^16-1 + 60 if pedantic) and
+                         * thus exceed the option field. Hence, we simply set
+                         * the option to the maximum possible value.
+                         */
+                        mtu = htons(UINT16_MAX);
                         r = n_dhcp4_outgoing_append(message, N_DHCP4_OPTION_MAXIMUM_MESSAGE_SIZE, &mtu, sizeof(mtu));
                         if (r < 0)
                                 return r;
                 }
+
                 break;
+        }
         default:
                 break;
         }
