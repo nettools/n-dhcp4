@@ -14,30 +14,43 @@
 #include "n-dhcp4-private.h"
 #include "util/packet.h"
 
-enum {
-        N_DHCP4_CONNECTION_STATE_INIT,
-        N_DHCP4_CONNECTION_STATE_PACKET,
-        N_DHCP4_CONNECTION_STATE_DRAINING,
-        N_DHCP4_CONNECTION_STATE_UDP,
-};
-
-int n_dhcp4_c_connection_init(NDhcp4CConnection *connection, int ifindex, uint8_t htype,
-                              uint8_t hlen, const uint8_t *chaddr, const uint8_t *bhaddr,
-                              size_t idlen, const uint8_t *id,
+int n_dhcp4_c_connection_init(NDhcp4CConnection *connection,
+                              int *efd,
+                              int ifindex,
+                              uint8_t htype,
+                              uint8_t hlen,
+                              const uint8_t *chaddr,
+                              const uint8_t *bhaddr,
+                              size_t idlen,
+                              const uint8_t *id,
                               bool request_broadcast) {
-        if (hlen > sizeof(connection->chaddr))
-                return -EINVAL;
-        if (idlen == 1)
-                return -EINVAL;
+        assert(hlen > 0);
+        assert(hlen <= sizeof(connection->chaddr));
+        assert(chaddr);
+        assert(bhaddr);
 
+        *connection = (NDhcp4CConnection)N_DHCP4_C_CONNECTION_NULL;
+        connection->efd = efd;
         connection->ifindex = ifindex;
+        connection->request_broadcast = request_broadcast;
         connection->htype = htype;
         connection->hlen = hlen;
-        connection->request_broadcast = request_broadcast;
-        memcpy(connection->bhaddr, bhaddr, hlen);
         memcpy(connection->chaddr, chaddr, hlen);
-        memcpy(connection->id, id, idlen);
+        memcpy(connection->bhaddr, bhaddr, hlen);
 
+        if (idlen) {
+                connection->id = malloc(idlen);
+                if (!connection->id)
+                        return -ENOMEM;
+
+                memcpy(connection->id, id, idlen);
+        }
+
+        /*
+         * Force specific options depending on the configured transport. In
+         * particular, Infiniband mandates broadcasts. It also has hw-addresses
+         * bigger than the chaddr field, so it requires its suppression.
+         */
         if (htype == ARPHRD_INFINIBAND)
                 connection->request_broadcast = true;
         else
@@ -47,19 +60,20 @@ int n_dhcp4_c_connection_init(NDhcp4CConnection *connection, int ifindex, uint8_
 }
 
 void n_dhcp4_c_connection_deinit(NDhcp4CConnection *connection) {
-        if (*connection->efdp >= 0) {
+        if (connection->efd) {
                 if (connection->ufd >= 0) {
-                        epoll_ctl(*connection->efdp, EPOLL_CTL_DEL, connection->ufd, NULL);
+                        epoll_ctl(*connection->efd, EPOLL_CTL_DEL, connection->ufd, NULL);
                         close(connection->ufd);
                 }
 
                 if (connection->pfd >= 0) {
-                        epoll_ctl(*connection->efdp, EPOLL_CTL_DEL, connection->pfd, NULL);
+                        epoll_ctl(*connection->efd, EPOLL_CTL_DEL, connection->pfd, NULL);
                         close(connection->pfd);
                 }
         }
 
-        *connection = (NDhcp4CConnection)N_DHCP4_C_CONNECTION_NULL(connection->efdp);
+        free(connection->id);
+        *connection = (NDhcp4CConnection)N_DHCP4_C_CONNECTION_NULL;
 }
 
 int n_dhcp4_c_connection_listen(NDhcp4CConnection *connection) {
@@ -75,7 +89,7 @@ int n_dhcp4_c_connection_listen(NDhcp4CConnection *connection) {
                 return r;
 
         ev.data.u32 = N_DHCP4_CLIENT_EPOLL_CONNECTION;
-        r = epoll_ctl(*connection->efdp, EPOLL_CTL_ADD, connection->pfd, &ev);
+        r = epoll_ctl(*connection->efd, EPOLL_CTL_ADD, connection->pfd, &ev);
         if (r < 0)
                 return -errno;
 
@@ -97,7 +111,7 @@ int n_dhcp4_c_connection_connect(NDhcp4CConnection *connection, const struct in_
                 return r;
 
         ev.data.u32 = N_DHCP4_CLIENT_EPOLL_CONNECTION;
-        r = epoll_ctl(*connection->efdp, EPOLL_CTL_ADD, connection->ufd, &ev);
+        r = epoll_ctl(*connection->efd, EPOLL_CTL_ADD, connection->ufd, &ev);
         if (r < 0)
                 return -errno;
 
@@ -203,7 +217,7 @@ int n_dhcp4_c_connection_dispatch(NDhcp4CConnection *connection, NDhcp4Incoming 
                  * and drained, clean up the packet socket and fall through to
                  * dispatching the UDP socket.
                  */
-                epoll_ctl(*connection->efdp, EPOLL_CTL_DEL, connection->pfd, NULL);
+                epoll_ctl(*connection->efd, EPOLL_CTL_DEL, connection->pfd, NULL);
                 close(connection->pfd);
                 connection->state = N_DHCP4_CONNECTION_STATE_UDP;
 

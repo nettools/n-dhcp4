@@ -166,37 +166,51 @@ int n_dhcp4_incoming_query(NDhcp4Incoming *incoming, uint8_t option, const void 
 /*
  * DHCP4 Client Connection
  */
+
+enum {
+        N_DHCP4_CONNECTION_STATE_INIT,
+        N_DHCP4_CONNECTION_STATE_PACKET,
+        N_DHCP4_CONNECTION_STATE_DRAINING,
+        N_DHCP4_CONNECTION_STATE_UDP,
+};
+
 struct NDhcp4CConnection {
         unsigned int state;             /* current connection state */
-        int *efdp;                      /* epoll fd */
+        int *efd;                       /* epoll fd */
         int ifindex;                    /* interface index */
         int pfd;                        /* packet socket */
         int ufd;                        /* udp socket */
+
+        bool request_broadcast : 1;     /* request broadcast from server */
+        bool send_chaddr : 1;           /* send chaddr to server */
 
         uint8_t htype;                  /* APR hardware type */
         uint8_t hlen;                   /* hardware address length */
         uint8_t chaddr[MAX_ADDR_LEN];   /* client hardware address */
         uint8_t bhaddr[MAX_ADDR_LEN];   /* broadcast hardware address */
-        bool request_broadcast : 1;     /* request broadcast from server */
-        bool send_chaddr : 1;           /* send chaddr to server */
 
         uint32_t ciaddr;                /* client IP address, or 0 */
         uint32_t siaddr;                /* server IP address, or 0 */
         uint16_t mtu;                   /* client mtu, or 0 */
 
         size_t idlen;                   /* client identifier length */
-        uint8_t id[];                   /* client identifier */
+        uint8_t *id;                    /* client identifier */
 };
 
-#define N_DHCP4_C_CONNECTION_NULL(_efdp) {              \
-                .efdp = (_efdp),                        \
-                .pfd = -1,                              \
-                .ufd = -1,                              \
+#define N_DHCP4_C_CONNECTION_NULL {                                             \
+                .pfd = -1,                                                      \
+                .ufd = -1,                                                      \
         }
 
-int n_dhcp4_c_connection_init(NDhcp4CConnection *connection, int ifindex, uint8_t htype,
-                              uint8_t hlen, const uint8_t *chaddr, const uint8_t *bhaddr,
-                              size_t idlen, const uint8_t *id,
+int n_dhcp4_c_connection_init(NDhcp4CConnection *connection,
+                              int *efd,
+                              int ifindex,
+                              uint8_t htype,
+                              uint8_t hlen,
+                              const uint8_t *chaddr,
+                              const uint8_t *bhaddr,
+                              size_t idlen,
+                              const uint8_t *id,
                               bool request_broadcast);
 void n_dhcp4_c_connection_deinit(NDhcp4CConnection *connection);
 
@@ -242,7 +256,7 @@ struct NDhcp4Client {
 #define N_DHCP4_CLIENT_NULL(_x) {                                       \
                 .efd = -1,                                              \
                 .tfd = -1,                                              \
-                .connection = N_DHCP4_C_CONNECTION_NULL(&(_x).efd),     \
+                .connection = N_DHCP4_C_CONNECTION_NULL,                \
         }
 
 /*

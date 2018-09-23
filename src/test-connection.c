@@ -128,7 +128,7 @@ static void test_acquisition(int ns_client, NDhcp4CConnection *connection, int s
 
 int main(int argc, char **argv) {
         int efd;
-        NDhcp4CConnection connection = N_DHCP4_C_CONNECTION_NULL(&efd);
+        NDhcp4CConnection connection = N_DHCP4_C_CONNECTION_NULL;
         struct in_addr addr_server = (struct in_addr){ htonl(10 << 24 | 1) };
         int r, ns_server, ns_client, ifindex_server, ifindex_client, sk_server_packet, sk_server_udp;
         struct ether_addr mac_client;
@@ -149,9 +149,16 @@ int main(int argc, char **argv) {
         test_server_udp_socket_new(ns_server, &sk_server_udp, ifindex_server);
         test_add_ip(ns_server, ifindex_server, &addr_server, 8);
 
-        r = n_dhcp4_c_connection_init(&connection, ifindex_client, ARPHRD_ETHER,
-                                      ETH_ALEN, mac_client.ether_addr_octet, (const uint8_t[]){0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
-                                      0, NULL, false);
+        r = n_dhcp4_c_connection_init(&connection,
+                                      &efd,
+                                      ifindex_client,
+                                      ARPHRD_ETHER,
+                                      ETH_ALEN,
+                                      mac_client.ether_addr_octet,
+                                      (const uint8_t[]){0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
+                                      0,
+                                      NULL,
+                                      false);
         assert(r >= 0);
         test_acquisition(ns_client, &connection, sk_server_udp, &addr_server);
         n_dhcp4_c_connection_deinit(&connection);

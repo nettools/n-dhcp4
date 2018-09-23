@@ -39,6 +39,7 @@ _public_ int n_dhcp4_client_new(NDhcp4Client **clientp) {
         client = malloc(sizeof(*client));
         if (!client)
                 return -ENOMEM;
+
         *client = (NDhcp4Client)N_DHCP4_CLIENT_NULL(*client);
 
         client->efd = epoll_create1(EPOLL_CLOEXEC);
