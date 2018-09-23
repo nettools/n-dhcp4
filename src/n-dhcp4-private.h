@@ -205,8 +205,8 @@ struct NDhcp4CConnection {
         uint8_t chaddr[MAX_ADDR_LEN];   /* client hardware address */
         uint8_t bhaddr[MAX_ADDR_LEN];   /* broadcast hardware address */
 
-        uint32_t ciaddr;                /* client IP address, or 0 */
-        uint32_t siaddr;                /* server IP address, or 0 */
+        uint32_t client_ip;             /* client IP address, or 0 */
+        uint32_t server_ip;             /* server IP address, or 0 */
         uint16_t mtu;                   /* client mtu, or 0 */
 
         size_t idlen;                   /* client identifier length */

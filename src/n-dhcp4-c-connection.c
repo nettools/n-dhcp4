@@ -121,8 +121,8 @@ int n_dhcp4_c_connection_connect(NDhcp4CConnection *connection,
         if (r < 0)
                 return r;
 
-        connection->ciaddr = client->s_addr;
-        connection->siaddr = server->s_addr;
+        connection->client_ip = client->s_addr;
+        connection->server_ip = server->s_addr;
         connection->state = N_DHCP4_CONNECTION_STATE_DRAINING;
 
         return 0;
@@ -303,7 +303,7 @@ static void n_dhcp4_c_connection_init_header(NDhcp4CConnection *connection,
                                              NDhcp4Header *header) {
         header->op = N_DHCP4_OP_BOOTREQUEST;
         header->htype = connection->htype;
-        header->ciaddr = connection->ciaddr;
+        header->ciaddr = connection->client_ip;
 
         if (connection->request_broadcast)
                 header->flags |= N_DHCP4_MESSAGE_FLAG_BROADCAST;
@@ -713,7 +713,7 @@ int n_dhcp4_c_connection_release(NDhcp4CConnection *connection, const char *erro
         if (r < 0)
                 return r;
 
-        r = n_dhcp4_outgoing_append(message, N_DHCP4_OPTION_SERVER_IDENTIFIER, &connection->siaddr, sizeof(connection->siaddr));
+        r = n_dhcp4_outgoing_append(message, N_DHCP4_OPTION_SERVER_IDENTIFIER, &connection->server_ip, sizeof(connection->server_ip));
         if (r < 0)
                 return r;
 
