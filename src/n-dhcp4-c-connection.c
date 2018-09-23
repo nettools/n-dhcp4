@@ -98,7 +98,9 @@ int n_dhcp4_c_connection_listen(NDhcp4CConnection *connection) {
         return 0;
 }
 
-int n_dhcp4_c_connection_connect(NDhcp4CConnection *connection, const struct in_addr *client, const struct in_addr *server) {
+int n_dhcp4_c_connection_connect(NDhcp4CConnection *connection,
+                                 const struct in_addr *client,
+                                 const struct in_addr *server) {
         struct epoll_event ev = {
                 .events = EPOLLIN,
         };
@@ -126,7 +128,8 @@ int n_dhcp4_c_connection_connect(NDhcp4CConnection *connection, const struct in_
         return 0;
 }
 
-static int n_dhcp4_c_connection_verify_incoming(NDhcp4CConnection *connection, NDhcp4Incoming *message) {
+static int n_dhcp4_c_connection_verify_incoming(NDhcp4CConnection *connection,
+                                                NDhcp4Incoming *message) {
         NDhcp4Header *header = n_dhcp4_incoming_get_header(message);
         const void *id;
         size_t idlen;
@@ -152,7 +155,8 @@ static int n_dhcp4_c_connection_verify_incoming(NDhcp4CConnection *connection, N
         return 0;
 }
 
-static int n_dhcp4_c_connection_dispatch_packet(NDhcp4CConnection *connection, NDhcp4Incoming **messagep) {
+static int n_dhcp4_c_connection_dispatch_packet(NDhcp4CConnection *connection,
+                                                NDhcp4Incoming **messagep) {
         uint8_t buf[1 << 16];
         ssize_t len;
         int r;
@@ -173,7 +177,8 @@ static int n_dhcp4_c_connection_dispatch_packet(NDhcp4CConnection *connection, N
         return 0;
 }
 
-static int n_dhcp4_c_connection_dispatch_udp(NDhcp4CConnection *connection, NDhcp4Incoming **messagep) {
+static int n_dhcp4_c_connection_dispatch_udp(NDhcp4CConnection *connection,
+                                             NDhcp4Incoming **messagep) {
         uint8_t buf[1 << 16];
         ssize_t len;
         int r;
@@ -194,7 +199,8 @@ static int n_dhcp4_c_connection_dispatch_udp(NDhcp4CConnection *connection, NDhc
         return 0;
 }
 
-int n_dhcp4_c_connection_dispatch(NDhcp4CConnection *connection, NDhcp4Incoming **messagep) {
+int n_dhcp4_c_connection_dispatch(NDhcp4CConnection *connection,
+                                  NDhcp4Incoming **messagep) {
         _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *message = NULL;
         int r;
 
@@ -237,7 +243,8 @@ int n_dhcp4_c_connection_dispatch(NDhcp4CConnection *connection, NDhcp4Incoming 
         return 0;
 }
 
-static int n_dhcp4_c_connection_packet_broadcast(NDhcp4CConnection *connection, NDhcp4Outgoing *message) {
+static int n_dhcp4_c_connection_packet_broadcast(NDhcp4CConnection *connection,
+                                                 NDhcp4Outgoing *message) {
         const void *buf;
         size_t n_buf;
         int r;
@@ -258,7 +265,8 @@ static int n_dhcp4_c_connection_packet_broadcast(NDhcp4CConnection *connection, 
         return 0;
 }
 
-static int n_dhcp4_c_connection_udp_broadcast(NDhcp4CConnection *connection, NDhcp4Outgoing *message) {
+static int n_dhcp4_c_connection_udp_broadcast(NDhcp4CConnection *connection,
+                                              NDhcp4Outgoing *message) {
         const void *buf;
         size_t n_buf;
         int r;
@@ -274,7 +282,8 @@ static int n_dhcp4_c_connection_udp_broadcast(NDhcp4CConnection *connection, NDh
         return 0;
 }
 
-static int n_dhcp4_c_connection_udp_send(NDhcp4CConnection *connection, NDhcp4Outgoing *message) {
+static int n_dhcp4_c_connection_udp_send(NDhcp4CConnection *connection,
+                                         NDhcp4Outgoing *message) {
         const void *buf;
         size_t n_buf;
         int r;
@@ -290,7 +299,8 @@ static int n_dhcp4_c_connection_udp_send(NDhcp4CConnection *connection, NDhcp4Ou
         return 0;
 }
 
-static void n_dhcp4_c_connection_init_header(NDhcp4CConnection *connection, NDhcp4Header *header) {
+static void n_dhcp4_c_connection_init_header(NDhcp4CConnection *connection,
+                                             NDhcp4Header *header) {
         header->op = N_DHCP4_OP_BOOTREQUEST;
         header->htype = connection->htype;
         header->ciaddr = connection->ciaddr;
@@ -306,7 +316,8 @@ static void n_dhcp4_c_connection_init_header(NDhcp4CConnection *connection, NDhc
         }
 }
 
-static int n_dhcp4_c_connection_new_message(NDhcp4CConnection *connection, NDhcp4Outgoing **messagep, uint8_t type) {
+static int n_dhcp4_c_connection_new_message(NDhcp4CConnection *connection,
+                                            NDhcp4Outgoing **messagep, uint8_t type) {
         _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *message = NULL;
         NDhcp4Header *header;
         int r;
