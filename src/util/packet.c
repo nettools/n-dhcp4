@@ -78,15 +78,15 @@ uint16_t packet_internet_checksum_udp(const struct in_addr *src_addr, const stru
                                       uint16_t src_port, uint16_t dst_port,
                                       const uint8_t *data, size_t size, uint16_t checksum) {
         struct {
-                struct in_addr src;
-                struct in_addr dst;
+                uint32_t src;
+                uint32_t dst;
                 uint8_t _zeros;
                 uint8_t protocol;
                 uint16_t length;
                 struct udphdr udp;
         } __attribute__((__packed__)) udp_phdr = {
-                .src.s_addr = src_addr->s_addr,
-                .dst.s_addr = dst_addr->s_addr,
+                .src = src_addr->s_addr,
+                .dst = dst_addr->s_addr,
                 .protocol = IPPROTO_UDP,
                 .length = htons(sizeof(struct udphdr) + size),
                 .udp = {
