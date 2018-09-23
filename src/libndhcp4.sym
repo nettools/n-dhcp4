@@ -1,7 +1,8 @@
 LIBNDHCP4_1 {
 global:
         n_dhcp4_client_new;
-        n_dhcp4_client_free;
+        n_dhcp4_client_ref;
+        n_dhcp4_client_unref;
         n_dhcp4_client_get_fd;
         n_dhcp4_client_dispatch;
 local:

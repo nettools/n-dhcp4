@@ -254,6 +254,7 @@ enum {
 };
 
 struct NDhcp4Client {
+        unsigned long n_refs;           /* reference counter */
         unsigned int state;             /* current client state */
         int efd;                        /* epoll fd */
         int tfd;                        /* timer fd */
@@ -270,6 +271,7 @@ struct NDhcp4Client {
 };
 
 #define N_DHCP4_CLIENT_NULL(_x) {                                       \
+                .n_refs = 1,                                            \
                 .efd = -1,                                              \
                 .tfd = -1,                                              \
                 .connection = N_DHCP4_C_CONNECTION_NULL,                \

@@ -28,7 +28,7 @@ enum {
 };
 
 _public_ int n_dhcp4_client_new(NDhcp4Client **clientp) {
-        _cleanup_(n_dhcp4_client_freep) NDhcp4Client *client = NULL;
+        _cleanup_(n_dhcp4_client_unrefp) NDhcp4Client *client = NULL;
         struct epoll_event ev = {
                 .events = EPOLLIN,
         };
@@ -60,10 +60,7 @@ _public_ int n_dhcp4_client_new(NDhcp4Client **clientp) {
         return 0;
 }
 
-_public_ NDhcp4Client *n_dhcp4_client_free(NDhcp4Client *client) {
-        if (!client)
-                return NULL;
-
+static void n_dhcp4_client_free(NDhcp4Client *client) {
         n_dhcp4_c_connection_deinit(&client->connection);
 
         if (client->tfd >= 0) {
@@ -75,7 +72,17 @@ _public_ NDhcp4Client *n_dhcp4_client_free(NDhcp4Client *client) {
                 close(client->efd);
 
         free(client);
+}
 
+_public_ NDhcp4Client *n_dhcp4_client_ref(NDhcp4Client *client) {
+        if (client)
+                ++client->n_refs;
+        return client;
+}
+
+_public_ NDhcp4Client *n_dhcp4_client_unref(NDhcp4Client *client) {
+        if (client && !--client->n_refs)
+                n_dhcp4_client_free(client);
         return NULL;
 }
 

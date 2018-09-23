@@ -19,7 +19,8 @@ typedef struct NDhcp4Client NDhcp4Client;
 typedef struct NDhcp4ClientConfig NDhcp4ClientConfig;
 typedef struct NDhcp4ClientEvent NDhcp4ClientEvent;
 typedef struct NDhcp4ClientLease NDhcp4ClientLease;
-typedef struct NDhcp4ClientRequest NDhcp4ClientRequest;
+typedef struct NDhcp4ClientProbe NDhcp4ClientProbe;
+typedef struct NDhcp4ClientProbeConfig NDhcp4ClientProbeConfig;
 
 enum {
         _N_DHCP4_E_SUCCESS,
@@ -32,10 +33,10 @@ enum {
 enum {
         N_DHCP4_CLIENT_EVENT_DOWN,
         N_DHCP4_CLIENT_EVENT_OFFER,
-        N_DHCP4_CLIENT_EVENT_READY,
+        N_DHCP4_CLIENT_EVENT_GRANTED,
+        N_DHCP4_CLIENT_EVENT_RETRACTED,
+        N_DHCP4_CLIENT_EVENT_EXTENDED,
         N_DHCP4_CLIENT_EVENT_EXPIRED,
-        N_DHCP4_CLIENT_EVENT_REVOKED,
-
         _N_DHCP4_CLIENT_EVENT_N,
 };
 
@@ -45,12 +46,16 @@ struct NDhcp4ClientEvent {
                 struct {
                 } down;
                 struct {
+                        NDhcp4ClientProbe *probe;
                         NDhcp4ClientLease *lease;
-                } offer, ready, expired, revoked;
+                } offer, granted, extended;
+                struct {
+                        NDhcp4ClientProbe *probe;
+                } retracted, expired;
         };
 };
 
-/* configs */
+/* client configs */
 
 int n_dhcp4_client_config_new(NDhcp4ClientConfig **configp);
 NDhcp4ClientConfig *n_dhcp4_client_config_free(NDhcp4ClientConfig *config);
@@ -59,72 +64,89 @@ void n_dhcp4_client_config_set_ifindex(NDhcp4ClientConfig *config, int ifindex);
 void n_dhcp4_client_config_set_link_mtu(NDhcp4ClientConfig *config, ...);
 void n_dhcp4_client_config_set_client_id(NDhcp4ClientConfig *config, ...);
 
-/* requests */
+/* client-probe configs */
 
-int n_dhcp4_client_request_new(NDhcp4ClientRequest *request);
-NDhcp4ClientRequest *n_dhcp4_client_request_free(NDhcp4ClientRequest *request);
+int n_dhcp4_client_probe_config_new(NDhcp4ClientProbeConfig *config);
+NDhcp4ClientProbeConfig *n_dhcp4_client_probe_config_free(NDhcp4ClientProbeConfig *config);
 
-void n_dhcp4_client_request_set_local_ip(NDhcp4ClientRequest *request, ...);
+void n_dhcp4_client_probe_config_set_inform_only(NDhcp4ClientProbeConfig *config, ...);
+void n_dhcp4_client_probe_config_set_local_ip(NDhcp4ClientProbeConfig *config, ...);
 
 /* clients */
 
 int n_dhcp4_client_new(NDhcp4Client **clientp);
-NDhcp4Client *n_dhcp4_client_free(NDhcp4Client *client);
+NDhcp4Client *n_dhcp4_client_ref(NDhcp4Client *client);
+NDhcp4Client *n_dhcp4_client_unref(NDhcp4Client *client);
 
 void n_dhcp4_client_get_fd(NDhcp4Client *client, int *fdp);
 int n_dhcp4_client_dispatch(NDhcp4Client *client);
 int n_dhcp4_client_pop_event(NDhcp4Client *client, NDhcp4ClientEvent **eventp);
 
-int n_dhcp4_client_request_lease(NDhcp4Client *client,
-                                 NDhcp4ClientLease **leasep,
-                                 NDhcp4ClientRequest *request);
-int n_dhcp4_client_request_inform(NDhcp4Client *client,
-                                  NDhcp4ClientLease **leasep,
-                                  NDhcp4ClientRequest *request);
+int n_dhcp4_client_probe(NDhcp4Client *client,
+                         NDhcp4ClientProbe **probep,
+                         NDhcp4ClientProbeConfig *config);
 
-/* client lease */
+/* client probes */
 
-NDhcp4ClientLease *n_dhcp4_client_lease_free(NDhcp4ClientLease *lease);
+NDhcp4ClientProbe *n_dhcp4_client_probe_free(NDhcp4ClientProbe *probe);
 
-int n_dhcp4_client_lease_reject(NDhcp4ClientLease *lease);
+void n_dhcp4_client_probe_set_userdata(NDhcp4ClientProbe *probe, void *userdata);
+void n_dhcp4_client_probe_get_userdata(NDhcp4ClientProbe *probe, void **userdatap);
+
+/* client leases */
+
+NDhcp4ClientLease *n_dhcp4_client_lease_ref(NDhcp4ClientLease *lease);
+NDhcp4ClientLease *n_dhcp4_client_lease_unref(NDhcp4ClientLease *lease);
+
+int n_dhcp4_client_lease_select(NDhcp4ClientLease *lease);
 int n_dhcp4_client_lease_accept(NDhcp4ClientLease *lease);
+int n_dhcp4_client_lease_decline(NDhcp4ClientLease *lease);
 
 /* inline helpers */
 
-static inline void n_dhcp4_client_config_freep(NDhcp4ClientConfig **config) {
-        if (*config)
-                n_dhcp4_client_config_free(*config);
+static inline void n_dhcp4_client_config_freep(NDhcp4ClientConfig **p) {
+        if (*p)
+                n_dhcp4_client_config_free(*p);
 }
 
-static inline void n_dhcp4_client_config_freev(NDhcp4ClientConfig *config) {
-        n_dhcp4_client_config_free(config);
+static inline void n_dhcp4_client_config_freev(NDhcp4ClientConfig *p) {
+        n_dhcp4_client_config_free(p);
 }
 
-static inline void n_dhcp4_client_request_freep(NDhcp4ClientRequest **request) {
-        if (*request)
-                n_dhcp4_client_request_free(*request);
+static inline void n_dhcp4_client_probe_config_freep(NDhcp4ClientProbeConfig **p) {
+        if (*p)
+                n_dhcp4_client_probe_config_free(*p);
 }
 
-static inline void n_dhcp4_client_request_freev(NDhcp4ClientRequest *request) {
-        n_dhcp4_client_request_free(request);
+static inline void n_dhcp4_client_probe_config_freev(NDhcp4ClientProbeConfig *p) {
+        n_dhcp4_client_probe_config_free(p);
 }
 
-static inline void n_dhcp4_client_freep(NDhcp4Client **client) {
-        if (*client)
-                n_dhcp4_client_free(*client);
+static inline void n_dhcp4_client_unrefp(NDhcp4Client **p) {
+        if (*p)
+                n_dhcp4_client_unref(*p);
 }
 
-static inline void n_dhcp4_client_freev(NDhcp4Client *client) {
-        n_dhcp4_client_free(client);
+static inline void n_dhcp4_client_unrefv(NDhcp4Client *p) {
+        n_dhcp4_client_unref(p);
 }
 
-static inline void n_dhcp4_client_lease_freep(NDhcp4ClientLease **lease) {
-        if (*lease)
-                n_dhcp4_client_lease_free(*lease);
+static inline void n_dhcp4_client_probe_freep(NDhcp4ClientProbe **p) {
+        if (*p)
+                n_dhcp4_client_probe_free(*p);
 }
 
-static inline void n_dhcp4_client_lease_freev(NDhcp4ClientLease *lease) {
-        n_dhcp4_client_lease_free(lease);
+static inline void n_dhcp4_client_probe_freev(NDhcp4ClientProbe *p) {
+        n_dhcp4_client_probe_free(p);
+}
+
+static inline void n_dhcp4_client_lease_unrefp(NDhcp4ClientLease **p) {
+        if (*p)
+                n_dhcp4_client_lease_unref(*p);
+}
+
+static inline void n_dhcp4_client_lease_unrefv(NDhcp4ClientLease *p) {
+        n_dhcp4_client_lease_unref(p);
 }
 
 #ifdef __cplusplus

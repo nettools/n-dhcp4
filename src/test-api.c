@@ -19,7 +19,7 @@ static void test_api(void) {
         r = n_dhcp4_client_dispatch(client);
         assert(!r);
 
-        client = n_dhcp4_client_free(client);
+        client = n_dhcp4_client_unref(client);
         assert(!client);
 }
 
