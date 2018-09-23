@@ -102,28 +102,20 @@ static void test_acquisition(int ns_client, NDhcp4CConnection *connection, int s
         test_netns_set(oldns);
         assert(r >= 0);
 
-        fprintf(stderr, "connected\n");
-
         r = n_dhcp4_c_connection_renew(connection, 1, 1);
         assert(r >= 0);
 
         test_server_receive(sk_server, N_DHCP4_MESSAGE_REQUEST);
-
-        fprintf(stderr, "renewed\n");
 
         r = n_dhcp4_c_connection_rebind(connection, 1, 1);
         assert(r >= 0);
 
         test_server_receive(sk_server, N_DHCP4_MESSAGE_REQUEST);
 
-        fprintf(stderr, "rebound\n");
-
         r = n_dhcp4_c_connection_release(connection, "Shutting down!");
         assert(r >= 0);
 
         test_server_receive(sk_server, N_DHCP4_MESSAGE_RELEASE);
-
-        fprintf(stderr, "released\n");
 }
 
 int main(int argc, char **argv) {
