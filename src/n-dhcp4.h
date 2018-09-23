@@ -12,6 +12,7 @@
 extern "C" {
 #endif
 
+#include <stdbool.h>
 #include <stdlib.h>
 
 typedef struct NDhcp4Client NDhcp4Client;
@@ -55,11 +56,15 @@ int n_dhcp4_client_config_new(NDhcp4ClientConfig **configp);
 NDhcp4ClientConfig *n_dhcp4_client_config_free(NDhcp4ClientConfig *config);
 
 void n_dhcp4_client_config_set_ifindex(NDhcp4ClientConfig *config, int ifindex);
+void n_dhcp4_client_config_set_link_mtu(NDhcp4ClientConfig *config, ...);
+void n_dhcp4_client_config_set_client_id(NDhcp4ClientConfig *config, ...);
 
 /* requests */
 
 int n_dhcp4_client_request_new(NDhcp4ClientRequest *request);
 NDhcp4ClientRequest *n_dhcp4_client_request_free(NDhcp4ClientRequest *request);
+
+void n_dhcp4_client_request_set_local_ip(NDhcp4ClientRequest *request, ...);
 
 /* clients */
 
@@ -70,9 +75,12 @@ void n_dhcp4_client_get_fd(NDhcp4Client *client, int *fdp);
 int n_dhcp4_client_dispatch(NDhcp4Client *client);
 int n_dhcp4_client_pop_event(NDhcp4Client *client, NDhcp4ClientEvent **eventp);
 
-int n_dhcp4_client_lease(NDhcp4Client *client,
-                         NDhcp4ClientLease **leasep,
-                         NDhcp4ClientRequest *request);
+int n_dhcp4_client_request_lease(NDhcp4Client *client,
+                                 NDhcp4ClientLease **leasep,
+                                 NDhcp4ClientRequest *request);
+int n_dhcp4_client_request_inform(NDhcp4Client *client,
+                                  NDhcp4ClientLease **leasep,
+                                  NDhcp4ClientRequest *request);
 
 /* client lease */
 
