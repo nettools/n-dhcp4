@@ -12,6 +12,8 @@
 extern "C" {
 #endif
 
+#include <inttypes.h>
+#include <netinet/in.h>
 #include <stdbool.h>
 #include <stdlib.h>
 
@@ -28,6 +30,12 @@ enum {
         N_DHCP4_E_PREEMPTED,
 
         _N_DHCP4_E_N,
+};
+
+enum {
+        N_DHCP4_TRANSPORT_ETHERNET,
+        N_DHCP4_TRANSPORT_INFINIBAND,
+        _N_DHCP4_TRANSPORT_N,
 };
 
 enum {
@@ -61,16 +69,18 @@ int n_dhcp4_client_config_new(NDhcp4ClientConfig **configp);
 NDhcp4ClientConfig *n_dhcp4_client_config_free(NDhcp4ClientConfig *config);
 
 void n_dhcp4_client_config_set_ifindex(NDhcp4ClientConfig *config, int ifindex);
-void n_dhcp4_client_config_set_link_mtu(NDhcp4ClientConfig *config, ...);
-void n_dhcp4_client_config_set_client_id(NDhcp4ClientConfig *config, ...);
+void n_dhcp4_client_config_set_transport(NDhcp4ClientConfig *config, unsigned int transport);
+void n_dhcp4_client_config_set_mac(NDhcp4ClientConfig *config, const uint8_t *mac, size_t n_mac);
+void n_dhcp4_client_config_set_broadcast_mac(NDhcp4ClientConfig *config, const uint8_t *mac, size_t n_mac);
+int n_dhcp4_client_config_set_client_id(NDhcp4ClientConfig *config, const uint8_t *id, size_t n_id);
 
 /* client-probe configs */
 
 int n_dhcp4_client_probe_config_new(NDhcp4ClientProbeConfig *config);
 NDhcp4ClientProbeConfig *n_dhcp4_client_probe_config_free(NDhcp4ClientProbeConfig *config);
 
-void n_dhcp4_client_probe_config_set_inform_only(NDhcp4ClientProbeConfig *config, ...);
-void n_dhcp4_client_probe_config_set_local_ip(NDhcp4ClientProbeConfig *config, ...);
+void n_dhcp4_client_probe_config_set_inform_only(NDhcp4ClientProbeConfig *config, bool inform_only);
+void n_dhcp4_client_probe_config_set_requested_ip(NDhcp4ClientProbeConfig *config, struct in_addr ip);
 
 /* clients */
 
@@ -81,6 +91,8 @@ NDhcp4Client *n_dhcp4_client_unref(NDhcp4Client *client);
 void n_dhcp4_client_get_fd(NDhcp4Client *client, int *fdp);
 int n_dhcp4_client_dispatch(NDhcp4Client *client);
 int n_dhcp4_client_pop_event(NDhcp4Client *client, NDhcp4ClientEvent **eventp);
+
+int n_dhcp4_client_update_mtu(NDhcp4Client *client, uint16_t mtu);
 
 int n_dhcp4_client_probe(NDhcp4Client *client,
                          NDhcp4ClientProbe **probep,
