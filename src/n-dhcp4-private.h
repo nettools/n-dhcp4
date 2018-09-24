@@ -142,6 +142,17 @@ enum {
         N_DHCP4_CLIENT_EPOLL_CONNECTION,
 };
 
+enum {
+        N_DHCP4_C_PROBE_STATE_INIT,
+        N_DHCP4_C_PROBE_STATE_INIT_REBOOT,
+        N_DHCP4_C_PROBE_STATE_SELECTING,
+        N_DHCP4_C_PROBE_STATE_REBOOTING,
+        N_DHCP4_C_PROBE_STATE_REQUESTING,
+        N_DHCP4_C_PROBE_STATE_BOUND,
+        N_DHCP4_C_PROBE_STATE_RENEWING,
+        N_DHCP4_C_PROBE_STATE_REBINDING,
+};
+
 struct NDhcp4Outgoing {
         NDhcp4Message *message;
         size_t n_message;

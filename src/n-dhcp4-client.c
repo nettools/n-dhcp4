@@ -95,17 +95,6 @@ _public_ int n_dhcp4_client_config_set_client_id(NDhcp4ClientConfig *config, con
         return 0;
 }
 
-enum {
-        N_DHCP4_STATE_INIT,
-        N_DHCP4_STATE_SELECTING,
-        N_DHCP4_STATE_INIT_REBOOT,
-        N_DHCP4_STATE_REBOOTING,
-        N_DHCP4_STATE_REQUESTING,
-        N_DHCP4_STATE_BOUND,
-        N_DHCP4_STATE_RENEWING,
-        N_DHCP4_STATE_REBINDING,
-};
-
 _public_ int n_dhcp4_client_new(NDhcp4Client **clientp) {
         _cleanup_(n_dhcp4_client_unrefp) NDhcp4Client *client = NULL;
         struct epoll_event ev = {
