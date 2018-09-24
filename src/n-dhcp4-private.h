@@ -163,9 +163,6 @@ struct NDhcp4Message {
         uint8_t options[];
 } _packed_;
 
-#define N_DHCP4_MESSAGE_NULL {                          \
-                .magic = htonl(N_DHCP4_MESSAGE_MAGIC),  \
-        }
 
 int n_dhcp4_outgoing_new(NDhcp4Outgoing **outgoingp, size_t max_size, uint8_t overload);
 NDhcp4Outgoing *n_dhcp4_outgoing_free(NDhcp4Outgoing *outgoing);

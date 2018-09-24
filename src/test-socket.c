@@ -78,7 +78,7 @@ static void test_client_server_packet(int ns_server,
                                       int ns_client,
                                       int ifindex_server,
                                       int ifindex_client) {
-        NDhcp4Message message_out = N_DHCP4_MESSAGE_NULL, message_in = {};
+        NDhcp4Message message_out = {}, message_in = {};
         int sk_server, sk_client;
         ssize_t len;
         int r;
@@ -87,6 +87,7 @@ static void test_client_server_packet(int ns_server,
         test_server_udp_socket_new(ns_server, &sk_server, ifindex_server);
 
         message_out.header.op = N_DHCP4_OP_BOOTREQUEST;
+        message_out.magic = htonl(N_DHCP4_MESSAGE_MAGIC);
 
         r = n_dhcp4_c_socket_packet_send(sk_client,
                                          ifindex_client,
@@ -110,7 +111,7 @@ static void test_client_server_udp(int ns_server,
                                    int ns_client,
                                    int ifindex_server,
                                    int ifindex_client) {
-        NDhcp4Message message_out = N_DHCP4_MESSAGE_NULL, message_in = {};
+        NDhcp4Message message_out = {}, message_in = {};
         struct in_addr addr_client = (struct in_addr){ htonl(10 << 24 | 2) };
         struct in_addr addr_server = (struct in_addr){ htonl(10 << 24 | 1) };
         int r, sk_server, sk_client;
@@ -123,6 +124,7 @@ static void test_client_server_udp(int ns_server,
         test_add_ip(ns_server, ifindex_server, &addr_server, 8);
 
         message_out.header.op = N_DHCP4_OP_BOOTREQUEST;
+        message_out.magic = htonl(N_DHCP4_MESSAGE_MAGIC);
 
         r = n_dhcp4_c_socket_udp_send(sk_client, &message_out, sizeof(message_out));
         assert(r >= 0);
@@ -145,7 +147,7 @@ static void test_server_client_packet(int ns_server,
                                       int ifindex_server,
                                       int ifindex_client,
                                       const struct ether_addr *mac_client) {
-        NDhcp4Message message_out = N_DHCP4_MESSAGE_NULL, message_in = {};
+        NDhcp4Message message_out = {}, message_in = {};
         struct in_addr addr_client = (struct in_addr){ htonl(10 << 24 | 2) };
         struct in_addr addr_server = (struct in_addr){ htonl(10 << 24 | 1) };
         int sk_server, sk_client;
@@ -157,6 +159,7 @@ static void test_server_client_packet(int ns_server,
         test_add_ip(ns_server, ifindex_server, &addr_server, 8);
 
         message_out.header.op = N_DHCP4_OP_BOOTREPLY;
+        message_out.magic = htonl(N_DHCP4_MESSAGE_MAGIC);
 
         r = n_dhcp4_s_socket_packet_send(sk_server,
                                          ifindex_server,
@@ -199,7 +202,7 @@ static void test_server_client_udp(int ns_server,
                                    int ns_client,
                                    int ifindex_server,
                                    int ifindex_client) {
-        NDhcp4Message message_out = N_DHCP4_MESSAGE_NULL, message_in = {};
+        NDhcp4Message message_out = {}, message_in = {};
         struct in_addr addr_client = (struct in_addr){ htonl(10 << 24 | 2) };
         struct in_addr addr_server = (struct in_addr){ htonl(10 << 24 | 1) };
         int sk_server, sk_client;
@@ -212,6 +215,7 @@ static void test_server_client_udp(int ns_server,
         test_add_ip(ns_server, ifindex_server, &addr_server, 8);
 
         message_out.header.op = N_DHCP4_OP_BOOTREPLY;
+        message_out.magic = htonl(N_DHCP4_MESSAGE_MAGIC);
 
         r = n_dhcp4_s_socket_udp_send(sk_server,
                                       &addr_client,

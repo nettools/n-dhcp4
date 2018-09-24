@@ -77,7 +77,7 @@ int n_dhcp4_outgoing_new(NDhcp4Outgoing **outgoingp, size_t max_size, uint8_t ov
         if (!outgoing->message)
                 return -ENOMEM;
 
-        *outgoing->message = (NDhcp4Message)N_DHCP4_MESSAGE_NULL;
+        outgoing->message->magic = htonl(N_DHCP4_MESSAGE_MAGIC);
         outgoing->message->options[0] = N_DHCP4_OPTION_END;
 
         *outgoingp = outgoing;
