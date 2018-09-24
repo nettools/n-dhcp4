@@ -15,9 +15,7 @@ typedef struct NDhcp4Incoming NDhcp4Incoming;
 typedef struct NDhcp4Message NDhcp4Message;
 typedef struct NDhcp4Outgoing NDhcp4Outgoing;
 
-/*
- * Macros
- */
+/* macros */
 
 #define _cleanup_(_x) __attribute__((__cleanup__(_x)))
 #define _packed_ __attribute__((__packed__))
@@ -25,60 +23,19 @@ typedef struct NDhcp4Outgoing NDhcp4Outgoing;
 
 #define MIN(_x, _y) ((_x) < (_y) ? (_x) : (_y))
 
-/*
- * Spec Constants
- */
+/* specs */
 
 #define N_DHCP4_NETWORK_IP_MAXIMUM_HEADER_SIZE (60) /* See RFC791 */
 #define N_DHCP4_NETWORK_IP_MINIMUM_MAX_SIZE (576) /* See RFC791 */
 #define N_DHCP4_NETWORK_SERVER_PORT (67)
 #define N_DHCP4_NETWORK_CLIENT_PORT (68)
-
-/*
- * Socket Layers
- */
-
-int n_dhcp4_c_socket_packet_new(int *sockfdp, int ifindex);
-int n_dhcp4_c_socket_udp_new(int *sockfdp,
-                             int ifindex,
-                             const struct in_addr *client_addr,
-                             const struct in_addr *server_addr);
-int n_dhcp4_s_socket_packet_new(int *sockfdp);
-int n_dhcp4_s_socket_udp_new(int *sockfdp, int ifindex);
-
-int n_dhcp4_c_socket_packet_send(int sockfd,
-                                 int ifindex,
-                                 const unsigned char *dest_haddr,
-                                 unsigned char halen,
-                                 const void *buf,
-                                 size_t n_buf);
-int n_dhcp4_c_socket_udp_send(int sockfd, const void *buf, size_t n_buf);
-int n_dhcp4_c_socket_udp_broadcast(int sockfd, const void *buf, size_t n_buf);
-int n_dhcp4_s_socket_packet_send(int sockfd,
-                                 int ifindex,
-                                 const struct in_addr *src_inaddr,
-                                 const unsigned char *dest_haddr,
-                                 unsigned char halen,
-                                 const struct in_addr *dest_inaddr,
-                                 const void *buf,
-                                 size_t n_buf);
-int n_dhcp4_s_socket_udp_send(int sockfd,
-                              const struct in_addr *inaddr_dest,
-                              const void *buf,
-                              size_t n_buf);
-
-/*
- * DHCP4 Messages
- */
-
 #define N_DHCP4_MESSAGE_MAGIC ((uint32_t)(0x63825363))
+#define N_DHCP4_MESSAGE_FLAG_BROADCAST (htons(0x8000))
 
 enum {
         N_DHCP4_OP_BOOTREQUEST                          = 1,
         N_DHCP4_OP_BOOTREPLY                            = 2,
 };
-
-#define N_DHCP4_MESSAGE_FLAG_BROADCAST (htons(0x8000))
 
 enum {
         N_DHCP4_OPTION_PAD                              = 0,
@@ -163,22 +120,7 @@ struct NDhcp4Message {
         uint8_t options[];
 } _packed_;
 
-
-int n_dhcp4_outgoing_new(NDhcp4Outgoing **outgoingp, size_t max_size, uint8_t overload);
-NDhcp4Outgoing *n_dhcp4_outgoing_free(NDhcp4Outgoing *outgoing);
-NDhcp4Header *n_dhcp4_outgoing_get_header(NDhcp4Outgoing *outgoing);
-size_t n_dhcp4_outgoing_get_raw(NDhcp4Outgoing *outgoing, const void **rawp);
-int n_dhcp4_outgoing_append(NDhcp4Outgoing *outgoing, uint8_t option, const void *data, uint8_t n_data);
-
-int n_dhcp4_incoming_new(NDhcp4Incoming **incomingp, const void *raw, size_t n_raw);
-NDhcp4Incoming *n_dhcp4_incoming_free(NDhcp4Incoming *incoming);
-NDhcp4Header *n_dhcp4_incoming_get_header(NDhcp4Incoming *incoming);
-size_t n_dhcp4_incoming_get_raw(NDhcp4Incoming *incoming, const void **rawp);
-int n_dhcp4_incoming_query(NDhcp4Incoming *incoming, uint8_t option, const void **datap, size_t *n_datap);
-
-/*
- * DHCP4 Client Connection
- */
+/* objects */
 
 enum {
         N_DHCP4_CONNECTION_STATE_INIT,
@@ -186,6 +128,34 @@ enum {
         N_DHCP4_CONNECTION_STATE_DRAINING,
         N_DHCP4_CONNECTION_STATE_UDP,
 };
+
+enum {
+        N_DHCP4_CLIENT_EPOLL_TIMER,
+        N_DHCP4_CLIENT_EPOLL_CONNECTION,
+};
+
+struct NDhcp4ClientConfig {
+        int ifindex;
+        unsigned int transport;
+        uint8_t mac[MAX_ADDR_LEN];
+        size_t n_mac;
+        uint8_t broadcast_mac[MAX_ADDR_LEN];
+        size_t n_broadcast_mac;
+        uint8_t *client_id;
+        size_t n_client_id;
+};
+
+#define N_DHCP4_CLIENT_CONFIG_NULL(_x) {                                        \
+                .transport = _N_DHCP4_TRANSPORT_N,                              \
+        }
+
+struct NDhcp4ClientProbeConfig {
+        bool inform_only;
+        struct in_addr local_ip;
+};
+
+#define N_DHCP4_CLIENT_PROBE_CONFIG_NULL(_x) {                                  \
+        }
 
 struct NDhcp4CConnection {
         unsigned int state;             /* current connection state */
@@ -214,6 +184,80 @@ struct NDhcp4CConnection {
                 .pfd = -1,                                                      \
                 .ufd = -1,                                                      \
         }
+
+struct NDhcp4Client {
+        unsigned long n_refs;           /* reference counter */
+        unsigned int state;             /* current client state */
+        int efd;                        /* epoll fd */
+        int tfd;                        /* timer fd */
+        uint64_t u_t1;                  /* next T1 timeout, or 0 */
+        uint64_t u_t2;                  /* next T2 timeout, or 0 */
+        uint64_t u_lifetime;            /* next lifetime timeout, or 0 */
+
+        uint32_t xid;                   /* transaction id, or 0 */
+        uint64_t u_starttime;           /* transaction start time, or 0 */
+        uint32_t secs;                  /* seconds since start of transaction, or 0 */
+
+        NDhcp4CConnection connection;   /* client connection wrapper */
+};
+
+#define N_DHCP4_CLIENT_NULL(_x) {                                               \
+                .n_refs = 1,                                                    \
+                .efd = -1,                                                      \
+                .tfd = -1,                                                      \
+                .connection = N_DHCP4_C_CONNECTION_NULL((_x).connection),       \
+        }
+
+/* outgoing messages */
+
+int n_dhcp4_outgoing_new(NDhcp4Outgoing **outgoingp, size_t max_size, uint8_t overload);
+NDhcp4Outgoing *n_dhcp4_outgoing_free(NDhcp4Outgoing *outgoing);
+
+NDhcp4Header *n_dhcp4_outgoing_get_header(NDhcp4Outgoing *outgoing);
+size_t n_dhcp4_outgoing_get_raw(NDhcp4Outgoing *outgoing, const void **rawp);
+int n_dhcp4_outgoing_append(NDhcp4Outgoing *outgoing, uint8_t option, const void *data, uint8_t n_data);
+
+/* incoming messages */
+
+int n_dhcp4_incoming_new(NDhcp4Incoming **incomingp, const void *raw, size_t n_raw);
+NDhcp4Incoming *n_dhcp4_incoming_free(NDhcp4Incoming *incoming);
+
+NDhcp4Header *n_dhcp4_incoming_get_header(NDhcp4Incoming *incoming);
+size_t n_dhcp4_incoming_get_raw(NDhcp4Incoming *incoming, const void **rawp);
+int n_dhcp4_incoming_query(NDhcp4Incoming *incoming, uint8_t option, const void **datap, size_t *n_datap);
+
+/* sockets */
+
+int n_dhcp4_c_socket_packet_new(int *sockfdp, int ifindex);
+int n_dhcp4_c_socket_udp_new(int *sockfdp,
+                             int ifindex,
+                             const struct in_addr *client_addr,
+                             const struct in_addr *server_addr);
+int n_dhcp4_s_socket_packet_new(int *sockfdp);
+int n_dhcp4_s_socket_udp_new(int *sockfdp, int ifindex);
+
+int n_dhcp4_c_socket_packet_send(int sockfd,
+                                 int ifindex,
+                                 const unsigned char *dest_haddr,
+                                 unsigned char halen,
+                                 const void *buf,
+                                 size_t n_buf);
+int n_dhcp4_c_socket_udp_send(int sockfd, const void *buf, size_t n_buf);
+int n_dhcp4_c_socket_udp_broadcast(int sockfd, const void *buf, size_t n_buf);
+int n_dhcp4_s_socket_packet_send(int sockfd,
+                                 int ifindex,
+                                 const struct in_addr *src_inaddr,
+                                 const unsigned char *dest_haddr,
+                                 unsigned char halen,
+                                 const struct in_addr *dest_inaddr,
+                                 const void *buf,
+                                 size_t n_buf);
+int n_dhcp4_s_socket_udp_send(int sockfd,
+                              const struct in_addr *inaddr_dest,
+                              const void *buf,
+                              size_t n_buf);
+
+/* client connections */
 
 int n_dhcp4_c_connection_init(NDhcp4CConnection *connection,
                               int *efd,
@@ -260,42 +304,7 @@ int n_dhcp4_c_connection_inform(NDhcp4CConnection *connection,
 int n_dhcp4_c_connection_release(NDhcp4CConnection *connection,
                                  const char *error);
 
-/*
- * DHCP4 Client
- */
-
-enum {
-        N_DHCP4_CLIENT_EPOLL_TIMER,
-        N_DHCP4_CLIENT_EPOLL_CONNECTION,
-};
-
-struct NDhcp4Client {
-        unsigned long n_refs;           /* reference counter */
-        unsigned int state;             /* current client state */
-        int efd;                        /* epoll fd */
-        int tfd;                        /* timer fd */
-        uint64_t u_t1;                  /* next T1 timeout, or 0 */
-        uint64_t u_t2;                  /* next T2 timeout, or 0 */
-        uint64_t u_lifetime;            /* next lifetime timeout, or 0 */
-
-        uint32_t xid;                   /* transaction id, or 0 */
-        uint64_t u_starttime;           /* transaction start time, or 0 */
-        uint32_t secs;                  /* seconds since start of transaction, or 0 */
-
-        NDhcp4CConnection connection;   /* client connection wrapper */
-        /* @connection must be last, as it contains a VLA */
-};
-
-#define N_DHCP4_CLIENT_NULL(_x) {                                       \
-                .n_refs = 1,                                            \
-                .efd = -1,                                              \
-                .tfd = -1,                                              \
-                .connection = N_DHCP4_C_CONNECTION_NULL,                \
-        }
-
-/*
- * Convenience Wrappers
- */
+/* inline helpers */
 
 static inline void n_dhcp4_outgoing_freep(NDhcp4Outgoing **outgoing) {
         if (*outgoing)
