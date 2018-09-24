@@ -327,6 +327,9 @@ int n_dhcp4_s_socket_udp_send(int sockfd,
                               const struct in_addr *inaddr_src,
                               const struct in_addr *inaddr_dest,
                               NDhcp4Outgoing *message);
+int n_dhcp4_s_socket_udp_broadcast(int sockfd,
+                                   const struct in_addr *inaddr_src,
+                                   NDhcp4Outgoing *message);
 
 int n_dhcp4_c_socket_packet_recv(int sockfd,
                                  NDhcp4Incoming **messagep);

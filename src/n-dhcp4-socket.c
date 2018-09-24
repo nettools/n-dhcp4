@@ -517,6 +517,15 @@ int n_dhcp4_s_socket_udp_send(int sockfd,
         return 0;
 }
 
+int n_dhcp4_s_socket_udp_broadcast(int sockfd,
+                                   const struct in_addr *inaddr_src,
+                                   NDhcp4Outgoing *message) {
+        return n_dhcp4_s_socket_udp_send(sockfd,
+                                         inaddr_src,
+                                         &(const struct in_addr){INADDR_BROADCAST},
+                                         message);
+}
+
 int n_dhcp4_c_socket_packet_recv(int sockfd,
                                  NDhcp4Incoming **messagep) {
         _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *message = NULL;
