@@ -123,6 +123,12 @@ struct NDhcp4Message {
 /* objects */
 
 enum {
+        _N_DHCP4_E_INTERNAL = _N_DHCP4_E_N,
+
+        N_DHCP4_E_NO_SPACE,
+};
+
+enum {
         N_DHCP4_CONNECTION_STATE_INIT,
         N_DHCP4_CONNECTION_STATE_PACKET,
         N_DHCP4_CONNECTION_STATE_DRAINING,
@@ -133,6 +139,18 @@ enum {
         N_DHCP4_CLIENT_EPOLL_TIMER,
         N_DHCP4_CLIENT_EPOLL_CONNECTION,
 };
+
+struct NDhcp4Outgoing {
+        NDhcp4Message *message;
+        size_t n_message;
+        size_t i_message;
+        size_t max_size;
+
+        uint8_t overload : 2;
+};
+
+#define N_DHCP4_OUTGOING_NULL(_x) {                                             \
+        }
 
 struct NDhcp4ClientConfig {
         int ifindex;
