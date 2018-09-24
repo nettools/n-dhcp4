@@ -332,7 +332,7 @@ static int n_dhcp4_client_dispatch_tfd(NDhcp4Client *client, unsigned int events
 }
 
 static int n_dhcp4_client_dispatch_msg(NDhcp4Client *client, NDhcp4Incoming *incoming) {
-        const void *value;
+        void *value;
         size_t size;
         int r;
 

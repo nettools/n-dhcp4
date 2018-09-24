@@ -126,6 +126,8 @@ enum {
         _N_DHCP4_E_INTERNAL = _N_DHCP4_E_N,
 
         N_DHCP4_E_NO_SPACE,
+        N_DHCP4_E_MALFORMED,
+        N_DHCP4_E_UNSET,
 };
 
 enum {
@@ -150,6 +152,20 @@ struct NDhcp4Outgoing {
 };
 
 #define N_DHCP4_OUTGOING_NULL(_x) {                                             \
+        }
+
+struct NDhcp4Incoming {
+        struct {
+                uint8_t *value;
+                size_t size;
+        } options[_N_DHCP4_OPTION_N];
+
+        size_t n_message;
+        NDhcp4Message message;
+        /* @message must be the last member */
+};
+
+#define N_DHCP4_INCOMING_NULL(_x) {                                             \
         }
 
 struct NDhcp4ClientConfig {
@@ -242,7 +258,7 @@ NDhcp4Incoming *n_dhcp4_incoming_free(NDhcp4Incoming *incoming);
 
 NDhcp4Header *n_dhcp4_incoming_get_header(NDhcp4Incoming *incoming);
 size_t n_dhcp4_incoming_get_raw(NDhcp4Incoming *incoming, const void **rawp);
-int n_dhcp4_incoming_query(NDhcp4Incoming *incoming, uint8_t option, const void **datap, size_t *n_datap);
+int n_dhcp4_incoming_query(NDhcp4Incoming *incoming, uint8_t option, void **datap, size_t *n_datap);
 
 /* sockets */
 

@@ -132,24 +132,18 @@ int n_dhcp4_c_connection_connect(NDhcp4CConnection *connection,
 static int n_dhcp4_c_connection_verify_incoming(NDhcp4CConnection *connection,
                                                 NDhcp4Incoming *message) {
         NDhcp4Header *header = n_dhcp4_incoming_get_header(message);
-        const void *id;
-        size_t idlen;
+        void *id = NULL;
+        size_t idlen = 0;
         int r;
 
         if (memcmp(connection->chaddr, header->chaddr, connection->hlen) != 0)
                 return -EINVAL;
 
         r = n_dhcp4_incoming_query(message, N_DHCP4_OPTION_CLIENT_IDENTIFIER, &id, &idlen);
-        if (r == -ENODATA) {
-                id = NULL;
-                idlen = 0;
-        } else if (r < 0) {
+        if (r && r != N_DHCP4_E_UNSET)
                 return r;
-        }
-
         if (idlen != connection->idlen)
                 return -EINVAL;
-
         if (memcmp(connection->id, id, idlen) != 0)
                 return -EINVAL;
 

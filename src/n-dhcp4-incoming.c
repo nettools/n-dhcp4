@@ -1,7 +1,19 @@
 /*
- * DHCPv4 Message
+ * DHCPv4 Incoming Messages
  *
- * XXX
+ * This file implements the message parser object for incoming DHCP4 messages.
+ * It takes a linear data blob as input, and provides accessors for the message
+ * content.
+ *
+ * This wrapper mainly deals with the OPTIONs array. That is, in hides the
+ * different overload-sections the DHCP4 spec defines, it concatenates
+ * duplicate option fields (as described by the spec), and provides a
+ * consistent view to the caller.
+ *
+ * Internally, for every incoming message we linearize its OPTIONs. This means,
+ * we create a copy of the contents, and merge all duplicate options into a
+ * single option entry. We then provide accessors to the caller to easily get
+ * O(1) access to individual fields.
  */
 
 #include <assert.h>
@@ -14,18 +26,8 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
+#include "n-dhcp4.h"
 #include "n-dhcp4-private.h"
-
-struct NDhcp4Incoming {
-        struct {
-                uint8_t *value;
-                size_t size;
-        } options[_N_DHCP4_OPTION_N];
-
-        size_t n_message;
-        NDhcp4Message message;
-        /* @message must be the last member */
-};
 
 static void n_dhcp4_incoming_prefetch(NDhcp4Incoming *incoming, size_t *offset, uint8_t option, const uint8_t *raw, size_t n_raw) {
         uint8_t o, l;
@@ -163,21 +165,38 @@ static void n_dhcp4_incoming_linearize(NDhcp4Incoming *incoming) {
         }
 }
 
+/**
+ * n_dhcp4_incoming_new() - Allocate new incoming message object
+ * @incomingp:          output argument for new object
+ * @raw:                raw message blob
+ * @n_raw:              length of the raw message blob
+ *
+ * This function allocates a new incoming-message object to wrap a received
+ * message blob. It performs basic verification of the message length and
+ * header, and then linearizes the DHCP4 options.
+ *
+ * The incoming-message object mainly provides accessors for the option-array.
+ * It handles all the different quirks around parsing and concatenating the
+ * options array, and provides the assembled data to the caller. It does not,
+ * however, in any way interpret the data of the individual options. This is up
+ * to the caller to do.
+ *
+ * Return: 0 on success, negative error code on failure, N_DHCP4_E_MALFORMED if
+ *         the message is not a valid DHCP4 message.
+ */
 int n_dhcp4_incoming_new(NDhcp4Incoming **incomingp, const void *raw, size_t n_raw) {
         _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *incoming = NULL;
         size_t size;
 
-        assert(incomingp);
-
-        if (n_raw < sizeof(NDhcp4Message))
-                return -EINVAL;
+        if (n_raw < sizeof(NDhcp4Message) || n_raw > UINT16_MAX)
+                return N_DHCP4_E_MALFORMED;
 
         /*
          * Allocate enough space for book-keeping, a copy of @raw and trailing
          * space for linearized options. The trailing space must be big enough
          * to hold the entire options array unmodified (linearizing can only
-         * make it smaller). Hence, just allocate enough space to hold a the
-         * raw message without the header.
+         * make it smaller). Hence, just allocate enough space to hold the raw
+         * message without the header.
          */
         size = sizeof(*incoming) + n_raw - sizeof(NDhcp4Message);
         size += n_raw - sizeof(NDhcp4Header);
@@ -186,11 +205,12 @@ int n_dhcp4_incoming_new(NDhcp4Incoming **incomingp, const void *raw, size_t n_r
         if (!incoming)
                 return -ENOMEM;
 
+        *incoming = (NDhcp4Incoming)N_DHCP4_INCOMING_NULL(*incoming);
         incoming->n_message = n_raw;
         memcpy(&incoming->message, raw, n_raw);
 
         if (incoming->message.magic != htobe32(N_DHCP4_MESSAGE_MAGIC))
-                return -EINVAL;
+                return N_DHCP4_E_MALFORMED;
 
         /* linearize options */
         n_dhcp4_incoming_linearize(incoming);
@@ -200,6 +220,15 @@ int n_dhcp4_incoming_new(NDhcp4Incoming **incomingp, const void *raw, size_t n_r
         return 0;
 }
 
+/**
+ * n_dhcp4_incoming_free() - Deallocate message object
+ * @incoming:           object to operate on, or NULL
+ *
+ * This deallocates and frees the given incoming-message object. If NULL is
+ * passed, this is a no-op.
+ *
+ * Return: NULL is returned.
+ */
 NDhcp4Incoming *n_dhcp4_incoming_free(NDhcp4Incoming *incoming) {
         if (!incoming)
                 return NULL;
@@ -209,19 +238,77 @@ NDhcp4Incoming *n_dhcp4_incoming_free(NDhcp4Incoming *incoming) {
         return NULL;
 }
 
+/**
+ * n_dhcp4_incoming_get_header() - Return message header
+ * @incoming:           message to operate on
+ *
+ * This returns a pointer to the message header. Note that modifications to
+ * this header are permanent and will affect the original message.
+ *
+ * Return: A pointer to the message header is returned.
+ */
 NDhcp4Header *n_dhcp4_incoming_get_header(NDhcp4Incoming *incoming) {
         return &incoming->message.header;
 }
 
+/**
+ * n_dhcp4_incoming_get_raw() - Get access to the raw original message
+ * @incoming:           message to operate on
+ * @rawp:               output argument for the raw blob, or NULL
+ *
+ * This hands out a pointer to the raw message blob to the caller. This will
+ * point to the original message content, rather than the linearized version.
+ *
+ * Note that if the caller queried the contents of the message before, any
+ * modifications done by the caller will not affect the original message. It
+ * only affects the linearized content (which is a duplicate trailing the
+ * original message). However, modifications to the message header *DO* also
+ * appear in the original, since the message header is not duplicated.
+ *
+ * In either case, it is better to never modify the message, if you intend to
+ * forward it further.
+ *
+ * Return: The length of the raw message blob is returned.
+ */
 size_t n_dhcp4_incoming_get_raw(NDhcp4Incoming *incoming, const void **rawp) {
         if (rawp)
                 *rawp = &incoming->message;
         return incoming->n_message;
 }
 
-int n_dhcp4_incoming_query(NDhcp4Incoming *incoming, uint8_t option, const void **datap, size_t *n_datap) {
+/**
+ * n_dhcp4_incoming_query() - Query the contents of a specific option
+ * @incoming:           message to query
+ * @option:             option to look for
+ * @datap:              output argument for the option-data, or NULL
+ * @n_datap:            output argument for the length of the option, or NULL
+ *
+ * This returns a pointer to the requested option blob in the message. It
+ * points to a linearized version of all respective option-fields of the same
+ * type. Hence, the caller is not required to deal with multiple occurrences of
+ * the same option.
+ *
+ * If an option was not present in the incoming message, N_DHCP4_E_UNSET is
+ * returned. Note that this is different from an empty option! And empty option
+ * will return a valid pointer and size 0.
+ *
+ * Note that the pointer to the option-blob does not point to the original
+ * message, but a duplicated version. Modifications to the blob will not be
+ * reflected in the original message, but they will be permanent regarding
+ * further queries through this function.
+ *
+ * Note that the original message alignment might no longer be reflected in the
+ * returned blob. You must not alias the content of the blob, but always copy
+ * it out, or consume piecemeal.
+ *
+ * This function runs in O(1).
+ *
+ * Return: 0 on success, negative error code on failure, N_DHCP4_E_UNSET if the
+ *         option was not found,
+ */
+int n_dhcp4_incoming_query(NDhcp4Incoming *incoming, uint8_t option, void **datap, size_t *n_datap) {
         if (!incoming->options[option].value)
-                return -ENODATA;
+                return N_DHCP4_E_UNSET;
 
         if (datap)
                 *datap = incoming->options[option].value;

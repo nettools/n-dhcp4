@@ -19,7 +19,7 @@ static void test_outgoing(void) {
 
         outgoing = NULL;
         r = n_dhcp4_outgoing_new(&outgoing, 0, 0);
-        assert(r >= 0);
+        assert(!r);
         assert(outgoing);
 
         outgoing = n_dhcp4_outgoing_free(outgoing);
@@ -42,16 +42,16 @@ static void test_incoming(void) {
         /* verify that messages must be at least the size of the header */
 
         r = n_dhcp4_incoming_new(&incoming, NULL, 0);
-        assert(r < 0);
+        assert(r == N_DHCP4_E_MALFORMED);
 
         r = n_dhcp4_incoming_new(&incoming, NULL, sizeof(m.header) + 64 + 128 + 3);
-        assert(r < 0);
+        assert(r == N_DHCP4_E_MALFORMED);
 
         /* verify that magic must be set */
 
         memset(&m, 0, sizeof(m));
         r = n_dhcp4_incoming_new(&incoming, &m, sizeof(m));
-        assert(r < 0);
+        assert(r == N_DHCP4_E_MALFORMED);
 
         /* verify basic NEW/FREE */
 
@@ -59,7 +59,7 @@ static void test_incoming(void) {
         m.magic = htobe32(N_DHCP4_MESSAGE_MAGIC);
         incoming = NULL;
         r = n_dhcp4_incoming_new(&incoming, &m, sizeof(m.header) + 64 + 128 + 4);
-        assert(r >= 0);
+        assert(!r);
         assert(incoming);
 
         incoming = n_dhcp4_incoming_free(incoming);
@@ -68,7 +68,7 @@ static void test_incoming(void) {
         /* verify that PAD is properly handled */
 
         r = n_dhcp4_incoming_new(&incoming, &m, sizeof(m));
-        assert(r >= 0);
+        assert(!r);
         incoming = n_dhcp4_incoming_free(incoming);
 
         /* verify that SNAME/FILE are only looked at if OVERLOAD is set */
@@ -79,11 +79,11 @@ static void test_incoming(void) {
         m.file[1] = 0;
 
         r = n_dhcp4_incoming_new(&incoming, &m, sizeof(m));
-        assert(r >= 0);
+        assert(!r);
         r = n_dhcp4_incoming_query(incoming, 1, NULL, NULL);
-        assert(r == -ENODATA);
+        assert(r == N_DHCP4_E_UNSET);
         r = n_dhcp4_incoming_query(incoming, 2, NULL, NULL);
-        assert(r == -ENODATA);
+        assert(r == N_DHCP4_E_UNSET);
         incoming = n_dhcp4_incoming_free(incoming);
 
         m.options[0] = N_DHCP4_OPTION_OVERLOAD;
@@ -91,11 +91,11 @@ static void test_incoming(void) {
         m.options[2] = 0;
 
         r = n_dhcp4_incoming_new(&incoming, &m, sizeof(m));
-        assert(r >= 0);
+        assert(!r);
         r = n_dhcp4_incoming_query(incoming, 1, NULL, NULL);
-        assert(r == -ENODATA);
+        assert(r == N_DHCP4_E_UNSET);
         r = n_dhcp4_incoming_query(incoming, 2, NULL, NULL);
-        assert(r == -ENODATA);
+        assert(r == N_DHCP4_E_UNSET);
         incoming = n_dhcp4_incoming_free(incoming);
 
         m.options[0] = N_DHCP4_OPTION_OVERLOAD;
@@ -103,11 +103,11 @@ static void test_incoming(void) {
         m.options[2] = N_DHCP4_OVERLOAD_SNAME;
 
         r = n_dhcp4_incoming_new(&incoming, &m, sizeof(m));
-        assert(r >= 0);
+        assert(!r);
         r = n_dhcp4_incoming_query(incoming, 1, NULL, NULL);
         assert(r == 0);
         r = n_dhcp4_incoming_query(incoming, 2, NULL, NULL);
-        assert(r == -ENODATA);
+        assert(r == N_DHCP4_E_UNSET);
         incoming = n_dhcp4_incoming_free(incoming);
 
         m.options[0] = N_DHCP4_OPTION_OVERLOAD;
@@ -115,9 +115,9 @@ static void test_incoming(void) {
         m.options[2] = N_DHCP4_OVERLOAD_FILE;
 
         r = n_dhcp4_incoming_new(&incoming, &m, sizeof(m));
-        assert(r >= 0);
+        assert(!r);
         r = n_dhcp4_incoming_query(incoming, 1, NULL, NULL);
-        assert(r == -ENODATA);
+        assert(r == N_DHCP4_E_UNSET);
         r = n_dhcp4_incoming_query(incoming, 2, NULL, NULL);
         assert(r == 0);
         incoming = n_dhcp4_incoming_free(incoming);
@@ -127,7 +127,7 @@ static void test_incoming(void) {
         m.options[2] = N_DHCP4_OVERLOAD_FILE | N_DHCP4_OVERLOAD_SNAME;
 
         r = n_dhcp4_incoming_new(&incoming, &m, sizeof(m));
-        assert(r >= 0);
+        assert(!r);
         r = n_dhcp4_incoming_query(incoming, 1, NULL, NULL);
         assert(r == 0);
         r = n_dhcp4_incoming_query(incoming, 2, NULL, NULL);
@@ -143,8 +143,8 @@ static void test_incoming(void) {
         m.sname[2] = 0xcf;
 
         r = n_dhcp4_incoming_new(&incoming, &m, sizeof(m));
-        assert(r >= 0);
-        r = n_dhcp4_incoming_query(incoming, 1, (const void **)&v, &l);
+        assert(!r);
+        r = n_dhcp4_incoming_query(incoming, 1, (void **)&v, &l);
         assert(r == 0);
         assert(l == 2);
         assert(v[0] == 0xef && v[1] == 0xcf);
