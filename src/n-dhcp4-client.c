@@ -169,6 +169,7 @@ _public_ void n_dhcp4_client_get_fd(NDhcp4Client *client, int *fdp) {
         *fdp = client->efd;
 }
 
+#if 0
 static int n_dhcp4_client_transition_t1(NDhcp4Client *client) {
         switch (client->state) {
         case N_DHCP4_STATE_BOUND:
@@ -377,8 +378,10 @@ static int n_dhcp4_client_dispatch_connection(NDhcp4Client *client, unsigned int
 
         return 0;
 }
+#endif
 
 _public_ int n_dhcp4_client_dispatch(NDhcp4Client *client) {
+#if 0
         struct epoll_event ev;
         int r;
 
@@ -408,4 +411,6 @@ exit:
                 client->state = N_DHCP4_STATE_INIT;
         }
         return r;
+#endif
+        return 0;
 }
