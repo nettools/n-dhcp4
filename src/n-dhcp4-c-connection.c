@@ -132,7 +132,7 @@ int n_dhcp4_c_connection_connect(NDhcp4CConnection *connection,
 static int n_dhcp4_c_connection_verify_incoming(NDhcp4CConnection *connection,
                                                 NDhcp4Incoming *message) {
         NDhcp4Header *header = n_dhcp4_incoming_get_header(message);
-        void *id = NULL;
+        uint8_t *id = NULL;
         size_t idlen = 0;
         int r;
 

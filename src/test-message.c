@@ -144,7 +144,7 @@ static void test_incoming(void) {
 
         r = n_dhcp4_incoming_new(&incoming, &m, sizeof(m));
         assert(!r);
-        r = n_dhcp4_incoming_query(incoming, 1, (void **)&v, &l);
+        r = n_dhcp4_incoming_query(incoming, 1, &v, &l);
         assert(r == 0);
         assert(l == 2);
         assert(v[0] == 0xef && v[1] == 0xcf);

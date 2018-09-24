@@ -332,7 +332,7 @@ static int n_dhcp4_client_dispatch_tfd(NDhcp4Client *client, unsigned int events
 }
 
 static int n_dhcp4_client_dispatch_msg(NDhcp4Client *client, NDhcp4Incoming *incoming) {
-        void *value;
+        uint8_t *value;
         size_t size;
         int r;
 
@@ -342,7 +342,7 @@ static int n_dhcp4_client_dispatch_msg(NDhcp4Client *client, NDhcp4Incoming *inc
         else if (r < 0)
                 return r;
 
-        switch (*(const uint8_t *)value) {
+        switch (*value) {
         case N_DHCP4_MESSAGE_OFFER:
                 return n_dhcp4_client_transition_offer(client);
         case N_DHCP4_MESSAGE_ACK:

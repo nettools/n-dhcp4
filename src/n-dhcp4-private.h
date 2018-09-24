@@ -258,7 +258,7 @@ NDhcp4Incoming *n_dhcp4_incoming_free(NDhcp4Incoming *incoming);
 
 NDhcp4Header *n_dhcp4_incoming_get_header(NDhcp4Incoming *incoming);
 size_t n_dhcp4_incoming_get_raw(NDhcp4Incoming *incoming, const void **rawp);
-int n_dhcp4_incoming_query(NDhcp4Incoming *incoming, uint8_t option, void **datap, size_t *n_datap);
+int n_dhcp4_incoming_query(NDhcp4Incoming *incoming, uint8_t option, uint8_t **datap, size_t *n_datap);
 
 /* sockets */
 

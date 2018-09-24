@@ -306,7 +306,7 @@ size_t n_dhcp4_incoming_get_raw(NDhcp4Incoming *incoming, const void **rawp) {
  * Return: 0 on success, negative error code on failure, N_DHCP4_E_UNSET if the
  *         option was not found,
  */
-int n_dhcp4_incoming_query(NDhcp4Incoming *incoming, uint8_t option, void **datap, size_t *n_datap) {
+int n_dhcp4_incoming_query(NDhcp4Incoming *incoming, uint8_t option, uint8_t **datap, size_t *n_datap) {
         if (!incoming->options[option].value)
                 return N_DHCP4_E_UNSET;
 

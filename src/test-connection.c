@@ -51,7 +51,7 @@ static void test_server_udp_socket_new(int netns, int *skp, int ifindex) {
 static void test_server_receive(int sk, uint8_t type) {
         _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *message = NULL;
         uint8_t buf[1 << 15];
-        void *value;
+        uint8_t *value;
         ssize_t len;
         size_t size;
         int r;
@@ -67,7 +67,7 @@ static void test_server_receive(int sk, uint8_t type) {
         r = n_dhcp4_incoming_query(message, N_DHCP4_OPTION_MESSAGE_TYPE, &value, &size);
         assert(!r);
         assert(size == 1);
-        assert(*(const uint8_t *)value == type);
+        assert(*value == type);
 }
 
 static void test_acquisition(int ns_client, NDhcp4CConnection *connection, int sk_server, const struct in_addr *addr_server) {
