@@ -150,50 +150,6 @@ static int n_dhcp4_c_connection_verify_incoming(NDhcp4CConnection *connection,
         return 0;
 }
 
-static int n_dhcp4_c_connection_dispatch_packet(NDhcp4CConnection *connection,
-                                                NDhcp4Incoming **messagep) {
-        uint8_t buf[1 << 16];
-        ssize_t len;
-        int r;
-
-        len = packet_recv_udp(connection->pfd, buf, sizeof(buf), 0);
-        if (len == 0) {
-                *messagep = NULL;
-                return 0;
-        } else if (len < 0) {
-                return -errno;
-        }
-
-        /* XXX: handle malformed packets gracefully */
-        r = n_dhcp4_incoming_new(messagep, buf, len);
-        if (r < 0)
-                return r;
-
-        return 0;
-}
-
-static int n_dhcp4_c_connection_dispatch_udp(NDhcp4CConnection *connection,
-                                             NDhcp4Incoming **messagep) {
-        uint8_t buf[1 << 16];
-        ssize_t len;
-        int r;
-
-        len = recv(connection->ufd, buf, sizeof(buf), 0);
-        if (len == 0) {
-                *messagep = NULL;
-                return 0;
-        } else if (len < 0) {
-                return -errno;
-        }
-
-        /* XXX: handle malformed packets gracefully */
-        r = n_dhcp4_incoming_new(messagep, buf, len);
-        if (r < 0)
-                return r;
-
-        return 0;
-}
-
 int n_dhcp4_c_connection_dispatch(NDhcp4CConnection *connection,
                                   NDhcp4Incoming **messagep) {
         _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *message = NULL;
@@ -201,14 +157,14 @@ int n_dhcp4_c_connection_dispatch(NDhcp4CConnection *connection,
 
         switch (connection->state) {
         case N_DHCP4_C_CONNECTION_STATE_PACKET:
-                r = n_dhcp4_c_connection_dispatch_packet(connection, &message);
-                if (r < 0)
+                r = n_dhcp4_c_socket_packet_recv(connection->pfd, &message);
+                if (r)
                         return r;
 
                 break;
         case N_DHCP4_C_CONNECTION_STATE_DRAINING:
-                r = n_dhcp4_c_connection_dispatch_packet(connection, &message);
-                if (r >= 0)
+                r = n_dhcp4_c_socket_packet_recv(connection->pfd, &message);
+                if (!r)
                         break;
                 else if (r != -EAGAIN)
                         return r;
@@ -224,8 +180,8 @@ int n_dhcp4_c_connection_dispatch(NDhcp4CConnection *connection,
 
                 /* fall-through */
         case N_DHCP4_C_CONNECTION_STATE_UDP:
-                r = n_dhcp4_c_connection_dispatch_udp(connection, &message);
-                if (r < 0)
+                r = n_dhcp4_c_socket_udp_recv(connection, &message);
+                if (r)
                         return r;
         }
 
@@ -240,20 +196,15 @@ int n_dhcp4_c_connection_dispatch(NDhcp4CConnection *connection,
 
 static int n_dhcp4_c_connection_packet_broadcast(NDhcp4CConnection *connection,
                                                  NDhcp4Outgoing *message) {
-        const void *buf;
-        size_t n_buf;
         int r;
 
         assert(connection->state == N_DHCP4_C_CONNECTION_STATE_PACKET);
-
-        n_buf = n_dhcp4_outgoing_get_raw(message, &buf);
 
         r = n_dhcp4_c_socket_packet_send(connection->pfd,
                                          connection->ifindex,
                                          connection->bhaddr,
                                          connection->hlen,
-                                         buf,
-                                         n_buf);
+                                         message);
         if (r < 0)
                 return r;
 
@@ -262,15 +213,11 @@ static int n_dhcp4_c_connection_packet_broadcast(NDhcp4CConnection *connection,
 
 static int n_dhcp4_c_connection_udp_broadcast(NDhcp4CConnection *connection,
                                               NDhcp4Outgoing *message) {
-        const void *buf;
-        size_t n_buf;
         int r;
 
         assert(connection->state > N_DHCP4_C_CONNECTION_STATE_PACKET);
 
-        n_buf = n_dhcp4_outgoing_get_raw(message, &buf);
-
-        r = n_dhcp4_c_socket_udp_broadcast(connection->ufd, buf, n_buf);
+        r = n_dhcp4_c_socket_udp_broadcast(connection->ufd, message);
         if (r < 0)
                 return r;
 
@@ -279,15 +226,11 @@ static int n_dhcp4_c_connection_udp_broadcast(NDhcp4CConnection *connection,
 
 static int n_dhcp4_c_connection_udp_send(NDhcp4CConnection *connection,
                                          NDhcp4Outgoing *message) {
-        const void *buf;
-        size_t n_buf;
         int r;
 
         assert(connection->state > N_DHCP4_C_CONNECTION_STATE_PACKET);
 
-        n_buf = n_dhcp4_outgoing_get_raw(message, &buf);
-
-        r = n_dhcp4_c_socket_udp_send(connection->ufd, buf, n_buf);
+        r = n_dhcp4_c_socket_udp_send(connection->ufd, message);
         if (r < 0)
                 return r;
 

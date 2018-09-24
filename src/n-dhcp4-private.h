@@ -313,23 +313,27 @@ int n_dhcp4_c_socket_packet_send(int sockfd,
                                  int ifindex,
                                  const unsigned char *dest_haddr,
                                  unsigned char halen,
-                                 const void *buf,
-                                 size_t n_buf);
-int n_dhcp4_c_socket_udp_send(int sockfd, const void *buf, size_t n_buf);
-int n_dhcp4_c_socket_udp_broadcast(int sockfd, const void *buf, size_t n_buf);
+                                 NDhcp4Outgoing *message);
+int n_dhcp4_c_socket_udp_send(int sockfd, NDhcp4Outgoing *message);
+int n_dhcp4_c_socket_udp_broadcast(int sockfd, NDhcp4Outgoing *message);
 int n_dhcp4_s_socket_packet_send(int sockfd,
                                  int ifindex,
                                  const struct in_addr *src_inaddr,
                                  const unsigned char *dest_haddr,
                                  unsigned char halen,
                                  const struct in_addr *dest_inaddr,
-                                 const void *buf,
-                                 size_t n_buf);
+                                 NDhcp4Outgoing *message);
 int n_dhcp4_s_socket_udp_send(int sockfd,
                               const struct in_addr *inaddr_src,
                               const struct in_addr *inaddr_dest,
-                              const void *buf,
-                              size_t n_buf);
+                              NDhcp4Outgoing *message);
+
+int n_dhcp4_c_socket_packet_recv(int sockfd,
+                                 NDhcp4Incoming **messagep);
+int n_dhcp4_c_socket_udp_recv(int sockfd,
+                              NDhcp4Incoming **messagep);
+int n_dhcp4_s_socket_udp_recv(int sockfd,
+                              NDhcp4Incoming **messagep);
 
 /* client events */
 

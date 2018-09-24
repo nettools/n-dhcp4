@@ -339,17 +339,20 @@ static int n_dhcp4_socket_packet_send(int sockfd,
                                       const unsigned char *dest_haddr,
                                       unsigned char halen,
                                       const struct sockaddr_in *dest_paddr,
-                                      const void *buf,
-                                      size_t n_buf) {
+                                      NDhcp4Outgoing *message) {
         struct sockaddr_ll2 haddr = {
                 .sll_family = AF_PACKET,
                 .sll_protocol = htons(ETH_P_IP),
                 .sll_ifindex = ifindex,
                 .sll_halen = halen,
         };
+        const void *buf;
+        size_t n_buf;
         ssize_t len;
 
         memcpy(haddr.sll_addr, dest_haddr, halen);
+
+        n_buf = n_dhcp4_outgoing_get_raw(message, &buf);
 
         len = packet_sendto_udp(sockfd, buf, n_buf, 0, src_paddr, &haddr, dest_paddr);
         if (len < 0)
@@ -367,8 +370,7 @@ int n_dhcp4_c_socket_packet_send(int sockfd,
                                  int ifindex,
                                  const unsigned char *dest_haddr,
                                  unsigned char halen,
-                                 const void *buf,
-                                 size_t n_buf) {
+                                 NDhcp4Outgoing *message) {
         struct sockaddr_in src_paddr = {
                 .sin_family = AF_INET,
                 .sin_port = htons(N_DHCP4_NETWORK_CLIENT_PORT),
@@ -386,15 +388,19 @@ int n_dhcp4_c_socket_packet_send(int sockfd,
                                           dest_haddr,
                                           halen,
                                           &dest_paddr,
-                                          buf,
-                                          n_buf);
+                                          message);
 }
 
 /**
  * n_dhcp4_c_socket_udp_send() - XXX
  */
-int n_dhcp4_c_socket_udp_send(int sockfd, const void *buf, size_t n_buf) {
+int n_dhcp4_c_socket_udp_send(int sockfd,
+                              NDhcp4Outgoing *message) {
+        const void *buf;
+        size_t n_buf;
         ssize_t len;
+
+        n_buf = n_dhcp4_outgoing_get_raw(message, &buf);
 
         len = send(sockfd, buf, n_buf, 0);
         if (len < 0)
@@ -408,13 +414,17 @@ int n_dhcp4_c_socket_udp_send(int sockfd, const void *buf, size_t n_buf) {
 /**
  * n_dhcp4_c_socket_udp_broadcast() - XXX
  */
-int n_dhcp4_c_socket_udp_broadcast(int sockfd, const void *buf, size_t n_buf) {
+int n_dhcp4_c_socket_udp_broadcast(int sockfd, NDhcp4Outgoing *message) {
         struct sockaddr_in sockaddr_dest = {
                 .sin_family = AF_INET,
                 .sin_port = htons(N_DHCP4_NETWORK_SERVER_PORT),
                 .sin_addr = { INADDR_BROADCAST },
         };
+        const void *buf;
+        size_t n_buf;
         ssize_t len;
+
+        n_buf = n_dhcp4_outgoing_get_raw(message, &buf);
 
         len = sendto(sockfd,
                      buf,
@@ -439,8 +449,7 @@ int n_dhcp4_s_socket_packet_send(int sockfd,
                                  const unsigned char *dest_haddr,
                                  unsigned char halen,
                                  const struct in_addr *dest_inaddr,
-                                 const void *buf,
-                                 size_t n_buf) {
+                                 NDhcp4Outgoing *message) {
         struct sockaddr_in src_paddr = {
                 .sin_family = AF_INET,
                 .sin_port = htons(N_DHCP4_NETWORK_SERVER_PORT),
@@ -458,8 +467,7 @@ int n_dhcp4_s_socket_packet_send(int sockfd,
                                           dest_haddr,
                                           halen,
                                           &dest_paddr,
-                                          buf,
-                                          n_buf);
+                                          message);
 }
 
 /**
@@ -468,17 +476,13 @@ int n_dhcp4_s_socket_packet_send(int sockfd,
 int n_dhcp4_s_socket_udp_send(int sockfd,
                               const struct in_addr *inaddr_src,
                               const struct in_addr *inaddr_dest,
-                              const void *buf,
-                              size_t n_buf) {
+                              NDhcp4Outgoing *message) {
         struct sockaddr_in sockaddr_dest = {
                 .sin_family = AF_INET,
                 .sin_port = htons(N_DHCP4_NETWORK_CLIENT_PORT),
                 .sin_addr = *inaddr_dest,
         };
-        struct iovec iov = {
-                .iov_base = (void*)buf,
-                .iov_len = n_buf,
-        };
+        struct iovec iov = {};
         union {
                struct cmsghdr align; /* ensure correct stack alignment */
                char buf[CMSG_SPACE(sizeof(struct in_pktinfo))];
@@ -502,11 +506,83 @@ int n_dhcp4_s_socket_udp_send(int sockfd,
         cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_pktinfo));
         memcpy(CMSG_DATA(cmsg), &pktinfo, sizeof(pktinfo));
 
+        iov.iov_len = n_dhcp4_outgoing_get_raw(message, (const void **)&iov.iov_base);
+
         len = sendmsg(sockfd, &msg, 0);
         if (len < 0)
                 return -errno;
-        else if ((size_t)len != n_buf)
+        else if ((size_t)len != iov.iov_len)
                 return -EIO;
 
         return 0;
+}
+
+int n_dhcp4_c_socket_packet_recv(int sockfd,
+                                 NDhcp4Incoming **messagep) {
+        _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *message = NULL;
+        uint8_t buf[UINT16_MAX];
+        ssize_t len;
+        int r;
+
+        len = packet_recv_udp(sockfd, buf, sizeof(buf), 0);
+        if (len == 0) {
+                *messagep = NULL;
+                return 0;
+        } else if (len < 0) {
+                return -errno;
+        }
+
+        r = n_dhcp4_incoming_new(&message, buf, len);
+        if (r) {
+                if (r == N_DHCP4_E_MALFORMED) {
+                        *messagep = NULL;
+                        return 0;
+                }
+
+                return r;
+        }
+
+        *messagep = message;
+        message = NULL;
+        return 0;
+}
+
+static int n_dhcp4_socket_udp_recv(int sockfd,
+                                   NDhcp4Incoming **messagep) {
+        _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *message = NULL;
+        uint8_t buf[UINT16_MAX];
+        ssize_t len;
+        int r;
+
+        len = recv(sockfd, buf, sizeof(buf), 0);
+        if (len == 0) {
+                *messagep = NULL;
+                return 0;
+        } else if (len < 0) {
+                return -errno;
+        }
+
+        r = n_dhcp4_incoming_new(&message, buf, len);
+        if (r) {
+                if (r == N_DHCP4_E_MALFORMED) {
+                        *messagep = NULL;
+                        return 0;
+                }
+
+                return r;
+        }
+
+        *messagep = message;
+        message = NULL;
+        return 0;
+}
+
+int n_dhcp4_c_socket_udp_recv(int sockfd,
+                              NDhcp4Incoming **messagep) {
+        return n_dhcp4_socket_udp_recv(sockfd, messagep);
+}
+
+int n_dhcp4_s_socket_udp_recv(int sockfd,
+                              NDhcp4Incoming **messagep) {
+        return n_dhcp4_socket_udp_recv(sockfd, messagep);
 }

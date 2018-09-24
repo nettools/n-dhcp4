@@ -78,30 +78,30 @@ static void test_client_server_packet(int ns_server,
                                       int ns_client,
                                       int ifindex_server,
                                       int ifindex_client) {
-        NDhcp4Message message_out = {}, message_in = {};
+        _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *outgoing = NULL;
+        _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *incoming = NULL;
         int sk_server, sk_client;
-        ssize_t len;
         int r;
 
         test_client_packet_socket_new(ns_client, &sk_client, ifindex_client);
         test_server_udp_socket_new(ns_server, &sk_server, ifindex_server);
 
-        message_out.header.op = N_DHCP4_OP_BOOTREQUEST;
-        message_out.magic = htonl(N_DHCP4_MESSAGE_MAGIC);
+        r = n_dhcp4_outgoing_new(&outgoing, 0, 0);
+        assert(!r);
+        n_dhcp4_outgoing_get_header(outgoing)->op = N_DHCP4_OP_BOOTREQUEST;
 
         r = n_dhcp4_c_socket_packet_send(sk_client,
                                          ifindex_client,
                                          (const unsigned char[]){0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
                                          ETH_ALEN,
-                                         &message_out,
-                                         sizeof(message_out));
-        assert(r >= 0);
+                                         outgoing);
+        assert(!r);
 
         test_poll(sk_server);
 
-        len = recv(sk_server, &message_in, sizeof(message_in), 0);
-        assert(len == sizeof(message_in));
-        assert(memcmp(&message_out, &message_in, sizeof(message_out)) == 0);
+        r = n_dhcp4_s_socket_udp_recv(sk_server, &incoming);
+        assert(!r);
+        assert(incoming);
 
         close(sk_server);
         close(sk_client);
@@ -111,29 +111,29 @@ static void test_client_server_udp(int ns_server,
                                    int ns_client,
                                    int ifindex_server,
                                    int ifindex_client) {
-        NDhcp4Message message_out = {}, message_in = {};
+        _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *outgoing = NULL;
+        _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *incoming = NULL;
         struct in_addr addr_client = (struct in_addr){ htonl(10 << 24 | 2) };
         struct in_addr addr_server = (struct in_addr){ htonl(10 << 24 | 1) };
         int r, sk_server, sk_client;
-        ssize_t len;
-
 
         test_add_ip(ns_client, ifindex_client, &addr_client, 8);
         test_client_udp_socket_new(ns_client, &sk_client, ifindex_client, &addr_client, &addr_server);
         test_server_udp_socket_new(ns_server, &sk_server, ifindex_server);
         test_add_ip(ns_server, ifindex_server, &addr_server, 8);
 
-        message_out.header.op = N_DHCP4_OP_BOOTREQUEST;
-        message_out.magic = htonl(N_DHCP4_MESSAGE_MAGIC);
+        r = n_dhcp4_outgoing_new(&outgoing, 0, 0);
+        assert(!r);
+        n_dhcp4_outgoing_get_header(outgoing)->op = N_DHCP4_OP_BOOTREQUEST;
 
-        r = n_dhcp4_c_socket_udp_send(sk_client, &message_out, sizeof(message_out));
-        assert(r >= 0);
+        r = n_dhcp4_c_socket_udp_send(sk_client, outgoing);
+        assert(!r);
 
         test_poll(sk_server);
 
-        len = recv(sk_server, &message_in, sizeof(message_in), 0);
-        assert(len == sizeof(message_in));
-        assert(memcmp(&message_out, &message_in, sizeof(message_out)) == 0);
+        r = n_dhcp4_s_socket_udp_recv(sk_server, &incoming);
+        assert(!r);
+        assert(incoming);
 
         close(sk_server);
         close(sk_client);
@@ -147,19 +147,20 @@ static void test_server_client_packet(int ns_server,
                                       int ifindex_server,
                                       int ifindex_client,
                                       const struct ether_addr *mac_client) {
-        NDhcp4Message message_out = {}, message_in = {};
+        _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *outgoing = NULL;
+        _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *incoming1 = NULL, *incoming2 = NULL;
         struct in_addr addr_client = (struct in_addr){ htonl(10 << 24 | 2) };
         struct in_addr addr_server = (struct in_addr){ htonl(10 << 24 | 1) };
         int sk_server, sk_client;
-        ssize_t len;
         int r;
 
         test_client_packet_socket_new(ns_client, &sk_client, ifindex_client);
         test_server_packet_socket_new(ns_server, &sk_server);
         test_add_ip(ns_server, ifindex_server, &addr_server, 8);
 
-        message_out.header.op = N_DHCP4_OP_BOOTREPLY;
-        message_out.magic = htonl(N_DHCP4_MESSAGE_MAGIC);
+        r = n_dhcp4_outgoing_new(&outgoing, 0, 0);
+        assert(!r);
+        n_dhcp4_outgoing_get_header(outgoing)->op = N_DHCP4_OP_BOOTREPLY;
 
         r = n_dhcp4_s_socket_packet_send(sk_server,
                                          ifindex_server,
@@ -167,30 +168,28 @@ static void test_server_client_packet(int ns_server,
                                          mac_client->ether_addr_octet,
                                          ETH_ALEN,
                                          &addr_client,
-                                         &message_out,
-                                         sizeof(message_out));
-        assert(r >= 0);
+                                         outgoing);
+        assert(!r);
         r = n_dhcp4_s_socket_packet_send(sk_server,
                                          ifindex_server,
                                          &addr_server,
                                          (const unsigned char[]){0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
                                          ETH_ALEN,
                                          &addr_client,
-                                         &message_out,
-                                         sizeof(message_out));
-        assert(r >= 0);
+                                         outgoing);
+        assert(!r);
 
         test_poll(sk_client);
 
-        len = packet_recv_udp(sk_client, &message_in, sizeof(message_in), 0);
-        assert(len == sizeof(message_in));
-        assert(memcmp(&message_out, &message_in, sizeof(message_out)) == 0);
+        r = n_dhcp4_c_socket_packet_recv(sk_client, &incoming1);
+        assert(!r);
+        assert(incoming1);
 
         test_poll(sk_client);
 
-        len = packet_recv_udp(sk_client, &message_in, sizeof(message_in), 0);
-        assert(len == sizeof(message_in));
-        assert(memcmp(&message_out, &message_in, sizeof(message_out)) == 0);
+        r = n_dhcp4_c_socket_packet_recv(sk_client, &incoming2);
+        assert(!r);
+        assert(incoming2);
 
         close(sk_server);
         close(sk_client);
@@ -202,11 +201,11 @@ static void test_server_client_udp(int ns_server,
                                    int ns_client,
                                    int ifindex_server,
                                    int ifindex_client) {
-        NDhcp4Message message_out = {}, message_in = {};
+        _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *outgoing = NULL;
+        _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *incoming = NULL;
         struct in_addr addr_client = (struct in_addr){ htonl(10 << 24 | 2) };
         struct in_addr addr_server = (struct in_addr){ htonl(10 << 24 | 1) };
         int sk_server, sk_client;
-        ssize_t len;
         int r;
 
         test_add_ip(ns_client, ifindex_client, &addr_client, 8);
@@ -214,21 +213,21 @@ static void test_server_client_udp(int ns_server,
         test_server_udp_socket_new(ns_server, &sk_server, ifindex_server);
         test_add_ip(ns_server, ifindex_server, &addr_server, 8);
 
-        message_out.header.op = N_DHCP4_OP_BOOTREPLY;
-        message_out.magic = htonl(N_DHCP4_MESSAGE_MAGIC);
+        r = n_dhcp4_outgoing_new(&outgoing, 0, 0);
+        assert(!r);
+        n_dhcp4_outgoing_get_header(outgoing)->op = N_DHCP4_OP_BOOTREPLY;
 
         r = n_dhcp4_s_socket_udp_send(sk_server,
                                       &addr_server,
                                       &addr_client,
-                                      &message_out,
-                                      sizeof(message_out));
-        assert(r >= 0);
+                                      outgoing);
+        assert(!r);
 
         test_poll(sk_client);
 
-        len = recv(sk_client, &message_in, sizeof(message_in), 0);
-        assert(len == sizeof(message_in));
-        assert(memcmp(&message_out, &message_in, sizeof(message_out)) == 0);
+        r = n_dhcp4_c_socket_udp_recv(sk_client, &incoming);
+        assert(!r);
+        assert(incoming);
 
         close(sk_server);
         close(sk_client);
