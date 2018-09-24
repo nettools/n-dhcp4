@@ -83,7 +83,7 @@ int n_dhcp4_c_connection_listen(NDhcp4CConnection *connection) {
         };
         int r;
 
-        assert(connection->state == N_DHCP4_CONNECTION_STATE_INIT);
+        assert(connection->state == N_DHCP4_C_CONNECTION_STATE_INIT);
 
         r = n_dhcp4_c_socket_packet_new(&connection->pfd, connection->ifindex);
         if (r < 0)
@@ -94,7 +94,7 @@ int n_dhcp4_c_connection_listen(NDhcp4CConnection *connection) {
         if (r < 0)
                 return -errno;
 
-        connection->state = N_DHCP4_CONNECTION_STATE_PACKET;
+        connection->state = N_DHCP4_C_CONNECTION_STATE_PACKET;
 
         return 0;
 }
@@ -107,7 +107,7 @@ int n_dhcp4_c_connection_connect(NDhcp4CConnection *connection,
         };
         int r;
 
-        assert(connection->state == N_DHCP4_CONNECTION_STATE_PACKET);
+        assert(connection->state == N_DHCP4_C_CONNECTION_STATE_PACKET);
 
         r = n_dhcp4_c_socket_udp_new(&connection->ufd, connection->ifindex, client, server);
         if (r < 0)
@@ -124,7 +124,7 @@ int n_dhcp4_c_connection_connect(NDhcp4CConnection *connection,
 
         connection->client_ip = client->s_addr;
         connection->server_ip = server->s_addr;
-        connection->state = N_DHCP4_CONNECTION_STATE_DRAINING;
+        connection->state = N_DHCP4_C_CONNECTION_STATE_DRAINING;
 
         return 0;
 }
@@ -200,13 +200,13 @@ int n_dhcp4_c_connection_dispatch(NDhcp4CConnection *connection,
         int r;
 
         switch (connection->state) {
-        case N_DHCP4_CONNECTION_STATE_PACKET:
+        case N_DHCP4_C_CONNECTION_STATE_PACKET:
                 r = n_dhcp4_c_connection_dispatch_packet(connection, &message);
                 if (r < 0)
                         return r;
 
                 break;
-        case N_DHCP4_CONNECTION_STATE_DRAINING:
+        case N_DHCP4_C_CONNECTION_STATE_DRAINING:
                 r = n_dhcp4_c_connection_dispatch_packet(connection, &message);
                 if (r >= 0)
                         break;
@@ -220,10 +220,10 @@ int n_dhcp4_c_connection_dispatch(NDhcp4CConnection *connection,
                  */
                 epoll_ctl(*connection->efd, EPOLL_CTL_DEL, connection->pfd, NULL);
                 close(connection->pfd);
-                connection->state = N_DHCP4_CONNECTION_STATE_UDP;
+                connection->state = N_DHCP4_C_CONNECTION_STATE_UDP;
 
                 /* fall-through */
-        case N_DHCP4_CONNECTION_STATE_UDP:
+        case N_DHCP4_C_CONNECTION_STATE_UDP:
                 r = n_dhcp4_c_connection_dispatch_udp(connection, &message);
                 if (r < 0)
                         return r;
@@ -244,7 +244,7 @@ static int n_dhcp4_c_connection_packet_broadcast(NDhcp4CConnection *connection,
         size_t n_buf;
         int r;
 
-        assert(connection->state == N_DHCP4_CONNECTION_STATE_PACKET);
+        assert(connection->state == N_DHCP4_C_CONNECTION_STATE_PACKET);
 
         n_buf = n_dhcp4_outgoing_get_raw(message, &buf);
 
@@ -266,7 +266,7 @@ static int n_dhcp4_c_connection_udp_broadcast(NDhcp4CConnection *connection,
         size_t n_buf;
         int r;
 
-        assert(connection->state > N_DHCP4_CONNECTION_STATE_PACKET);
+        assert(connection->state > N_DHCP4_C_CONNECTION_STATE_PACKET);
 
         n_buf = n_dhcp4_outgoing_get_raw(message, &buf);
 
@@ -283,7 +283,7 @@ static int n_dhcp4_c_connection_udp_send(NDhcp4CConnection *connection,
         size_t n_buf;
         int r;
 
-        assert(connection->state > N_DHCP4_CONNECTION_STATE_PACKET);
+        assert(connection->state > N_DHCP4_C_CONNECTION_STATE_PACKET);
 
         n_buf = n_dhcp4_outgoing_get_raw(message, &buf);
 
@@ -355,7 +355,7 @@ static int n_dhcp4_c_connection_new_message(NDhcp4CConnection *connection,
         case N_DHCP4_MESSAGE_INFORM: {
                 uint16_t mtu;
 
-                if (connection->state <= N_DHCP4_CONNECTION_STATE_PACKET) {
+                if (connection->state <= N_DHCP4_C_CONNECTION_STATE_PACKET) {
                         /*
                          * In case of packet sockets, we do not support
                          * fragmentation. Hence, our maximum message size
