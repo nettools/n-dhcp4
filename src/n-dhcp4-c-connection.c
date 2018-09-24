@@ -366,15 +366,17 @@ static int n_dhcp4_c_connection_new_message(NDhcp4CConnection *connection,
                          * In case of packet sockets, we do not support
                          * fragmentation. Hence, our maximum message size
                          * equals the transport MTU. In case no mtu is given,
-                         * we omit the option and rely on both sides to share
-                         * the same MTU.
+                         * we use the minimum size mandated by the IP spec. If
+                         * we omit the field, some implementations will
+                         * interpret this to mean any packet size is supported,
+                         * which we rather not want as default behavior (we can
+                         * always support suppressing this field, if that is
+                         * what the caller wants).
                          */
-                        if (connection->mtu > 0) {
-                                mtu = htons(connection->mtu);
-                                r = n_dhcp4_outgoing_append(message, N_DHCP4_OPTION_MAXIMUM_MESSAGE_SIZE, &mtu, sizeof(mtu));
-                                if (r < 0)
-                                        return r;
-                        }
+                        mtu = htons(connection->mtu ?: N_DHCP4_NETWORK_IP_MINIMUM_MAX_SIZE);
+                        r = n_dhcp4_outgoing_append(message, N_DHCP4_OPTION_MAXIMUM_MESSAGE_SIZE, &mtu, sizeof(mtu));
+                        if (r < 0)
+                                return r;
                 } else {
                         /*
                          * Once we use UDP sockets, we support fragmentation
