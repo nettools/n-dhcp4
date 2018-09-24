@@ -52,6 +52,13 @@ _public_ void n_dhcp4_client_probe_config_set_inform_only(NDhcp4ClientProbeConfi
 }
 
 /**
+ * n_dhcp4_client_probe_config_set_init_reboot() - XXX
+ */
+_public_ void n_dhcp4_client_probe_config_set_init_reboot(NDhcp4ClientProbeConfig *config, bool init_reboot) {
+        config->init_reboot = init_reboot;
+}
+
+/**
  * n_dhcp4_client_probe_config_set_requested_ip() - XXX
  */
 _public_ void n_dhcp4_client_probe_config_set_requested_ip(NDhcp4ClientProbeConfig *config, struct in_addr ip) {

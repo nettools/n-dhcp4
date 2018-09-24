@@ -185,6 +185,7 @@ struct NDhcp4ClientConfig {
 
 struct NDhcp4ClientProbeConfig {
         bool inform_only;
+        bool init_reboot;
         struct in_addr requested_ip;
 };
 
