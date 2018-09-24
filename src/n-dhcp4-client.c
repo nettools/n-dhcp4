@@ -5,6 +5,7 @@
  */
 
 #include <assert.h>
+#include <c-list.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
@@ -95,6 +96,36 @@ _public_ int n_dhcp4_client_config_set_client_id(NDhcp4ClientConfig *config, con
         return 0;
 }
 
+/**
+ * n_dhcp4_c_event_node_new() - XXX
+ */
+int n_dhcp4_c_event_node_new(NDhcp4CEventNode **nodep) {
+        NDhcp4CEventNode *node;
+
+        node = calloc(1, sizeof(*node));
+        if (!node)
+                return -ENOMEM;
+
+        *node = (NDhcp4CEventNode)N_DHCP4_C_EVENT_NODE_NULL(*node);
+
+        *nodep = node;
+        return 0;
+}
+
+/**
+ * n_dhcp4_c_event_node_free() - XXX
+ */
+NDhcp4CEventNode *n_dhcp4_c_event_node_free(NDhcp4CEventNode *node) {
+        if (!node)
+                return NULL;
+
+        c_list_unlink(&node->probe_link);
+        c_list_unlink(&node->client_link);
+        free(node);
+
+        return NULL;
+}
+
 _public_ int n_dhcp4_client_new(NDhcp4Client **clientp) {
         _cleanup_(n_dhcp4_client_unrefp) NDhcp4Client *client = NULL;
         struct epoll_event ev = {
@@ -129,6 +160,11 @@ _public_ int n_dhcp4_client_new(NDhcp4Client **clientp) {
 }
 
 static void n_dhcp4_client_free(NDhcp4Client *client) {
+        NDhcp4CEventNode *node, *t_node;
+
+        c_list_for_each_entry_safe(node, t_node, &client->event_list, client_link)
+                n_dhcp4_c_event_node_free(node);
+
         n_dhcp4_c_connection_deinit(&client->connection);
 
         if (client->tfd >= 0) {
@@ -154,8 +190,42 @@ _public_ NDhcp4Client *n_dhcp4_client_unref(NDhcp4Client *client) {
         return NULL;
 }
 
+int n_dhcp4_client_raise(NDhcp4Client *client, NDhcp4CEventNode **nodep, unsigned int event) {
+        NDhcp4CEventNode *node;
+        int r;
+
+        r = n_dhcp4_c_event_node_new(&node);
+        if (r)
+                return r;
+
+        node->event.event = event;
+        c_list_link_tail(&client->event_list, &node->client_link);
+
+        if (nodep)
+                *nodep = node;
+        return 0;
+}
+
 _public_ void n_dhcp4_client_get_fd(NDhcp4Client *client, int *fdp) {
         *fdp = client->efd;
+}
+
+_public_ int n_dhcp4_client_pop_event(NDhcp4Client *client, NDhcp4ClientEvent **eventp) {
+        NDhcp4CEventNode *node, *t_node;
+
+        c_list_for_each_entry_safe(node, t_node, &client->event_list, client_link) {
+                if (node->is_public) {
+                        n_dhcp4_c_event_node_free(node);
+                        continue;
+                }
+
+                node->is_public = true;
+                *eventp = &node->event;
+                return 0;
+        }
+
+        *eventp = NULL;
+        return 0;
 }
 
 #if 0

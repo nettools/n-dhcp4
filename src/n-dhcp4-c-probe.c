@@ -5,6 +5,7 @@
  */
 
 #include <assert.h>
+#include <c-list.h>
 #include <endian.h>
 #include <errno.h>
 #include <inttypes.h>
@@ -87,8 +88,13 @@ int n_dhcp4_client_probe_new(NDhcp4ClientProbe **probep, NDhcp4Client *client) {
  * n_dhcp4_client_probe_free() - XXX
  */
 _public_ NDhcp4ClientProbe *n_dhcp4_client_probe_free(NDhcp4ClientProbe *probe) {
+        NDhcp4CEventNode *node, *t_node;
+
         if (!probe)
                 return NULL;
+
+        c_list_for_each_entry_safe(node, t_node, &probe->event_list, probe_link)
+                n_dhcp4_c_event_node_free(node);
 
         n_dhcp4_client_unref(probe->client);
         free(probe);

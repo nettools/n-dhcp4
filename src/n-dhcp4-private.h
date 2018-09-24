@@ -1,6 +1,7 @@
 #pragma once
 
 #include <arpa/inet.h>
+#include <c-list.h>
 #include <inttypes.h>
 #include <limits.h>
 #include <linux/netdevice.h>
@@ -10,6 +11,7 @@
 #include "n-dhcp4.h"
 
 typedef struct NDhcp4CConnection NDhcp4CConnection;
+typedef struct NDhcp4CEventNode NDhcp4CEventNode;
 typedef struct NDhcp4Header NDhcp4Header;
 typedef struct NDhcp4Incoming NDhcp4Incoming;
 typedef struct NDhcp4Message NDhcp4Message;
@@ -203,6 +205,18 @@ struct NDhcp4ClientProbeConfig {
 #define N_DHCP4_CLIENT_PROBE_CONFIG_NULL(_x) {                                  \
         }
 
+struct NDhcp4CEventNode {
+        CList client_link;
+        CList probe_link;
+        NDhcp4ClientEvent event;
+        bool is_public : 1;
+};
+
+#define N_DHCP4_C_EVENT_NODE_NULL(_x) {                                         \
+                .client_link = C_LIST_INIT((_x).client_link),                   \
+                .probe_link = C_LIST_INIT((_x).probe_link),                     \
+        }
+
 struct NDhcp4CConnection {
         unsigned int state;             /* current connection state */
         int *efd;                       /* epoll fd */
@@ -232,7 +246,9 @@ struct NDhcp4CConnection {
         }
 
 struct NDhcp4Client {
-        unsigned long n_refs;           /* reference counter */
+        unsigned long n_refs;
+        CList event_list;
+
         unsigned int state;             /* current client state */
         int efd;                        /* epoll fd */
         int tfd;                        /* timer fd */
@@ -249,6 +265,7 @@ struct NDhcp4Client {
 
 #define N_DHCP4_CLIENT_NULL(_x) {                                               \
                 .n_refs = 1,                                                    \
+                .event_list = C_LIST_INIT((_x).event_list),                     \
                 .efd = -1,                                                      \
                 .tfd = -1,                                                      \
                 .connection = N_DHCP4_C_CONNECTION_NULL((_x).connection),       \
@@ -256,10 +273,12 @@ struct NDhcp4Client {
 
 struct NDhcp4ClientProbe {
         NDhcp4Client *client;
+        CList event_list;
         void *userdata;
 };
 
 #define N_DHCP4_CLIENT_PROBE_NULL(_x) {                                         \
+                .event_list = C_LIST_INIT((_x).event_list),                     \
         }
 
 /* outgoing messages */
@@ -312,6 +331,11 @@ int n_dhcp4_s_socket_udp_send(int sockfd,
                               const void *buf,
                               size_t n_buf);
 
+/* client events */
+
+int n_dhcp4_c_event_node_new(NDhcp4CEventNode **nodep);
+NDhcp4CEventNode *n_dhcp4_c_event_node_free(NDhcp4CEventNode *node);
+
 /* client connections */
 
 int n_dhcp4_c_connection_init(NDhcp4CConnection *connection,
@@ -358,6 +382,10 @@ int n_dhcp4_c_connection_inform(NDhcp4CConnection *connection,
                                 uint32_t secs);
 int n_dhcp4_c_connection_release(NDhcp4CConnection *connection,
                                  const char *error);
+
+/* clients */
+
+int n_dhcp4_client_raise(NDhcp4Client *client, NDhcp4CEventNode **nodep, unsigned int event);
 
 /* client probes */
 
