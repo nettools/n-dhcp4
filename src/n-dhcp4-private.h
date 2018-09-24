@@ -185,7 +185,7 @@ struct NDhcp4ClientConfig {
 
 struct NDhcp4ClientProbeConfig {
         bool inform_only;
-        struct in_addr local_ip;
+        struct in_addr requested_ip;
 };
 
 #define N_DHCP4_CLIENT_PROBE_CONFIG_NULL(_x) {                                  \

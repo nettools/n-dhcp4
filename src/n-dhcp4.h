@@ -76,7 +76,7 @@ int n_dhcp4_client_config_set_client_id(NDhcp4ClientConfig *config, const uint8_
 
 /* client-probe configs */
 
-int n_dhcp4_client_probe_config_new(NDhcp4ClientProbeConfig *config);
+int n_dhcp4_client_probe_config_new(NDhcp4ClientProbeConfig **configp);
 NDhcp4ClientProbeConfig *n_dhcp4_client_probe_config_free(NDhcp4ClientProbeConfig *config);
 
 void n_dhcp4_client_probe_config_set_inform_only(NDhcp4ClientProbeConfig *config, bool inform_only);
