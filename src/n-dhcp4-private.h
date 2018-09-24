@@ -210,7 +210,7 @@ struct NDhcp4CConnection {
         uint8_t *id;                    /* client identifier */
 };
 
-#define N_DHCP4_C_CONNECTION_NULL {                                             \
+#define N_DHCP4_C_CONNECTION_NULL(_x) {                                         \
                 .pfd = -1,                                                      \
                 .ufd = -1,                                                      \
         }

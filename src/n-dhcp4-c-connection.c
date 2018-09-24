@@ -30,7 +30,7 @@ int n_dhcp4_c_connection_init(NDhcp4CConnection *connection,
         assert(chaddr);
         assert(bhaddr);
 
-        *connection = (NDhcp4CConnection)N_DHCP4_C_CONNECTION_NULL;
+        *connection = (NDhcp4CConnection)N_DHCP4_C_CONNECTION_NULL(*connection);
         connection->efd = efd;
         connection->ifindex = ifindex;
         connection->request_broadcast = request_broadcast;
@@ -74,7 +74,7 @@ void n_dhcp4_c_connection_deinit(NDhcp4CConnection *connection) {
         }
 
         free(connection->id);
-        *connection = (NDhcp4CConnection)N_DHCP4_C_CONNECTION_NULL;
+        *connection = (NDhcp4CConnection)N_DHCP4_C_CONNECTION_NULL(*connection);
 }
 
 int n_dhcp4_c_connection_listen(NDhcp4CConnection *connection) {

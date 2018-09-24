@@ -120,7 +120,7 @@ static void test_acquisition(int ns_client, NDhcp4CConnection *connection, int s
 
 int main(int argc, char **argv) {
         int efd;
-        NDhcp4CConnection connection = N_DHCP4_C_CONNECTION_NULL;
+        NDhcp4CConnection connection = N_DHCP4_C_CONNECTION_NULL(connection);
         struct in_addr addr_server = (struct in_addr){ htonl(10 << 24 | 1) };
         int r, ns_server, ns_client, ifindex_server, ifindex_client, sk_server_packet, sk_server_udp;
         struct ether_addr mac_client;
