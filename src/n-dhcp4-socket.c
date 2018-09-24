@@ -466,6 +466,7 @@ int n_dhcp4_s_socket_packet_send(int sockfd,
  * n_dhcp4_s_socket_udp_send() - XXX
  */
 int n_dhcp4_s_socket_udp_send(int sockfd,
+                              const struct in_addr *inaddr_src,
                               const struct in_addr *inaddr_dest,
                               const void *buf,
                               size_t n_buf) {
@@ -474,14 +475,34 @@ int n_dhcp4_s_socket_udp_send(int sockfd,
                 .sin_port = htons(N_DHCP4_NETWORK_CLIENT_PORT),
                 .sin_addr = *inaddr_dest,
         };
+        struct iovec iov = {
+                .iov_base = (void*)buf,
+                .iov_len = n_buf,
+        };
+        union {
+               struct cmsghdr align; /* ensure correct stack alignment */
+               char buf[CMSG_SPACE(sizeof(struct in_pktinfo))];
+        } control = {};
+        struct in_pktinfo pktinfo = {
+                .ipi_spec_dst = *inaddr_src,
+        };
+        struct msghdr msg = {
+                .msg_name = (void*)&sockaddr_dest,
+                .msg_namelen = sizeof(sockaddr_dest),
+                .msg_iov = &iov,
+                .msg_iovlen = 1,
+                .msg_control = &control.buf,
+                .msg_controllen = sizeof(control.buf),
+        };
+        struct cmsghdr *cmsg = CMSG_FIRSTHDR(&msg);
         ssize_t len;
 
-        len = sendto(sockfd,
-                     buf,
-                     n_buf,
-                     0,
-                     (struct sockaddr*)&sockaddr_dest,
-                     sizeof(sockaddr_dest));
+        cmsg->cmsg_level = IPPROTO_IP;
+        cmsg->cmsg_type = IP_PKTINFO;
+        cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_pktinfo));
+        memcpy(CMSG_DATA(cmsg), &pktinfo, sizeof(pktinfo));
+
+        len = sendmsg(sockfd, &msg, 0);
         if (len < 0)
                 return -errno;
         else if ((size_t)len != n_buf)

@@ -253,6 +253,7 @@ int n_dhcp4_s_socket_packet_send(int sockfd,
                                  const void *buf,
                                  size_t n_buf);
 int n_dhcp4_s_socket_udp_send(int sockfd,
+                              const struct in_addr *inaddr_src,
                               const struct in_addr *inaddr_dest,
                               const void *buf,
                               size_t n_buf);

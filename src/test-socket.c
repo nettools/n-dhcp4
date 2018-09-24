@@ -218,6 +218,7 @@ static void test_server_client_udp(int ns_server,
         message_out.magic = htonl(N_DHCP4_MESSAGE_MAGIC);
 
         r = n_dhcp4_s_socket_udp_send(sk_server,
+                                      &addr_server,
                                       &addr_client,
                                       &message_out,
                                       sizeof(message_out));
