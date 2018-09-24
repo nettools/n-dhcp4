@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/epoll.h>
 #include <sys/time.h>
 #include <sys/timerfd.h>
@@ -15,6 +16,84 @@
 #include "n-dhcp4.h"
 #include "n-dhcp4-private.h"
 #include "util/packet.h"
+
+/**
+ * n_dhcp4_client_config_new() - XXX
+ */
+int n_dhcp4_client_config_new(NDhcp4ClientConfig **configp) {
+        _cleanup_(n_dhcp4_client_config_freep) NDhcp4ClientConfig *config = NULL;
+
+        config = calloc(1, sizeof(*config));
+        if (!config)
+                return -ENOMEM;
+
+        *config = (NDhcp4ClientConfig)N_DHCP4_CLIENT_CONFIG_NULL(*config);
+
+        *configp = config;
+        config = NULL;
+        return 0;
+}
+
+/**
+ * n_dhcp4_client_config_free() - XXX
+ */
+NDhcp4ClientConfig *n_dhcp4_client_config_free(NDhcp4ClientConfig *config) {
+        if (!config)
+                return NULL;
+
+        free(config->client_id);
+        free(config);
+
+        return NULL;
+}
+
+/**
+ * n_dhcp4_client_config_set_ifindex() - XXX
+ */
+void n_dhcp4_client_config_set_ifindex(NDhcp4ClientConfig *config, int ifindex) {
+        config->ifindex = ifindex;
+}
+
+/**
+ * n_dhcp4_client_config_set_transport() - XXX
+ */
+void n_dhcp4_client_config_set_transport(NDhcp4ClientConfig *config, unsigned int transport) {
+        config->transport = transport;
+}
+
+/**
+ * n_dhcp4_client_config_set_mac() - XXX
+ */
+void n_dhcp4_client_config_set_mac(NDhcp4ClientConfig *config, const uint8_t *mac, size_t n_mac) {
+        config->n_mac = n_mac;
+        memcpy(config->mac, mac, MIN(n_mac, sizeof(config->mac)));
+}
+
+/**
+ * n_dhcp4_client_config_set_broadcast_mac() - XXX
+ */
+void n_dhcp4_client_config_set_broadcast_mac(NDhcp4ClientConfig *config, const uint8_t *mac, size_t n_mac) {
+        config->n_broadcast_mac = n_mac;
+        memcpy(config->broadcast_mac, mac, MIN(n_mac, sizeof(config->broadcast_mac)));
+}
+
+/**
+ * n_dhcp4_client_config_set_client_id() - XXX
+ */
+int n_dhcp4_client_config_set_client_id(NDhcp4ClientConfig *config, const uint8_t *id, size_t n_id) {
+        uint8_t *t;
+
+        t = malloc(n_id + 1);
+        if (!t)
+                return -ENOMEM;
+
+        free(config->client_id);
+        config->client_id = t;
+        memcpy(config->client_id, id, n_id);
+        config->client_id[n_id] = 0; /* safety 0 for debugging */
+
+        return 0;
+}
 
 enum {
         N_DHCP4_STATE_INIT,
