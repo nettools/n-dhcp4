@@ -242,6 +242,14 @@ struct NDhcp4Client {
                 .connection = N_DHCP4_C_CONNECTION_NULL((_x).connection),       \
         }
 
+struct NDhcp4ClientProbe {
+        NDhcp4Client *client;
+        void *userdata;
+};
+
+#define N_DHCP4_CLIENT_PROBE_NULL(_x) {                                         \
+        }
+
 /* outgoing messages */
 
 int n_dhcp4_outgoing_new(NDhcp4Outgoing **outgoingp, size_t max_size, uint8_t overload);
@@ -338,6 +346,10 @@ int n_dhcp4_c_connection_inform(NDhcp4CConnection *connection,
                                 uint32_t secs);
 int n_dhcp4_c_connection_release(NDhcp4CConnection *connection,
                                  const char *error);
+
+/* client probes */
+
+int n_dhcp4_client_probe_new(NDhcp4ClientProbe **probep, NDhcp4Client *client);
 
 /* inline helpers */
 
