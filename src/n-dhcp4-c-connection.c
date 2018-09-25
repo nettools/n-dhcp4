@@ -180,7 +180,7 @@ int n_dhcp4_c_connection_dispatch(NDhcp4CConnection *connection,
 
                 /* fall-through */
         case N_DHCP4_C_CONNECTION_STATE_UDP:
-                r = n_dhcp4_c_socket_udp_recv(connection, &message);
+                r = n_dhcp4_c_socket_udp_recv(connection->ufd, &message);
                 if (r)
                         return r;
         }
