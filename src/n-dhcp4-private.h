@@ -16,6 +16,7 @@ typedef struct NDhcp4Header NDhcp4Header;
 typedef struct NDhcp4Incoming NDhcp4Incoming;
 typedef struct NDhcp4Message NDhcp4Message;
 typedef struct NDhcp4Outgoing NDhcp4Outgoing;
+typedef struct NDhcp4SConnection NDhcp4SConnection;
 
 /* macros */
 
@@ -155,6 +156,10 @@ enum {
         N_DHCP4_C_PROBE_STATE_REBINDING,
 };
 
+enum {
+        N_DHCP4_SERVER_EPOLL_CONNECTION,
+};
+
 struct NDhcp4Outgoing {
         NDhcp4Message *message;
         size_t n_message;
@@ -281,6 +286,21 @@ struct NDhcp4ClientProbe {
                 .event_list = C_LIST_INIT((_x).event_list),                     \
         }
 
+struct NDhcp4SConnection {
+        int *efd;                       /* epoll fd */
+        int ifindex;                    /* interface index */
+        int pfd;                        /* packet socket */
+        int ufd;                        /* udp socket */
+
+        /* XXX: support a set of server addresses */
+        uint32_t server_address;        /* server IP address, or 0 */
+};
+
+#define N_DHCP4_S_CONNECTION_NULL(_x) {                                         \
+                .pfd = -1,                                                      \
+                .ufd = -1,                                                      \
+        }
+
 /* outgoing messages */
 
 int n_dhcp4_outgoing_new(NDhcp4Outgoing **outgoingp, size_t max_size, uint8_t overload);
@@ -398,6 +418,40 @@ int n_dhcp4_client_raise(NDhcp4Client *client, NDhcp4CEventNode **nodep, unsigne
 
 int n_dhcp4_client_probe_new(NDhcp4ClientProbe **probep, NDhcp4Client *client);
 
+/* server connections */
+
+void n_dhcp4_s_connection_init(NDhcp4SConnection *connection, int *efd, int ifindex);
+void n_dhcp4_s_connection_deinit(NDhcp4SConnection *connection);
+
+int n_dhcp4_s_connection_add_server_address(NDhcp4SConnection *connection,
+                                            const struct in_addr *server_address);
+int n_dhcp4_s_connection_remove_server_address(NDhcp4SConnection *connection,
+                                               const struct in_addr *server_address);
+
+int n_dhcp4_s_connection_listen(NDhcp4SConnection *connection);
+
+int n_dhcp4_s_connection_dispatch(NDhcp4SConnection *connection, NDhcp4Incoming **messagep);
+
+int n_dhcp4_s_connection_offer_new(NDhcp4SConnection *connection,
+                                   NDhcp4Outgoing **replyp,
+                                   NDhcp4Incoming *request,
+                                   const struct in_addr *server_address,
+                                   const struct in_addr *client_address,
+                                   uint32_t lifetime);
+int n_dhcp4_s_connection_ack_new(NDhcp4SConnection *connection,
+                                   NDhcp4Outgoing **replyp,
+                                   NDhcp4Incoming *request,
+                                   const struct in_addr *server_address,
+                                   const struct in_addr *client_address,
+                                   uint32_t lifetime);
+int n_dhcp4_s_connection_nak_new(NDhcp4SConnection *connection,
+                                 NDhcp4Outgoing **replyp,
+                                 NDhcp4Incoming *request,
+                                 const struct in_addr *server_address);
+
+int n_dhcp4_s_connection_send_reply(NDhcp4SConnection *connection,
+                                    const struct in_addr *server_addr,
+                                    NDhcp4Outgoing *reply);
 /* inline helpers */
 
 static inline void n_dhcp4_outgoing_freep(NDhcp4Outgoing **outgoing) {
