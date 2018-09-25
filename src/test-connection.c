@@ -17,7 +17,7 @@
 #include "test.h"
 #include "util/packet.h"
 
-static void test_poll(int efd, int u32) {
+static void test_poll(int efd, unsigned int u32) {
         struct epoll_event event = {};
         int r;
 
@@ -177,8 +177,6 @@ static void test_decline(NDhcp4SConnection *connection_server,
                          NDhcp4CConnection *connection_client,
                          const struct in_addr *addr_server,
                          const struct in_addr *addr_client) {
-        _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *request = NULL;
-        _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *reply = NULL;
         int r;
 
         r = n_dhcp4_c_connection_decline(connection_client, "No thanks.", addr_client, addr_server);
@@ -236,8 +234,6 @@ static void test_release(NDhcp4SConnection *connection_server,
                          NDhcp4CConnection *connection_client,
                          const struct in_addr *addr_server,
                          const struct in_addr *addr_client) {
-        _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *request = NULL;
-        _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *reply = NULL;
         int r;
 
         r = n_dhcp4_c_connection_release(connection_client, "Shutting down!");
