@@ -167,6 +167,10 @@ struct NDhcp4Outgoing {
         size_t max_size;
 
         uint8_t overload : 2;
+
+        struct {
+                uint8_t type;
+        } userdata;
 };
 
 #define N_DHCP4_OUTGOING_NULL(_x) {                                             \

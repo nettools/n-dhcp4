@@ -15,6 +15,18 @@
 #include "n-dhcp4-private.h"
 #include "util/packet.h"
 
+enum {
+        _N_DHCP4_C_MESSAGE_INVALID = 0,
+        N_DHCP4_C_MESSAGE_DISCOVER,
+        N_DHCP4_C_MESSAGE_INFORM,
+        N_DHCP4_C_MESSAGE_SELECT,
+        N_DHCP4_C_MESSAGE_RENEW,
+        N_DHCP4_C_MESSAGE_REBIND,
+        N_DHCP4_C_MESSAGE_REBOOT,
+        N_DHCP4_C_MESSAGE_RELEASE,
+        N_DHCP4_C_MESSAGE_DECLINE,
+};
+
 int n_dhcp4_c_connection_init(NDhcp4CConnection *connection,
                               int *efd,
                               int ifindex,
@@ -258,7 +270,31 @@ static int n_dhcp4_c_connection_new_message(NDhcp4CConnection *connection,
                                             NDhcp4Outgoing **messagep, uint8_t type) {
         _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *message = NULL;
         NDhcp4Header *header;
+        uint8_t message_type;
         int r;
+
+        switch (type) {
+        case N_DHCP4_C_MESSAGE_DISCOVER:
+                message_type = N_DHCP4_MESSAGE_DISCOVER;
+                break;
+        case N_DHCP4_C_MESSAGE_INFORM:
+                message_type = N_DHCP4_MESSAGE_INFORM;
+                break;
+        case N_DHCP4_C_MESSAGE_SELECT:
+        case N_DHCP4_C_MESSAGE_RENEW:
+        case N_DHCP4_C_MESSAGE_REBIND:
+        case N_DHCP4_C_MESSAGE_REBOOT:
+                message_type = N_DHCP4_MESSAGE_REQUEST;
+                break;
+        case N_DHCP4_C_MESSAGE_RELEASE:
+                message_type = N_DHCP4_MESSAGE_RELEASE;
+                break;
+        case N_DHCP4_C_MESSAGE_DECLINE:
+                message_type = N_DHCP4_MESSAGE_DECLINE;
+                break;
+        default:
+                assert(0);
+        }
 
         /*
          * We explicitly pass 0 as maximum message size, which makes
@@ -277,12 +313,14 @@ static int n_dhcp4_c_connection_new_message(NDhcp4CConnection *connection,
         header = n_dhcp4_outgoing_get_header(message);
         n_dhcp4_c_connection_init_header(connection, header);
 
+        message->userdata.type = type;
+
         /*
          * Note that some implementations expect the MESSAGE_TYPE option to be
          * the first option, and possibly even hard-code access to it. Hence,
          * we really should make sure to pass it first as well.
          */
-        r = n_dhcp4_outgoing_append(message, N_DHCP4_OPTION_MESSAGE_TYPE, &type, sizeof(type));
+        r = n_dhcp4_outgoing_append(message, N_DHCP4_OPTION_MESSAGE_TYPE, &message_type, sizeof(message_type));
         if (r < 0)
                 return r;
 
@@ -292,7 +330,7 @@ static int n_dhcp4_c_connection_new_message(NDhcp4CConnection *connection,
                         return r;
         }
 
-        switch (type) {
+        switch (message_type) {
         case N_DHCP4_MESSAGE_DISCOVER:
         case N_DHCP4_MESSAGE_REQUEST:
         case N_DHCP4_MESSAGE_INFORM: {
@@ -399,7 +437,7 @@ int n_dhcp4_c_connection_discover(NDhcp4CConnection *connection, uint32_t xid, u
         _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *message = NULL;
         int r;
 
-        r = n_dhcp4_c_connection_new_message(connection, &message, N_DHCP4_MESSAGE_DISCOVER);
+        r = n_dhcp4_c_connection_new_message(connection, &message, N_DHCP4_C_MESSAGE_DISCOVER);
         if (r < 0)
                 return r;
 
@@ -423,7 +461,7 @@ int n_dhcp4_c_connection_select(NDhcp4CConnection *connection, const struct in_a
         _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *message = NULL;
         int r;
 
-        r = n_dhcp4_c_connection_new_message(connection, &message, N_DHCP4_MESSAGE_REQUEST);
+        r = n_dhcp4_c_connection_new_message(connection, &message, N_DHCP4_C_MESSAGE_SELECT);
         if (r < 0)
                 return r;
 
@@ -458,7 +496,7 @@ int n_dhcp4_c_connection_reboot(NDhcp4CConnection *connection, const struct in_a
         _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *message = NULL;
         int r;
 
-        r = n_dhcp4_c_connection_new_message(connection, &message, N_DHCP4_MESSAGE_REQUEST);
+        r = n_dhcp4_c_connection_new_message(connection, &message, N_DHCP4_C_MESSAGE_REBOOT);
         if (r < 0)
                 return r;
 
@@ -506,7 +544,7 @@ int n_dhcp4_c_connection_renew(NDhcp4CConnection *connection, uint32_t xid, uint
         _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *message = NULL;
         int r;
 
-        r = n_dhcp4_c_connection_new_message(connection, &message, N_DHCP4_MESSAGE_REQUEST);
+        r = n_dhcp4_c_connection_new_message(connection, &message, N_DHCP4_C_MESSAGE_RENEW);
         if (r < 0)
                 return r;
 
@@ -542,7 +580,7 @@ int n_dhcp4_c_connection_rebind(NDhcp4CConnection *connection, uint32_t xid, uin
         _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *message = NULL;
         int r;
 
-        r = n_dhcp4_c_connection_new_message(connection, &message, N_DHCP4_MESSAGE_REQUEST);
+        r = n_dhcp4_c_connection_new_message(connection, &message, N_DHCP4_C_MESSAGE_REBIND);
         if (r < 0)
                 return r;
 
@@ -572,7 +610,7 @@ int n_dhcp4_c_connection_decline(NDhcp4CConnection *connection, const char *erro
         _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *message = NULL;
         int r;
 
-        r = n_dhcp4_c_connection_new_message(connection, &message, N_DHCP4_MESSAGE_DECLINE);
+        r = n_dhcp4_c_connection_new_message(connection, &message, N_DHCP4_C_MESSAGE_DECLINE);
         if (r < 0)
                 return r;
 
@@ -629,7 +667,7 @@ int n_dhcp4_c_connection_inform(NDhcp4CConnection *connection, uint32_t xid, uin
         _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *message = NULL;
         int r;
 
-        r = n_dhcp4_c_connection_new_message(connection, &message, N_DHCP4_MESSAGE_INFORM);
+        r = n_dhcp4_c_connection_new_message(connection, &message, N_DHCP4_C_MESSAGE_INFORM);
         if (r < 0)
                 return r;
 
@@ -682,7 +720,7 @@ int n_dhcp4_c_connection_release(NDhcp4CConnection *connection, const char *erro
         _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *message = NULL;
         int r;
 
-        r = n_dhcp4_c_connection_new_message(connection, &message, N_DHCP4_MESSAGE_RELEASE);
+        r = n_dhcp4_c_connection_new_message(connection, &message, N_DHCP4_C_MESSAGE_RELEASE);
         if (r < 0)
                 return r;
 
