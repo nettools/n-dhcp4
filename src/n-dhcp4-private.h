@@ -386,33 +386,44 @@ int n_dhcp4_c_connection_connect(NDhcp4CConnection *connection, const struct in_
 
 int n_dhcp4_c_connection_dispatch(NDhcp4CConnection *connection, NDhcp4Incoming **messagep);
 
-int n_dhcp4_c_connection_discover(NDhcp4CConnection *connection,
-                                  uint32_t xid,
-                                  uint32_t secs);
-int n_dhcp4_c_connection_select(NDhcp4CConnection *connection,
-                                const struct in_addr *client,
-                                const struct in_addr *server,
-                                uint32_t xid,
-                                uint32_t secs);
-int n_dhcp4_c_connection_reboot(NDhcp4CConnection *connection,
-                                const struct in_addr *client,
-                                uint32_t xid,
-                                uint32_t secs);
-int n_dhcp4_c_connection_renew(NDhcp4CConnection *connection,
-                               uint32_t xid,
-                               uint32_t secs);
-int n_dhcp4_c_connection_rebind(NDhcp4CConnection *connection,
-                                uint32_t xid,
-                                uint32_t secs);
-int n_dhcp4_c_connection_decline(NDhcp4CConnection *connection,
-                                 const char *error,
-                                 const struct in_addr *client,
-                                 const struct in_addr *server);
-int n_dhcp4_c_connection_inform(NDhcp4CConnection *connection,
-                                uint32_t xid,
-                                uint32_t secs);
-int n_dhcp4_c_connection_release(NDhcp4CConnection *connection,
-                                 const char *error);
+int n_dhcp4_c_connection_discover_new(NDhcp4CConnection *connection,
+                                      NDhcp4Outgoing **request,
+                                      uint32_t xid,
+                                      uint32_t secs);
+int n_dhcp4_c_connection_select_new(NDhcp4CConnection *connection,
+                                    NDhcp4Outgoing **request,
+                                    const struct in_addr *client,
+                                    const struct in_addr *server,
+                                    uint32_t xid,
+                                    uint32_t secs);
+int n_dhcp4_c_connection_reboot_new(NDhcp4CConnection *connection,
+                                    NDhcp4Outgoing **request,
+                                    const struct in_addr *client,
+                                    uint32_t xid,
+                                    uint32_t secs);
+int n_dhcp4_c_connection_renew_new(NDhcp4CConnection *connection,
+                                   NDhcp4Outgoing **request,
+                                   uint32_t xid,
+                                   uint32_t secs);
+int n_dhcp4_c_connection_rebind_new(NDhcp4CConnection *connection,
+                                    NDhcp4Outgoing **request,
+                                    uint32_t xid,
+                                    uint32_t secs);
+int n_dhcp4_c_connection_decline_new(NDhcp4CConnection *connection,
+                                     NDhcp4Outgoing **request,
+                                     const char *error,
+                                     const struct in_addr *client,
+                                     const struct in_addr *server);
+int n_dhcp4_c_connection_inform_new(NDhcp4CConnection *connection,
+                                    NDhcp4Outgoing **request,
+                                    uint32_t xid,
+                                    uint32_t secs);
+int n_dhcp4_c_connection_release_new(NDhcp4CConnection *connection,
+                                     NDhcp4Outgoing **request,
+                                     const char *error);
+
+int n_dhcp4_c_connection_send_request(NDhcp4CConnection *connection,
+                                      NDhcp4Outgoing *request);
 
 /* clients */
 

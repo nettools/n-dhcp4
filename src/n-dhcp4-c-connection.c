@@ -433,7 +433,10 @@ static void n_dhcp4_c_connection_outgoing_set_xid(NDhcp4Outgoing *message, uint3
  *      must be silently discarded.  Any arriving DHCPACK messages must be
  *      silently discarded.
  */
-int n_dhcp4_c_connection_discover(NDhcp4CConnection *connection, uint32_t xid, uint32_t secs) {
+int n_dhcp4_c_connection_discover_new(NDhcp4CConnection *connection,
+                                      NDhcp4Outgoing **requestp,
+                                      uint32_t xid,
+                                      uint32_t secs) {
         _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *message = NULL;
         int r;
 
@@ -443,10 +446,8 @@ int n_dhcp4_c_connection_discover(NDhcp4CConnection *connection, uint32_t xid, u
 
         n_dhcp4_c_connection_outgoing_set_xid(message, xid, secs);
 
-        r = n_dhcp4_c_connection_packet_broadcast(connection, message);
-        if (r < 0)
-                return r;
-
+        *requestp = message;
+        message = NULL;
         return 0;
 }
 
@@ -457,7 +458,12 @@ int n_dhcp4_c_connection_discover(NDhcp4CConnection *connection, uint32_t xid, u
  *      identifier', 'ciaddr' MUST be zero, 'requested IP address' MUST be
  *      filled in with the yiaddr value from the chosen DHCPOFFER.
  */
-int n_dhcp4_c_connection_select(NDhcp4CConnection *connection, const struct in_addr *client, const struct in_addr *server, uint32_t xid, uint32_t secs) {
+int n_dhcp4_c_connection_select_new(NDhcp4CConnection *connection,
+                                    NDhcp4Outgoing **requestp,
+                                    const struct in_addr *client,
+                                    const struct in_addr *server,
+                                    uint32_t xid,
+                                    uint32_t secs) {
         _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *message = NULL;
         int r;
 
@@ -475,10 +481,8 @@ int n_dhcp4_c_connection_select(NDhcp4CConnection *connection, const struct in_a
         if (r < 0)
                 return r;
 
-        r = n_dhcp4_c_connection_packet_broadcast(connection, message);
-        if (r < 0)
-                return r;
-
+        *requestp = message;
+        message = NULL;
         return 0;
 }
 
@@ -492,7 +496,11 @@ int n_dhcp4_c_connection_select(NDhcp4CConnection *connection, const struct in_a
  *      send a DHCPNAK message to the client if the 'requested IP address'
  *      is incorrect, or is on the wrong network.
  */
-int n_dhcp4_c_connection_reboot(NDhcp4CConnection *connection, const struct in_addr *client, uint32_t xid, uint32_t secs) {
+int n_dhcp4_c_connection_reboot_new(NDhcp4CConnection *connection,
+                                    NDhcp4Outgoing **requestp,
+                                    const struct in_addr *client,
+                                    uint32_t xid,
+                                    uint32_t secs) {
         _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *message = NULL;
         int r;
 
@@ -506,10 +514,8 @@ int n_dhcp4_c_connection_reboot(NDhcp4CConnection *connection, const struct in_a
         if (r < 0)
                 return r;
 
-        r = n_dhcp4_c_connection_packet_broadcast(connection, message);
-        if (r < 0)
-                return r;
-
+        *requestp = message;
+        message = NULL;
         return 0;
 }
 
@@ -540,7 +546,10 @@ int n_dhcp4_c_connection_reboot(NDhcp4CConnection *connection, const struct in_a
  *      client MUST NOT include a 'server identifier' in the DHCPREQUEST
  *      message.
  */
-int n_dhcp4_c_connection_renew(NDhcp4CConnection *connection, uint32_t xid, uint32_t secs) {
+int n_dhcp4_c_connection_renew_new(NDhcp4CConnection *connection,
+                                   NDhcp4Outgoing **requestp,
+                                   uint32_t xid,
+                                   uint32_t secs) {
         _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *message = NULL;
         int r;
 
@@ -550,10 +559,8 @@ int n_dhcp4_c_connection_renew(NDhcp4CConnection *connection, uint32_t xid, uint
 
         n_dhcp4_c_connection_outgoing_set_xid(message, xid, secs);
 
-        r = n_dhcp4_c_connection_udp_send(connection, message);
-        if (r < 0)
-                return r;
-
+        *requestp = message;
+        message = NULL;
         return 0;
 }
 
@@ -576,7 +583,10 @@ int n_dhcp4_c_connection_renew(NDhcp4CConnection *connection, uint32_t xid, uint
  *      current network address.  The client MUST NOT include a 'server
  *      identifier' in the DHCPREQUEST message.
  */
-int n_dhcp4_c_connection_rebind(NDhcp4CConnection *connection, uint32_t xid, uint32_t secs) {
+int n_dhcp4_c_connection_rebind_new(NDhcp4CConnection *connection,
+                                    NDhcp4Outgoing **requestp,
+                                    uint32_t xid,
+                                    uint32_t secs) {
         _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *message = NULL;
         int r;
 
@@ -586,10 +596,8 @@ int n_dhcp4_c_connection_rebind(NDhcp4CConnection *connection, uint32_t xid, uin
 
         n_dhcp4_c_connection_outgoing_set_xid(message, xid, secs);
 
-        r = n_dhcp4_c_connection_udp_broadcast(connection, message);
-        if (r < 0)
-                return r;
-
+        *requestp = message;
+        message = NULL;
         return 0;
 }
 
@@ -606,7 +614,11 @@ int n_dhcp4_c_connection_rebind(NDhcp4CConnection *connection, uint32_t xid, uin
  *      Because the client is declining the use of the IP address supplied by
  *      the server, the client broadcasts DHCPDECLINE messages.
  */
-int n_dhcp4_c_connection_decline(NDhcp4CConnection *connection, const char *error, const struct in_addr *client, const struct in_addr *server) {
+int n_dhcp4_c_connection_decline_new(NDhcp4CConnection *connection,
+                                     NDhcp4Outgoing **requestp,
+                                     const char *error,
+                                     const struct in_addr *client,
+                                     const struct in_addr *server) {
         _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *message = NULL;
         int r;
 
@@ -628,10 +640,8 @@ int n_dhcp4_c_connection_decline(NDhcp4CConnection *connection, const char *erro
                         return r;
         }
 
-        r = n_dhcp4_c_connection_packet_broadcast(connection, message);
-        if (r < 0)
-                return r;
-
+        *requestp = message;
+        message = NULL;
         return 0;
 }
 
@@ -663,7 +673,10 @@ int n_dhcp4_c_connection_decline(NDhcp4CConnection *connection, const char *erro
  *      the limited (all 1s) broadcast address.  DHCPINFORM messages MUST be
  *      directed to the 'DHCP server' UDP port.
  */
-int n_dhcp4_c_connection_inform(NDhcp4CConnection *connection, uint32_t xid, uint32_t secs) {
+int n_dhcp4_c_connection_inform_new(NDhcp4CConnection *connection,
+                                    NDhcp4Outgoing **requestp,
+                                    uint32_t xid,
+                                    uint32_t secs) {
         _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *message = NULL;
         int r;
 
@@ -673,10 +686,8 @@ int n_dhcp4_c_connection_inform(NDhcp4CConnection *connection, uint32_t xid, uin
 
         n_dhcp4_c_connection_outgoing_set_xid(message, xid, secs);
 
-        r = n_dhcp4_c_connection_udp_broadcast(connection, message);
-        if (r < 0)
-                return r;
-
+        *requestp = message;
+        message = NULL;
         return 0;
 }
 
@@ -716,7 +727,9 @@ int n_dhcp4_c_connection_inform(NDhcp4CConnection *connection, uint32_t xid, uin
  *      DHCPRELEASE message to the server.  Note that the correct operation
  *      of DHCP does not depend on the transmission of DHCPRELEASE messages.
  */
-int n_dhcp4_c_connection_release(NDhcp4CConnection *connection, const char *error) {
+int n_dhcp4_c_connection_release_new(NDhcp4CConnection *connection,
+                                     NDhcp4Outgoing **requestp,
+                                     const char *error) {
         _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *message = NULL;
         int r;
 
@@ -734,9 +747,41 @@ int n_dhcp4_c_connection_release(NDhcp4CConnection *connection, const char *erro
                         return r;
         }
 
-        r = n_dhcp4_c_connection_udp_send(connection, message);
-        if (r < 0)
-                return r;
+        *requestp = message;
+        message = NULL;
+        return 0;
+}
+
+int n_dhcp4_c_connection_send_request(NDhcp4CConnection *connection,
+                                      NDhcp4Outgoing *request) {
+        int r;
+
+        switch (request->userdata.type) {
+        case N_DHCP4_C_MESSAGE_DISCOVER:
+        case N_DHCP4_C_MESSAGE_SELECT:
+        case N_DHCP4_C_MESSAGE_REBOOT:
+        case N_DHCP4_C_MESSAGE_DECLINE:
+                r = n_dhcp4_c_connection_packet_broadcast(connection, request);
+                if (r < 0)
+                        return r;
+                break;
+        case N_DHCP4_C_MESSAGE_INFORM:
+        case N_DHCP4_C_MESSAGE_REBIND:
+                r = n_dhcp4_c_connection_udp_broadcast(connection, request);
+                if (r < 0)
+                        return r;
+
+                break;
+        case N_DHCP4_C_MESSAGE_RENEW:
+        case N_DHCP4_C_MESSAGE_RELEASE:
+                r = n_dhcp4_c_connection_udp_send(connection, request);
+                if (r < 0)
+                        return r;
+
+                break;
+        default:
+                assert(0);
+        }
 
         return 0;
 }

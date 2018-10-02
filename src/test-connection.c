@@ -111,16 +111,20 @@ static void test_discover(NDhcp4SConnection *connection_server,
                           NDhcp4CConnection *connection_client,
                           const struct in_addr *addr_server,
                           const struct in_addr *addr_client) {
-        _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *request = NULL;
+        _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *request_out = NULL;
+        _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *request_in = NULL;
         _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *reply = NULL;
         int r;
 
-        r = n_dhcp4_c_connection_discover(connection_client, 1, 1);
+        r = n_dhcp4_c_connection_discover_new(connection_client, &request_out, 1, 1);
         assert(!r);
 
-        test_server_receive(connection_server, N_DHCP4_MESSAGE_DISCOVER, &request);
+        r = n_dhcp4_c_connection_send_request(connection_client, request_out);
+        assert(!r);
 
-        r = n_dhcp4_s_connection_offer_new(connection_server, &reply, request, addr_server, addr_client, 60);
+        test_server_receive(connection_server, N_DHCP4_MESSAGE_DISCOVER, &request_in);
+
+        r = n_dhcp4_s_connection_offer_new(connection_server, &reply, request_in, addr_server, addr_client, 60);
         assert(!r);
 
         r = n_dhcp4_s_connection_send_reply(connection_server, addr_server, reply);
@@ -133,16 +137,20 @@ static void test_select(NDhcp4SConnection *connection_server,
                         NDhcp4CConnection *connection_client,
                         const struct in_addr *addr_server,
                         const struct in_addr *addr_client) {
-        _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *request = NULL;
+        _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *request_out = NULL;
+        _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *request_in = NULL;
         _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *reply = NULL;
         int r;
 
-        r = n_dhcp4_c_connection_select(connection_client, addr_client, addr_server, 1, 1);
+        r = n_dhcp4_c_connection_select_new(connection_client, &request_out, addr_client, addr_server, 1, 1);
         assert(!r);
 
-        test_server_receive(connection_server, N_DHCP4_MESSAGE_REQUEST, &request);
+        r = n_dhcp4_c_connection_send_request(connection_client, request_out);
+        assert(!r);
 
-        r = n_dhcp4_s_connection_ack_new(connection_server, &reply, request, addr_server, addr_client, 60);
+        test_server_receive(connection_server, N_DHCP4_MESSAGE_REQUEST, &request_in);
+
+        r = n_dhcp4_s_connection_ack_new(connection_server, &reply, request_in, addr_server, addr_client, 60);
         assert(!r);
 
         r = n_dhcp4_s_connection_send_reply(connection_server, addr_server, reply);
@@ -155,16 +163,20 @@ static void test_reboot(NDhcp4SConnection *connection_server,
                         NDhcp4CConnection *connection_client,
                         const struct in_addr *addr_server,
                         const struct in_addr *addr_client) {
-        _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *request = NULL;
+        _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *request_out = NULL;
+        _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *request_in = NULL;
         _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *reply = NULL;
         int r;
 
-        r = n_dhcp4_c_connection_reboot(connection_client, addr_server, 1, 1);
+        r = n_dhcp4_c_connection_reboot_new(connection_client, &request_out, addr_server, 1, 1);
         assert(!r);
 
-        test_server_receive(connection_server, N_DHCP4_MESSAGE_REQUEST, &request);
+        r = n_dhcp4_c_connection_send_request(connection_client, request_out);
+        assert(!r);
 
-        r = n_dhcp4_s_connection_ack_new(connection_server, &reply, request, addr_server, addr_client, 60);
+        test_server_receive(connection_server, N_DHCP4_MESSAGE_REQUEST, &request_in);
+
+        r = n_dhcp4_s_connection_ack_new(connection_server, &reply, request_in, addr_server, addr_client, 60);
         assert(!r);
 
         r = n_dhcp4_s_connection_send_reply(connection_server, addr_server, reply);
@@ -177,9 +189,13 @@ static void test_decline(NDhcp4SConnection *connection_server,
                          NDhcp4CConnection *connection_client,
                          const struct in_addr *addr_server,
                          const struct in_addr *addr_client) {
+        _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *request_out = NULL;
         int r;
 
-        r = n_dhcp4_c_connection_decline(connection_client, "No thanks.", addr_client, addr_server);
+        r = n_dhcp4_c_connection_decline_new(connection_client, &request_out, "No thanks.", addr_client, addr_server);
+        assert(!r);
+
+        r = n_dhcp4_c_connection_send_request(connection_client, request_out);
         assert(!r);
 
         test_server_receive(connection_server, N_DHCP4_MESSAGE_DECLINE, NULL);
@@ -190,16 +206,20 @@ static void test_renew(NDhcp4SConnection *connection_server,
                        NDhcp4CConnection *connection_client,
                        const struct in_addr *addr_server,
                        const struct in_addr *addr_client) {
-        _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *request = NULL;
+        _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *request_out = NULL;
+        _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *request_in = NULL;
         _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *reply = NULL;
         int r;
 
-        r = n_dhcp4_c_connection_renew(connection_client, 1, 1);
+        r = n_dhcp4_c_connection_renew_new(connection_client, &request_out, 1, 1);
         assert(!r);
 
-        test_server_receive(connection_server, N_DHCP4_MESSAGE_REQUEST, &request);
+        r = n_dhcp4_c_connection_send_request(connection_client, request_out);
+        assert(!r);
 
-        r = n_dhcp4_s_connection_ack_new(connection_server, &reply, request, addr_server, addr_client, 60);
+        test_server_receive(connection_server, N_DHCP4_MESSAGE_REQUEST, &request_in);
+
+        r = n_dhcp4_s_connection_ack_new(connection_server, &reply, request_in, addr_server, addr_client, 60);
         assert(!r);
 
         r = n_dhcp4_s_connection_send_reply(connection_server, addr_server, reply);
@@ -212,16 +232,20 @@ static void test_rebind(NDhcp4SConnection *connection_server,
                         NDhcp4CConnection *connection_client,
                         const struct in_addr *addr_server,
                         const struct in_addr *addr_client) {
-        _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *request = NULL;
+        _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *request_out = NULL;
+        _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *request_in = NULL;
         _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *reply = NULL;
         int r;
 
-        r = n_dhcp4_c_connection_rebind(connection_client, 1, 1);
+        r = n_dhcp4_c_connection_rebind_new(connection_client, &request_out, 1, 1);
         assert(!r);
 
-        test_server_receive(connection_server, N_DHCP4_MESSAGE_REQUEST, &request);
+        r = n_dhcp4_c_connection_send_request(connection_client, request_out);
+        assert(!r);
 
-        r = n_dhcp4_s_connection_ack_new(connection_server, &reply, request, addr_server, addr_client, 60);
+        test_server_receive(connection_server, N_DHCP4_MESSAGE_REQUEST, &request_in);
+
+        r = n_dhcp4_s_connection_ack_new(connection_server, &reply, request_in, addr_server, addr_client, 60);
         assert(!r);
 
         r = n_dhcp4_s_connection_send_reply(connection_server, addr_server, reply);
@@ -234,9 +258,13 @@ static void test_release(NDhcp4SConnection *connection_server,
                          NDhcp4CConnection *connection_client,
                          const struct in_addr *addr_server,
                          const struct in_addr *addr_client) {
+        _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *request_out = NULL;
         int r;
 
-        r = n_dhcp4_c_connection_release(connection_client, "Shutting down!");
+        r = n_dhcp4_c_connection_release_new(connection_client, &request_out, "Shutting down!");
+        assert(!r);
+
+        r = n_dhcp4_c_connection_send_request(connection_client, request_out);
         assert(!r);
 
         test_server_receive(connection_server, N_DHCP4_MESSAGE_RELEASE, NULL);
