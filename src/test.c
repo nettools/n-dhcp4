@@ -273,21 +273,55 @@ void test_enslave_link(int netns, int master, int slave) {
         free(p);
 }
 
+static void test_unshare_user_namespace(void) {
+        uid_t euid;
+        gid_t egid;
+        int r, fd;
+
+        /*
+         * Enter a new user namespace as root:root.
+         */
+
+        euid = geteuid();
+        egid = getegid();
+
+        r = unshare(CLONE_NEWUSER);
+        assert(r >= 0);
+
+        fd = open("/proc/self/uid_map", O_WRONLY);
+        assert(fd >= 0);
+        r = dprintf(fd, "0 %d 1\n", euid);
+        assert(r >= 0);
+        close(fd);
+
+        fd = open("/proc/self/setgroups", O_WRONLY);
+        assert(fd >= 0);
+        r = dprintf(fd, "deny");
+        assert(r >= 0);
+        close(fd);
+
+        fd = open("/proc/self/gid_map", O_WRONLY);
+        assert(fd >= 0);
+        r = dprintf(fd, "0 %d 1\n", egid);
+        assert(r >= 0);
+        close(fd);
+}
+
 int test_setup(void) {
         int r;
 
         /*
-         * Move into a new network and mount namespace, and create
-         * a private instance of /run/netns. This ensures that any
-         * network devices or network namespaces are private to the
-         * test process.
+         * Move into a new network and mount namespace both associated
+         * with a new user namespace where the current eUID is mapped to
+         * 0. Then create a a private instance of /run/netns. This ensures
+         * that any network devices or network namespaces are private to
+         * the test process.
          */
 
+        test_unshare_user_namespace();
+
         r = unshare(CLONE_NEWNET | CLONE_NEWNS);
-        if (r < 0) {
-                assert(errno == EPERM);
-                return 77;
-        }
+        assert(r >= 0);
 
         r = mount(NULL, "/run", NULL, MS_PRIVATE | MS_REC, NULL);
         assert(r >= 0);
