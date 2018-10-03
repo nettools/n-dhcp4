@@ -284,9 +284,7 @@ int main(int argc, char **argv) {
         efd_client = epoll_create1(EPOLL_CLOEXEC);
         assert(efd_client >= 0);
 
-        r = test_setup();
-        if (r)
-                return r;
+        test_setup();
 
         test_netns_new(&ns_server);
         test_netns_new(&ns_client);

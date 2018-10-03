@@ -32,4 +32,4 @@ void test_bridge_new(int netns,
 
 void test_enslave_link(int netns, int master, int slave);
 
-int test_setup(void);
+void test_setup(void);

@@ -252,12 +252,10 @@ static void test_multiple_servers(void) {
 }
 
 int main(int argc, char **argv) {
-        int r, ns_server, ns_client, ifindex_server, ifindex_client;
+        int ns_server, ns_client, ifindex_server, ifindex_client;
         struct ether_addr mac_client;
 
-        r = test_setup();
-        if (r)
-                return r;
+        test_setup();
 
         test_netns_new(&ns_server);
         test_netns_new(&ns_client);

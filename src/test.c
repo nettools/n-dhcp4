@@ -307,7 +307,7 @@ static void test_unshare_user_namespace(void) {
         close(fd);
 }
 
-int test_setup(void) {
+void test_setup(void) {
         int r;
 
         /*
@@ -326,12 +326,9 @@ int test_setup(void) {
         r = mount(NULL, "/run", NULL, MS_PRIVATE | MS_REC, NULL);
         assert(r >= 0);
 
-        r = mkdir("/run/netns", 0755);
-        if (r < 0)
-                assert(errno == EEXIST);
-
-        r = mount(NULL, "/run/netns", "tmpfs", 0, NULL);
+        r = mount(NULL, "/run", "tmpfs", 0, NULL);
         assert(r >= 0);
 
-        return 0;
+        r = mkdir("/run/netns", 0755);
+        assert(r >= 0);
 }

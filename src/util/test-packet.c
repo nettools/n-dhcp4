@@ -308,14 +308,12 @@ int main(int argc, char **argv) {
                 .sin_port = htons(11),
         };
         struct ether_addr haddr_dst;
-        int r, ifindex_src, ifindex_dst, ns_src, ns_dst;
+        int ifindex_src, ifindex_dst, ns_src, ns_dst;
 
         test_checksum();
         test_checksum_udp();
 
-        r = test_setup();
-        if (r)
-                return r;
+        test_setup();
 
         test_netns_new(&ns_src);
         test_netns_new(&ns_dst);
