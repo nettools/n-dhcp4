@@ -98,7 +98,7 @@ int n_dhcp4_c_connection_listen(NDhcp4CConnection *connection) {
         assert(connection->state == N_DHCP4_C_CONNECTION_STATE_INIT);
 
         r = n_dhcp4_c_socket_packet_new(&connection->pfd, connection->ifindex);
-        if (r < 0)
+        if (r)
                 return r;
 
         ev.data.u32 = N_DHCP4_CLIENT_EPOLL_CONNECTION;
@@ -122,7 +122,7 @@ int n_dhcp4_c_connection_connect(NDhcp4CConnection *connection,
         assert(connection->state == N_DHCP4_C_CONNECTION_STATE_PACKET);
 
         r = n_dhcp4_c_socket_udp_new(&connection->ufd, connection->ifindex, client, server);
-        if (r < 0)
+        if (r)
                 return r;
 
         ev.data.u32 = N_DHCP4_CLIENT_EPOLL_CONNECTION;
@@ -149,15 +149,23 @@ static int n_dhcp4_c_connection_verify_incoming(NDhcp4CConnection *connection,
         int r;
 
         if (memcmp(connection->chaddr, header->chaddr, connection->hlen) != 0)
-                return -EINVAL;
+                return N_DHCP4_E_MALFORMED;
 
         r = n_dhcp4_incoming_query(message, N_DHCP4_OPTION_CLIENT_IDENTIFIER, &id, &idlen);
-        if (r && r != N_DHCP4_E_UNSET)
-                return r;
+        if (r) {
+                if (r == N_DHCP4_E_UNSET) {
+                        if (connection->idlen)
+                                return N_DHCP4_E_MALFORMED;
+                } else {
+                        return r;
+                }
+        }
+
         if (idlen != connection->idlen)
-                return -EINVAL;
+                return N_DHCP4_E_MALFORMED;
+
         if (memcmp(connection->id, id, idlen) != 0)
-                return -EINVAL;
+                return N_DHCP4_E_MALFORMED;
 
         return 0;
 }
@@ -178,7 +186,7 @@ int n_dhcp4_c_connection_dispatch(NDhcp4CConnection *connection,
                 r = n_dhcp4_c_socket_packet_recv(connection->pfd, &message);
                 if (!r)
                         break;
-                else if (r != -EAGAIN)
+                else if (r != N_DHCP4_E_AGAIN)
                         return r;
 
                 /*
@@ -198,8 +206,14 @@ int n_dhcp4_c_connection_dispatch(NDhcp4CConnection *connection,
         }
 
         r = n_dhcp4_c_connection_verify_incoming(connection, message);
-        if (r < 0)
-                return 0;
+        if (r) {
+                if (r == N_DHCP4_E_MALFORMED) {
+                        *messagep = NULL;
+                        return 0;
+                }
+
+                return -ENOTRECOVERABLE;
+        }
 
         *messagep = message;
         message = NULL;
@@ -217,7 +231,7 @@ static int n_dhcp4_c_connection_packet_broadcast(NDhcp4CConnection *connection,
                                          connection->bhaddr,
                                          connection->hlen,
                                          message);
-        if (r < 0)
+        if (r)
                 return r;
 
         return 0;
@@ -230,7 +244,7 @@ static int n_dhcp4_c_connection_udp_broadcast(NDhcp4CConnection *connection,
         assert(connection->state > N_DHCP4_C_CONNECTION_STATE_PACKET);
 
         r = n_dhcp4_c_socket_udp_broadcast(connection->ufd, message);
-        if (r < 0)
+        if (r)
                 return r;
 
         return 0;
@@ -243,7 +257,7 @@ static int n_dhcp4_c_connection_udp_send(NDhcp4CConnection *connection,
         assert(connection->state > N_DHCP4_C_CONNECTION_STATE_PACKET);
 
         r = n_dhcp4_c_socket_udp_send(connection->ufd, message);
-        if (r < 0)
+        if (r)
                 return r;
 
         return 0;
@@ -307,7 +321,7 @@ static int n_dhcp4_c_connection_new_message(NDhcp4CConnection *connection,
          * network-vendors come up with.
          */
         r = n_dhcp4_outgoing_new(&message, 0, N_DHCP4_OVERLOAD_FILE | N_DHCP4_OVERLOAD_SNAME);
-        if (r < 0)
+        if (r)
                 return r;
 
         header = n_dhcp4_outgoing_get_header(message);
@@ -321,12 +335,12 @@ static int n_dhcp4_c_connection_new_message(NDhcp4CConnection *connection,
          * we really should make sure to pass it first as well.
          */
         r = n_dhcp4_outgoing_append(message, N_DHCP4_OPTION_MESSAGE_TYPE, &message_type, sizeof(message_type));
-        if (r < 0)
+        if (r)
                 return r;
 
         if (connection->idlen) {
                 r = n_dhcp4_outgoing_append(message, N_DHCP4_OPTION_CLIENT_IDENTIFIER, connection->id, connection->idlen);
-                if (r < 0)
+                if (r)
                         return r;
         }
 
@@ -350,7 +364,7 @@ static int n_dhcp4_c_connection_new_message(NDhcp4CConnection *connection,
                          */
                         mtu = htons(connection->mtu ?: N_DHCP4_NETWORK_IP_MINIMUM_MAX_SIZE);
                         r = n_dhcp4_outgoing_append(message, N_DHCP4_OPTION_MAXIMUM_MESSAGE_SIZE, &mtu, sizeof(mtu));
-                        if (r < 0)
+                        if (r)
                                 return r;
                 } else {
                         /*
@@ -364,7 +378,7 @@ static int n_dhcp4_c_connection_new_message(NDhcp4CConnection *connection,
                          */
                         mtu = htons(UINT16_MAX);
                         r = n_dhcp4_outgoing_append(message, N_DHCP4_OPTION_MAXIMUM_MESSAGE_SIZE, &mtu, sizeof(mtu));
-                        if (r < 0)
+                        if (r)
                                 return r;
                 }
 
@@ -441,7 +455,7 @@ int n_dhcp4_c_connection_discover_new(NDhcp4CConnection *connection,
         int r;
 
         r = n_dhcp4_c_connection_new_message(connection, &message, N_DHCP4_C_MESSAGE_DISCOVER);
-        if (r < 0)
+        if (r)
                 return r;
 
         n_dhcp4_c_connection_outgoing_set_xid(message, xid, secs);
@@ -468,17 +482,17 @@ int n_dhcp4_c_connection_select_new(NDhcp4CConnection *connection,
         int r;
 
         r = n_dhcp4_c_connection_new_message(connection, &message, N_DHCP4_C_MESSAGE_SELECT);
-        if (r < 0)
+        if (r)
                 return r;
 
         n_dhcp4_c_connection_outgoing_set_xid(message, xid, secs);
 
         r = n_dhcp4_outgoing_append(message, N_DHCP4_OPTION_REQUESTED_IP_ADDRESS, client, sizeof(*client));
-        if (r < 0)
+        if (r)
                 return r;
 
         r = n_dhcp4_outgoing_append(message, N_DHCP4_OPTION_SERVER_IDENTIFIER, server, sizeof(*server));
-        if (r < 0)
+        if (r)
                 return r;
 
         *requestp = message;
@@ -505,13 +519,13 @@ int n_dhcp4_c_connection_reboot_new(NDhcp4CConnection *connection,
         int r;
 
         r = n_dhcp4_c_connection_new_message(connection, &message, N_DHCP4_C_MESSAGE_REBOOT);
-        if (r < 0)
+        if (r)
                 return r;
 
         n_dhcp4_c_connection_outgoing_set_xid(message, xid, secs);
 
         r = n_dhcp4_outgoing_append(message, N_DHCP4_OPTION_REQUESTED_IP_ADDRESS, client, sizeof(*client));
-        if (r < 0)
+        if (r)
                 return r;
 
         *requestp = message;
@@ -554,7 +568,7 @@ int n_dhcp4_c_connection_renew_new(NDhcp4CConnection *connection,
         int r;
 
         r = n_dhcp4_c_connection_new_message(connection, &message, N_DHCP4_C_MESSAGE_RENEW);
-        if (r < 0)
+        if (r)
                 return r;
 
         n_dhcp4_c_connection_outgoing_set_xid(message, xid, secs);
@@ -591,7 +605,7 @@ int n_dhcp4_c_connection_rebind_new(NDhcp4CConnection *connection,
         int r;
 
         r = n_dhcp4_c_connection_new_message(connection, &message, N_DHCP4_C_MESSAGE_REBIND);
-        if (r < 0)
+        if (r)
                 return r;
 
         n_dhcp4_c_connection_outgoing_set_xid(message, xid, secs);
@@ -623,20 +637,20 @@ int n_dhcp4_c_connection_decline_new(NDhcp4CConnection *connection,
         int r;
 
         r = n_dhcp4_c_connection_new_message(connection, &message, N_DHCP4_C_MESSAGE_DECLINE);
-        if (r < 0)
+        if (r)
                 return r;
 
         r = n_dhcp4_outgoing_append(message, N_DHCP4_OPTION_REQUESTED_IP_ADDRESS, client, sizeof(*client));
-        if (r < 0)
+        if (r)
                 return r;
 
         r = n_dhcp4_outgoing_append(message, N_DHCP4_OPTION_SERVER_IDENTIFIER, server, sizeof(*server));
-        if (r < 0)
+        if (r)
                 return r;
 
         if (error) {
                 r = n_dhcp4_outgoing_append(message, N_DHCP4_OPTION_ERROR_MESSAGE, error, strlen(error) + 1);
-                if (r < 0)
+                if (r)
                         return r;
         }
 
@@ -681,7 +695,7 @@ int n_dhcp4_c_connection_inform_new(NDhcp4CConnection *connection,
         int r;
 
         r = n_dhcp4_c_connection_new_message(connection, &message, N_DHCP4_C_MESSAGE_INFORM);
-        if (r < 0)
+        if (r)
                 return r;
 
         n_dhcp4_c_connection_outgoing_set_xid(message, xid, secs);
@@ -734,16 +748,16 @@ int n_dhcp4_c_connection_release_new(NDhcp4CConnection *connection,
         int r;
 
         r = n_dhcp4_c_connection_new_message(connection, &message, N_DHCP4_C_MESSAGE_RELEASE);
-        if (r < 0)
+        if (r)
                 return r;
 
         r = n_dhcp4_outgoing_append(message, N_DHCP4_OPTION_SERVER_IDENTIFIER, &connection->server_ip, sizeof(connection->server_ip));
-        if (r < 0)
+        if (r)
                 return r;
 
         if (error) {
                 r = n_dhcp4_outgoing_append(message, N_DHCP4_OPTION_ERROR_MESSAGE, error, strlen(error) + 1);
-                if (r < 0)
+                if (r)
                         return r;
         }
 
@@ -762,20 +776,20 @@ int n_dhcp4_c_connection_send_request(NDhcp4CConnection *connection,
         case N_DHCP4_C_MESSAGE_REBOOT:
         case N_DHCP4_C_MESSAGE_DECLINE:
                 r = n_dhcp4_c_connection_packet_broadcast(connection, request);
-                if (r < 0)
+                if (r)
                         return r;
                 break;
         case N_DHCP4_C_MESSAGE_INFORM:
         case N_DHCP4_C_MESSAGE_REBIND:
                 r = n_dhcp4_c_connection_udp_broadcast(connection, request);
-                if (r < 0)
+                if (r)
                         return r;
 
                 break;
         case N_DHCP4_C_MESSAGE_RENEW:
         case N_DHCP4_C_MESSAGE_RELEASE:
                 r = n_dhcp4_c_connection_udp_send(connection, request);
-                if (r < 0)
+                if (r)
                         return r;
 
                 break;

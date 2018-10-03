@@ -131,6 +131,10 @@ enum {
         N_DHCP4_E_NO_SPACE,
         N_DHCP4_E_MALFORMED,
         N_DHCP4_E_UNSET,
+
+        N_DHCP4_E_DROPPED,
+        N_DHCP4_E_DOWN,
+        N_DHCP4_E_AGAIN,
 };
 
 enum {

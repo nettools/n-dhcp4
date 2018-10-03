@@ -355,10 +355,15 @@ static int n_dhcp4_socket_packet_send(int sockfd,
         n_buf = n_dhcp4_outgoing_get_raw(message, &buf);
 
         len = packet_sendto_udp(sockfd, buf, n_buf, 0, src_paddr, &haddr, dest_paddr);
-        if (len < 0)
-                return -errno;
-        else if ((size_t)len != n_buf)
-                return -EIO;
+        if (len < 0) {
+                if (errno == EAGAIN || errno == ENOBUFS)
+                        return N_DHCP4_E_DROPPED;
+                else if (errno == ENETDOWN || errno == ENXIO)
+                        return N_DHCP4_E_DOWN;
+                else
+                        return -errno;
+        } else if ((size_t)len != n_buf)
+                return N_DHCP4_E_DROPPED;
 
         return 0;
 }
@@ -403,10 +408,15 @@ int n_dhcp4_c_socket_udp_send(int sockfd,
         n_buf = n_dhcp4_outgoing_get_raw(message, &buf);
 
         len = send(sockfd, buf, n_buf, 0);
-        if (len < 0)
-                return -errno;
-        else if ((size_t)len != n_buf)
-                return -EIO;
+        if (len < 0) {
+                if (errno == EAGAIN || errno == ENOBUFS)
+                        return N_DHCP4_E_DROPPED;
+                else if (errno == ENETDOWN || errno == ENXIO)
+                        return N_DHCP4_E_DOWN;
+                else
+                        return -errno;
+        } else if ((size_t)len != n_buf)
+                return N_DHCP4_E_DROPPED;
 
         return 0;
 }
@@ -432,10 +442,15 @@ int n_dhcp4_c_socket_udp_broadcast(int sockfd, NDhcp4Outgoing *message) {
                      0,
                      (struct sockaddr*)&sockaddr_dest,
                      sizeof(sockaddr_dest));
-        if (len < 0)
-                return -errno;
-        else if ((size_t)len != n_buf)
-                return -EIO;
+        if (len < 0) {
+                if (errno == EAGAIN || errno == ENOBUFS)
+                        return N_DHCP4_E_DROPPED;
+                else if (errno == ENETDOWN || errno == ENXIO)
+                        return N_DHCP4_E_DOWN;
+                else
+                        return -errno;
+        } else if ((size_t)len != n_buf)
+                return N_DHCP4_E_DROPPED;
 
         return 0;
 }
@@ -509,10 +524,15 @@ int n_dhcp4_s_socket_udp_send(int sockfd,
         iov.iov_len = n_dhcp4_outgoing_get_raw(message, (const void **)&iov.iov_base);
 
         len = sendmsg(sockfd, &msg, 0);
-        if (len < 0)
-                return -errno;
-        else if ((size_t)len != iov.iov_len)
-                return -EIO;
+        if (len < 0) {
+                if (errno == EAGAIN || errno == ENOBUFS)
+                        return N_DHCP4_E_DROPPED;
+                else if (errno == ENETDOWN || errno == ENXIO)
+                        return N_DHCP4_E_DOWN;
+                else
+                        return -errno;
+        } else if ((size_t)len != iov.iov_len)
+                return N_DHCP4_E_DROPPED;
 
         return 0;
 }
@@ -534,11 +554,16 @@ int n_dhcp4_c_socket_packet_recv(int sockfd,
         int r;
 
         len = packet_recv_udp(sockfd, buf, sizeof(buf), 0);
-        if (len == 0) {
+        if (len < 0) {
+                if (errno == ENETDOWN)
+                        return N_DHCP4_E_DOWN;
+                else if (errno == EAGAIN)
+                        return N_DHCP4_E_AGAIN;
+                else
+                        return -errno;
+        } else if (len == 0) {
                 *messagep = NULL;
                 return 0;
-        } else if (len < 0) {
-                return -errno;
         }
 
         r = n_dhcp4_incoming_new(&message, buf, len);
@@ -564,11 +589,16 @@ static int n_dhcp4_socket_udp_recv(int sockfd,
         int r;
 
         len = recv(sockfd, buf, sizeof(buf), 0);
-        if (len == 0) {
+        if (len < 0) {
+                if (errno == ENETDOWN)
+                        return N_DHCP4_E_DOWN;
+                else if (errno == EAGAIN)
+                        return N_DHCP4_E_AGAIN;
+                else
+                        return -errno;
+        } else if (len == 0) {
                 *messagep = NULL;
                 return 0;
-        } else if (len < 0) {
-                return -errno;
         }
 
         r = n_dhcp4_incoming_new(&message, buf, len);
