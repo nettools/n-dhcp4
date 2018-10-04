@@ -264,6 +264,11 @@ struct NDhcp4Client {
         int fd_epoll;
         int fd_timer;
 
+        uint16_t mtu;
+        NDhcp4ClientProbe *current_probe;
+
+        bool preempted : 1;
+
         unsigned int state;             /* current client state */
         uint64_t u_t1;                  /* next T1 timeout, or 0 */
         uint64_t u_t2;                  /* next T2 timeout, or 0 */
@@ -436,6 +441,13 @@ int n_dhcp4_client_raise(NDhcp4Client *client, NDhcp4CEventNode **nodep, unsigne
 /* client probes */
 
 int n_dhcp4_client_probe_new(NDhcp4ClientProbe **probep, NDhcp4Client *client);
+
+int n_dhcp4_client_probe_raise(NDhcp4ClientProbe *probe, NDhcp4CEventNode **nodep, unsigned int event);
+int n_dhcp4_client_probe_install(NDhcp4ClientProbe *probe);
+void n_dhcp4_client_probe_uninstall(NDhcp4ClientProbe *probe);
+int n_dhcp4_client_probe_dispatch_timer(NDhcp4ClientProbe *probe);
+int n_dhcp4_client_probe_dispatch_connection(NDhcp4ClientProbe *probe, uint32_t events);
+int n_dhcp4_client_probe_update_mtu(NDhcp4ClientProbe *probe, uint16_t mtu);
 
 /* server connections */
 

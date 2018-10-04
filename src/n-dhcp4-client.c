@@ -126,6 +126,9 @@ NDhcp4CEventNode *n_dhcp4_c_event_node_free(NDhcp4CEventNode *node) {
         return NULL;
 }
 
+/**
+ * n_dhcp4_client_new() - XXX
+ */
 _public_ int n_dhcp4_client_new(NDhcp4Client **clientp) {
         _cleanup_(n_dhcp4_client_unrefp) NDhcp4Client *client = NULL;
         struct epoll_event ev = {
@@ -162,6 +165,8 @@ _public_ int n_dhcp4_client_new(NDhcp4Client **clientp) {
 static void n_dhcp4_client_free(NDhcp4Client *client) {
         NDhcp4CEventNode *node, *t_node;
 
+        assert(!client->current_probe);
+
         c_list_for_each_entry_safe(node, t_node, &client->event_list, client_link)
                 n_dhcp4_c_event_node_free(node);
 
@@ -178,18 +183,27 @@ static void n_dhcp4_client_free(NDhcp4Client *client) {
         free(client);
 }
 
+/**
+ * n_dhcp4_client_ref() - XXX
+ */
 _public_ NDhcp4Client *n_dhcp4_client_ref(NDhcp4Client *client) {
         if (client)
                 ++client->n_refs;
         return client;
 }
 
+/**
+ * n_dhcp4_client_unref() - XXX
+ */
 _public_ NDhcp4Client *n_dhcp4_client_unref(NDhcp4Client *client) {
         if (client && !--client->n_refs)
                 n_dhcp4_client_free(client);
         return NULL;
 }
 
+/**
+ * n_dhcp4_client_raise() - XXX
+ */
 int n_dhcp4_client_raise(NDhcp4Client *client, NDhcp4CEventNode **nodep, unsigned int event) {
         NDhcp4CEventNode *node;
         int r;
@@ -206,10 +220,120 @@ int n_dhcp4_client_raise(NDhcp4Client *client, NDhcp4CEventNode **nodep, unsigne
         return 0;
 }
 
+/**
+ * n_dhcp4_client_get_fd() - XXX
+ */
 _public_ void n_dhcp4_client_get_fd(NDhcp4Client *client, int *fdp) {
         *fdp = client->fd_epoll;
 }
 
+static int n_dhcp4_client_dispatch_timer(NDhcp4Client *client, struct epoll_event *event) {
+        uint64_t v;
+        int r;
+
+        if (event->events & (EPOLLHUP | EPOLLERR)) {
+                /*
+                 * There is no way to handle either gracefully. If we ignored
+                 * them, we would busy-loop, so lets rather forward the error
+                 * to the caller.
+                 */
+                return -ENOTRECOVERABLE;
+        }
+
+        if (event->events & EPOLLIN) {
+                r = read(client->fd_timer, &v, sizeof(v));
+                if (r < 0) {
+                        if (errno == EAGAIN) {
+                                /*
+                                 * There are no more pending events, so nothing
+                                 * to be done. Return to the caller.
+                                 */
+                                return 0;
+                        }
+
+                        /*
+                         * Something failed. We use CLOCK_BOOTTIME/MONOTONIC,
+                         * so ECANCELED cannot happen. Hence, there is no error
+                         * that we could gracefully handle. Fail hard and let
+                         * the caller deal with it.
+                         */
+                        return -errno;
+                } else if (r != sizeof(v) || v == 0) {
+                        /*
+                         * Kernel guarantees 8-byte reads, and only to return
+                         * data if at least one timer triggered; fail hard if
+                         * it suddenly starts exposing unexpected behavior.
+                         */
+                        return -ENOTRECOVERABLE;
+                }
+
+                /*
+                 * Forward the timer-event to the active probe. Timers should
+                 * not fire if there is no probe running, but lets ignore them
+                 * for now, so probe-internals are not leaked to this generic
+                 * client dispatcher.
+                 */
+                if (client->current_probe) {
+                        r = n_dhcp4_client_probe_dispatch_timer(client->current_probe);
+                        if (r)
+                                return r;
+                }
+        }
+
+        return 0;
+}
+
+static int n_dhcp4_client_dispatch_connection(NDhcp4Client *client, struct epoll_event *event) {
+        int r;
+
+        if (client->current_probe)
+                r = n_dhcp4_client_probe_dispatch_connection(client->current_probe,
+                                                             event->events);
+        else
+                return -ENOTRECOVERABLE;
+
+        return r;
+}
+
+/**
+ * n_dhcp4_client_dispatch() - XXX
+ */
+_public_ int n_dhcp4_client_dispatch(NDhcp4Client *client) {
+        struct epoll_event events[2];
+        int n, i, r = 0;
+
+        n = epoll_wait(client->fd_epoll, events, sizeof(events) / sizeof(*events), 0);
+        if (n < 0) {
+                /* Linux never returns EINTR if `timeout == 0'. */
+                return -errno;
+        }
+
+        client->preempted = false;
+
+        for (i = 0; i < n; ++i) {
+                switch (events[i].data.u32) {
+                case N_DHCP4_CLIENT_EPOLL_TIMER:
+                        r = n_dhcp4_client_dispatch_timer(client, events + i);
+                        break;
+                case N_DHCP4_CLIENT_EPOLL_CONNECTION:
+                        r = n_dhcp4_client_dispatch_connection(client, events + i);
+                        break;
+                default:
+                        assert(0);
+                        r = 0;
+                        break;
+                }
+
+                if (r)
+                        return r;
+        }
+
+        return client->preempted ? N_DHCP4_E_PREEMPTED : 0;
+}
+
+/**
+ * n_dhcp4_client_pop_event() - XXX
+ */
 _public_ int n_dhcp4_client_pop_event(NDhcp4Client *client, NDhcp4ClientEvent **eventp) {
         NDhcp4CEventNode *node, *t_node;
 
@@ -225,6 +349,57 @@ _public_ int n_dhcp4_client_pop_event(NDhcp4Client *client, NDhcp4ClientEvent **
         }
 
         *eventp = NULL;
+        return 0;
+}
+
+/**
+ * n_dhcp4_client_update_mtu() - XXX
+ */
+_public_ int n_dhcp4_client_update_mtu(NDhcp4Client *client, uint16_t mtu) {
+        int r;
+
+        if (mtu == client->mtu)
+                return 0;
+
+        if (client->current_probe) {
+                r = n_dhcp4_client_probe_update_mtu(client->current_probe, mtu);
+                if (r)
+                        return r;
+        }
+
+        client->mtu = mtu;
+        return 0;
+}
+
+/**
+ * n_dhcp4_client_probe() - XXX
+ */
+_public_ int n_dhcp4_client_probe(NDhcp4Client *client,
+                                  NDhcp4ClientProbe **probep,
+                                  NDhcp4ClientProbeConfig *config) {
+        _cleanup_(n_dhcp4_client_probe_freep) NDhcp4ClientProbe *probe = NULL;
+        int r;
+
+        r = n_dhcp4_client_probe_new(&probe, client);
+        if (r)
+                return r;
+
+        if (client->current_probe) {
+                r = n_dhcp4_client_probe_raise(client->current_probe,
+                                               NULL,
+                                               N_DHCP4_CLIENT_EVENT_CANCELLED);
+                if (r)
+                        return r;
+
+                n_dhcp4_client_probe_uninstall(client->current_probe);
+        }
+
+        r = n_dhcp4_client_probe_install(probe);
+        if (r)
+                return r;
+
+        *probep = probe;
+        probe = NULL;
         return 0;
 }
 
@@ -414,62 +589,4 @@ static int n_dhcp4_client_dispatch_msg(NDhcp4Client *client, NDhcp4Incoming *inc
                 return 0;
         }
 }
-
-static int n_dhcp4_client_dispatch_connection(NDhcp4Client *client, unsigned int events) {
-        int r;
-
-        if (events & EPOLLIN) {
-                _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *incoming = NULL;
-
-                r = n_dhcp4_c_connection_dispatch(&client->connection, &incoming);
-                if (r == -EAGAIN)
-                        return 0;
-                else if (r < 0)
-                        return r;
-                else if (!incoming)
-                        return 0;
-
-                return n_dhcp4_client_dispatch_msg(client, incoming);
-        }
-
-        if (events & (EPOLLHUP | EPOLLERR))
-                return -EIO;
-
-        return 0;
-}
 #endif
-
-_public_ int n_dhcp4_client_dispatch(NDhcp4Client *client) {
-#if 0
-        struct epoll_event ev;
-        int r;
-
-        r = epoll_wait(client->efd, &ev, 1, 0);
-        if (r < 0) {
-                r = -errno;
-                goto exit;
-        }
-
-
-        if (r > 0) {
-                switch (ev.data.u32) {
-                case N_DHCP4_CLIENT_EPOLL_TIMER:
-                        r = n_dhcp4_client_dispatch_tfd(client, ev.events);
-                        break;
-                case N_DHCP4_CLIENT_EPOLL_CONNECTION:
-                        r = n_dhcp4_client_dispatch_connection(client, ev.events);
-                        break;
-                default:
-                        r = 0;
-                }
-        }
-
-exit:
-        if (r < 0) {
-                /* XXX */
-                client->state = N_DHCP4_STATE_INIT;
-        }
-        return r;
-#endif
-        return 0;
-}

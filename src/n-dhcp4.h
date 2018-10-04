@@ -45,6 +45,7 @@ enum {
         N_DHCP4_CLIENT_EVENT_RETRACTED,
         N_DHCP4_CLIENT_EVENT_EXTENDED,
         N_DHCP4_CLIENT_EVENT_EXPIRED,
+        N_DHCP4_CLIENT_EVENT_CANCELLED,
         _N_DHCP4_CLIENT_EVENT_N,
 };
 
@@ -59,7 +60,7 @@ struct NDhcp4ClientEvent {
                 } offer, granted, extended;
                 struct {
                         NDhcp4ClientProbe *probe;
-                } retracted, expired;
+                } retracted, expired, cancelled;
         };
 };
 
