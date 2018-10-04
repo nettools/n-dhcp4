@@ -9,4 +9,4 @@ cd "./ci-build"
 ${CHERRY_LIB_MESONSETUP} . "${CHERRY_LIB_SRCDIR}"
 ${CHERRY_LIB_NINJABUILD}
 ${CHERRY_LIB_MESONTEST}
-(( ! CHERRY_LIB_VALGRIND )) || ${CHERRY_LIB_MESONTEST} "--wrapper=${CHERRY_LIB_VALGRINDWRAP}"
+# no valgrind tests, since setns(2) is not supported by it
