@@ -218,6 +218,7 @@ int n_dhcp4_outgoing_append(NDhcp4Outgoing *outgoing,
                         if (!m)
                                 return -ENOMEM;
 
+                        memset((void *)m + outgoing->i_message, 0, n - outgoing->i_message);
                         outgoing->message = m;
                         outgoing->n_message = n;
                         n_dhcp4_outgoing_append_option(outgoing, option, data, n_data);
