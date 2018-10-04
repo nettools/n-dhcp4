@@ -323,7 +323,7 @@ void test_setup(void) {
         r = unshare(CLONE_NEWNET | CLONE_NEWNS);
         assert(r >= 0);
 
-        r = mount(NULL, "/run", NULL, MS_PRIVATE | MS_REC, NULL);
+        r = mount(NULL, "/", NULL, MS_PRIVATE | MS_REC, NULL);
         assert(r >= 0);
 
         r = mount(NULL, "/run", "tmpfs", 0, NULL);
