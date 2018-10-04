@@ -141,16 +141,16 @@ _public_ int n_dhcp4_client_new(NDhcp4Client **clientp) {
 
         *client = (NDhcp4Client)N_DHCP4_CLIENT_NULL(*client);
 
-        client->efd = epoll_create1(EPOLL_CLOEXEC);
-        if (client->efd < 0)
+        client->fd_epoll = epoll_create1(EPOLL_CLOEXEC);
+        if (client->fd_epoll < 0)
                 return -errno;
 
-        client->tfd = timerfd_create(CLOCK_BOOTTIME, TFD_CLOEXEC | TFD_NONBLOCK);
-        if (client->tfd < 0)
+        client->fd_timer = timerfd_create(CLOCK_BOOTTIME, TFD_CLOEXEC | TFD_NONBLOCK);
+        if (client->fd_timer < 0)
                 return -errno;
 
         ev.data.u32 = N_DHCP4_CLIENT_EPOLL_TIMER;
-        r = epoll_ctl(client->efd, EPOLL_CTL_ADD, client->tfd, &ev);
+        r = epoll_ctl(client->fd_epoll, EPOLL_CTL_ADD, client->fd_timer, &ev);
         if (r < 0)
                 return -errno;
 
@@ -167,13 +167,13 @@ static void n_dhcp4_client_free(NDhcp4Client *client) {
 
         n_dhcp4_c_connection_deinit(&client->connection);
 
-        if (client->tfd >= 0) {
-                epoll_ctl(client->efd, EPOLL_CTL_DEL, client->tfd, NULL);
-                close(client->tfd);
+        if (client->fd_timer >= 0) {
+                epoll_ctl(client->fd_epoll, EPOLL_CTL_DEL, client->fd_timer, NULL);
+                close(client->fd_timer);
         }
 
-        if (client->efd >= 0)
-                close(client->efd);
+        if (client->fd_epoll >= 0)
+                close(client->fd_epoll);
 
         free(client);
 }
@@ -207,7 +207,7 @@ int n_dhcp4_client_raise(NDhcp4Client *client, NDhcp4CEventNode **nodep, unsigne
 }
 
 _public_ void n_dhcp4_client_get_fd(NDhcp4Client *client, int *fdp) {
-        *fdp = client->efd;
+        *fdp = client->fd_epoll;
 }
 
 _public_ int n_dhcp4_client_pop_event(NDhcp4Client *client, NDhcp4ClientEvent **eventp) {

@@ -261,10 +261,10 @@ struct NDhcp4CConnection {
 struct NDhcp4Client {
         unsigned long n_refs;
         CList event_list;
+        int fd_epoll;
+        int fd_timer;
 
         unsigned int state;             /* current client state */
-        int efd;                        /* epoll fd */
-        int tfd;                        /* timer fd */
         uint64_t u_t1;                  /* next T1 timeout, or 0 */
         uint64_t u_t2;                  /* next T2 timeout, or 0 */
         uint64_t u_lifetime;            /* next lifetime timeout, or 0 */
@@ -279,8 +279,8 @@ struct NDhcp4Client {
 #define N_DHCP4_CLIENT_NULL(_x) {                                               \
                 .n_refs = 1,                                                    \
                 .event_list = C_LIST_INIT((_x).event_list),                     \
-                .efd = -1,                                                      \
-                .tfd = -1,                                                      \
+                .fd_epoll = -1,                                                 \
+                .fd_timer = -1,                                                 \
                 .connection = N_DHCP4_C_CONNECTION_NULL((_x).connection),       \
         }
 
