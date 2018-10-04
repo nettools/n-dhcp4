@@ -150,14 +150,14 @@ enum {
 };
 
 enum {
-        N_DHCP4_C_PROBE_STATE_INIT,
-        N_DHCP4_C_PROBE_STATE_INIT_REBOOT,
-        N_DHCP4_C_PROBE_STATE_SELECTING,
-        N_DHCP4_C_PROBE_STATE_REBOOTING,
-        N_DHCP4_C_PROBE_STATE_REQUESTING,
-        N_DHCP4_C_PROBE_STATE_BOUND,
-        N_DHCP4_C_PROBE_STATE_RENEWING,
-        N_DHCP4_C_PROBE_STATE_REBINDING,
+        N_DHCP4_CLIENT_PROBE_STATE_INIT,
+        N_DHCP4_CLIENT_PROBE_STATE_INIT_REBOOT,
+        N_DHCP4_CLIENT_PROBE_STATE_SELECTING,
+        N_DHCP4_CLIENT_PROBE_STATE_REBOOTING,
+        N_DHCP4_CLIENT_PROBE_STATE_REQUESTING,
+        N_DHCP4_CLIENT_PROBE_STATE_BOUND,
+        N_DHCP4_CLIENT_PROBE_STATE_RENEWING,
+        N_DHCP4_CLIENT_PROBE_STATE_REBINDING,
 };
 
 enum {
@@ -471,6 +471,7 @@ int n_dhcp4_s_connection_nak_new(NDhcp4SConnection *connection,
 int n_dhcp4_s_connection_send_reply(NDhcp4SConnection *connection,
                                     const struct in_addr *server_addr,
                                     NDhcp4Outgoing *reply);
+
 /* inline helpers */
 
 static inline void n_dhcp4_outgoing_freep(NDhcp4Outgoing **outgoing) {
