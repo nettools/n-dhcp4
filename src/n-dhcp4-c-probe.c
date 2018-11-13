@@ -13,6 +13,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include "n-dhcp4.h"
 #include "n-dhcp4-private.h"
 
@@ -97,6 +98,7 @@ _public_ NDhcp4ClientProbe *n_dhcp4_client_probe_free(NDhcp4ClientProbe *probe) 
                 n_dhcp4_c_event_node_free(node);
 
         n_dhcp4_client_probe_uninstall(probe);
+        n_dhcp4_c_connection_deinit(&probe->connection);
         n_dhcp4_client_unref(probe->client);
         free(probe);
 
@@ -183,10 +185,160 @@ void n_dhcp4_client_probe_uninstall(NDhcp4ClientProbe *probe) {
         probe->client->current_probe = NULL;
 }
 
+static uint64_t n_dhcp4_client_probe_gettime(void) {
+        struct timespec ts;
+        int r;
+
+        r = clock_gettime(CLOCK_BOOTTIME, &ts);
+        assert(r >= 0);
+
+        return ts.tv_sec * 1000ULL * 1000ULL + ts.tv_nsec / 1000ULL;
+}
+
+static int n_dhcp4_client_probe_transition_t1(NDhcp4ClientProbe *probe) {
+        switch (probe->state) {
+        case N_DHCP4_CLIENT_PROBE_STATE_BOUND:
+                probe->state = N_DHCP4_CLIENT_PROBE_STATE_RENEWING;
+                break;
+
+        case N_DHCP4_CLIENT_PROBE_STATE_INIT:
+        case N_DHCP4_CLIENT_PROBE_STATE_SELECTING:
+        case N_DHCP4_CLIENT_PROBE_STATE_INIT_REBOOT:
+        case N_DHCP4_CLIENT_PROBE_STATE_REBOOTING:
+        case N_DHCP4_CLIENT_PROBE_STATE_REQUESTING:
+        case N_DHCP4_CLIENT_PROBE_STATE_RENEWING:
+        case N_DHCP4_CLIENT_PROBE_STATE_REBINDING:
+        default:
+                /* ignore */
+                break;
+        }
+
+        return 0;
+}
+
+static int n_dhcp4_client_probe_transition_t2(NDhcp4ClientProbe *probe) {
+        switch (probe->state) {
+        case N_DHCP4_CLIENT_PROBE_STATE_BOUND:
+        case N_DHCP4_CLIENT_PROBE_STATE_RENEWING:
+                probe->state = N_DHCP4_CLIENT_PROBE_STATE_REBINDING;
+                break;
+
+        case N_DHCP4_CLIENT_PROBE_STATE_INIT:
+        case N_DHCP4_CLIENT_PROBE_STATE_SELECTING:
+        case N_DHCP4_CLIENT_PROBE_STATE_INIT_REBOOT:
+        case N_DHCP4_CLIENT_PROBE_STATE_REBOOTING:
+        case N_DHCP4_CLIENT_PROBE_STATE_REQUESTING:
+        case N_DHCP4_CLIENT_PROBE_STATE_REBINDING:
+        default:
+                /* ignore */
+                break;
+        }
+
+        return 0;
+}
+
+static int n_dhcp4_client_probe_transition_lifetime(NDhcp4ClientProbe *probe) {
+        switch (probe->state) {
+        case N_DHCP4_CLIENT_PROBE_STATE_BOUND:
+        case N_DHCP4_CLIENT_PROBE_STATE_RENEWING:
+        case N_DHCP4_CLIENT_PROBE_STATE_REBINDING:
+                probe->state = N_DHCP4_CLIENT_PROBE_STATE_INIT;
+                break;
+
+        case N_DHCP4_CLIENT_PROBE_STATE_INIT:
+        case N_DHCP4_CLIENT_PROBE_STATE_SELECTING:
+        case N_DHCP4_CLIENT_PROBE_STATE_INIT_REBOOT:
+        case N_DHCP4_CLIENT_PROBE_STATE_REBOOTING:
+        case N_DHCP4_CLIENT_PROBE_STATE_REQUESTING:
+        default:
+                /* ignore */
+                break;
+        }
+
+        return 0;
+}
+
+static int n_dhcp4_client_probe_transition_offer(NDhcp4ClientProbe *probe) {
+        switch (probe->state) {
+        case N_DHCP4_CLIENT_PROBE_STATE_SELECTING:
+                probe->state = N_DHCP4_CLIENT_PROBE_STATE_REQUESTING;
+                break;
+
+        case N_DHCP4_CLIENT_PROBE_STATE_INIT:
+        case N_DHCP4_CLIENT_PROBE_STATE_INIT_REBOOT:
+        case N_DHCP4_CLIENT_PROBE_STATE_REBOOTING:
+        case N_DHCP4_CLIENT_PROBE_STATE_REQUESTING:
+        case N_DHCP4_CLIENT_PROBE_STATE_BOUND:
+        case N_DHCP4_CLIENT_PROBE_STATE_RENEWING:
+        case N_DHCP4_CLIENT_PROBE_STATE_REBINDING:
+        default:
+                /* ignore */
+                break;
+        }
+
+        return 0;
+}
+
+static int n_dhcp4_client_probe_transition_ack(NDhcp4ClientProbe *probe) {
+        switch (probe->state) {
+        case N_DHCP4_CLIENT_PROBE_STATE_INIT:
+        case N_DHCP4_CLIENT_PROBE_STATE_SELECTING:
+        case N_DHCP4_CLIENT_PROBE_STATE_INIT_REBOOT:
+        case N_DHCP4_CLIENT_PROBE_STATE_REBOOTING:
+        case N_DHCP4_CLIENT_PROBE_STATE_REQUESTING:
+        case N_DHCP4_CLIENT_PROBE_STATE_BOUND:
+        case N_DHCP4_CLIENT_PROBE_STATE_RENEWING:
+        case N_DHCP4_CLIENT_PROBE_STATE_REBINDING:
+        default:
+                /* ignore */
+                break;
+        }
+
+        return 0;
+}
+
+static int n_dhcp4_client_probe_transition_nak(NDhcp4ClientProbe *probe) {
+        switch (probe->state) {
+        case N_DHCP4_CLIENT_PROBE_STATE_REBOOTING:
+        case N_DHCP4_CLIENT_PROBE_STATE_REQUESTING:
+        case N_DHCP4_CLIENT_PROBE_STATE_RENEWING:
+        case N_DHCP4_CLIENT_PROBE_STATE_REBINDING:
+                probe->state = N_DHCP4_CLIENT_PROBE_STATE_INIT;
+                break;
+
+        case N_DHCP4_CLIENT_PROBE_STATE_SELECTING:
+        case N_DHCP4_CLIENT_PROBE_STATE_INIT_REBOOT:
+        case N_DHCP4_CLIENT_PROBE_STATE_INIT:
+        case N_DHCP4_CLIENT_PROBE_STATE_BOUND:
+        default:
+                /* ignore */
+                break;
+        }
+
+        return 0;
+}
+
 /**
  * n_dhcp4_client_probe_dispatch_timer() - XXX
  */
 int n_dhcp4_client_probe_dispatch_timer(NDhcp4ClientProbe *probe) {
+        uint64_t now;
+
+        now = n_dhcp4_client_probe_gettime();
+        if (now >= probe->u_lifetime) {
+                probe->u_t1 = 0;
+                probe->u_t2 = 0;
+                probe->u_lifetime = 0;
+                return n_dhcp4_client_probe_transition_lifetime(probe);
+        } else if (now >= probe->u_t2) {
+                probe->u_t1 = 0;
+                probe->u_t2 = 0;
+                return n_dhcp4_client_probe_transition_t2(probe);
+        } else if (now >= probe->u_t1) {
+                probe->u_t1 = 0;
+                return n_dhcp4_client_probe_transition_t1(probe);
+        }
+
         return 0;
 }
 
@@ -194,6 +346,45 @@ int n_dhcp4_client_probe_dispatch_timer(NDhcp4ClientProbe *probe) {
  * n_dhcp4_client_probe_dispatch_connection() - XXX
  */
 int n_dhcp4_client_probe_dispatch_connection(NDhcp4ClientProbe *probe, uint32_t events) {
+        int r;
+
+        for (unsigned int i = 0; i < 32; ++i) {
+                _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *message = NULL;
+                NDhcp4Header *header;
+                uint8_t *type;
+                size_t n_type;
+
+                r = n_dhcp4_c_connection_dispatch(&probe->connection, &message);
+                if (r)
+                        return r;
+
+                if (!message)
+                        continue;
+
+                r = n_dhcp4_incoming_query(message, N_DHCP4_OPTION_MESSAGE_TYPE, &type, &n_type);
+                if (r == N_DHCP4_E_UNSET || n_type != sizeof(type))
+                        continue;
+
+                header = n_dhcp4_incoming_get_header(message);
+                if (header->xid != probe->xid)
+                        continue;
+
+                switch (*type) {
+                case N_DHCP4_MESSAGE_OFFER:
+                        r = n_dhcp4_client_probe_transition_offer(probe);
+                        if (r)
+                                return r;
+                case N_DHCP4_MESSAGE_ACK:
+                        r = n_dhcp4_client_probe_transition_ack(probe);
+                        if (r)
+                                return r;
+                case N_DHCP4_MESSAGE_NAK:
+                        r = n_dhcp4_client_probe_transition_nak(probe);
+                        if (r)
+                                return r;
+                }
+        }
+
         return 0;
 }
 

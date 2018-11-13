@@ -268,17 +268,6 @@ struct NDhcp4Client {
         NDhcp4ClientProbe *current_probe;
 
         bool preempted : 1;
-
-        unsigned int state;             /* current client state */
-        uint64_t u_t1;                  /* next T1 timeout, or 0 */
-        uint64_t u_t2;                  /* next T2 timeout, or 0 */
-        uint64_t u_lifetime;            /* next lifetime timeout, or 0 */
-
-        uint32_t xid;                   /* transaction id, or 0 */
-        uint64_t u_starttime;           /* transaction start time, or 0 */
-        uint32_t secs;                  /* seconds since start of transaction, or 0 */
-
-        NDhcp4CConnection connection;   /* client connection wrapper */
 };
 
 #define N_DHCP4_CLIENT_NULL(_x) {                                               \
@@ -286,17 +275,27 @@ struct NDhcp4Client {
                 .event_list = C_LIST_INIT((_x).event_list),                     \
                 .fd_epoll = -1,                                                 \
                 .fd_timer = -1,                                                 \
-                .connection = N_DHCP4_C_CONNECTION_NULL((_x).connection),       \
         }
 
 struct NDhcp4ClientProbe {
         NDhcp4Client *client;
         CList event_list;
         void *userdata;
+
+        unsigned int state;             /* current probe state */
+        uint64_t u_t1;                  /* next T1 timeout, or 0 */
+        uint64_t u_t2;                  /* next T2 timeout, or 0 */
+        uint64_t u_lifetime;            /* next lifetime timeout, or 0 */
+
+        uint32_t xid;                   /* transaction id, or 0 */
+        uint64_t u_starttime;           /* transaction start time, or 0 */
+
+        NDhcp4CConnection connection;   /* client connection wrapper */
 };
 
 #define N_DHCP4_CLIENT_PROBE_NULL(_x) {                                         \
                 .event_list = C_LIST_INIT((_x).event_list),                     \
+                .connection = N_DHCP4_C_CONNECTION_NULL((_x).connection),       \
         }
 
 struct NDhcp4SConnection {
