@@ -403,9 +403,7 @@ int n_dhcp4_c_connection_discover_new(NDhcp4CConnection *connection,
                                       uint32_t secs);
 int n_dhcp4_c_connection_select_new(NDhcp4CConnection *connection,
                                     NDhcp4Outgoing **request,
-                                    const struct in_addr *client,
-                                    const struct in_addr *server,
-                                    uint32_t xid,
+                                    NDhcp4Incoming *offer,
                                     uint32_t secs);
 int n_dhcp4_c_connection_reboot_new(NDhcp4CConnection *connection,
                                     NDhcp4Outgoing **request,
@@ -422,9 +420,8 @@ int n_dhcp4_c_connection_rebind_new(NDhcp4CConnection *connection,
                                     uint32_t secs);
 int n_dhcp4_c_connection_decline_new(NDhcp4CConnection *connection,
                                      NDhcp4Outgoing **request,
-                                     const char *error,
-                                     const struct in_addr *client,
-                                     const struct in_addr *server);
+                                     NDhcp4Incoming *ack,
+                                     const char *error);
 int n_dhcp4_c_connection_inform_new(NDhcp4CConnection *connection,
                                     NDhcp4Outgoing **request,
                                     uint32_t xid,

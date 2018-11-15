@@ -431,6 +431,38 @@ static void n_dhcp4_c_connection_outgoing_set_xid(NDhcp4Outgoing *message, uint3
         header->xid = xid;
 }
 
+static int n_dhcp4_c_connection_incoming_get_xid(NDhcp4Incoming *message, uint32_t *xidp) {
+        NDhcp4Header *header = n_dhcp4_incoming_get_header(message);
+
+        *xidp = header->xid;
+
+        return 0;
+}
+
+static int n_dhcp4_c_connection_incoming_get_yiaddr(NDhcp4Incoming *message, struct in_addr *yiaddr) {
+        NDhcp4Header *header = n_dhcp4_incoming_get_header(message);
+
+        yiaddr->s_addr = header->yiaddr;
+
+        return 0;
+}
+
+static int n_dhcp4_c_connection_incoming_get_server_identifier(NDhcp4Incoming *message, struct in_addr *server_identifier) {
+        uint8_t *data;
+        size_t n_data;
+        int r;
+
+        r = n_dhcp4_incoming_query(message, N_DHCP4_OPTION_SERVER_IDENTIFIER, &data, &n_data);
+        if (r)
+                return r;
+        else if (n_data != sizeof(*server_identifier))
+                return N_DHCP4_E_MALFORMED;
+
+        memcpy(server_identifier, data, n_data);
+
+        return 0;
+}
+
 /*
  *      RFC2131 3.1
  *
@@ -491,6 +523,12 @@ int n_dhcp4_c_connection_discover_new(NDhcp4CConnection *connection,
 }
 
 /*
+ *
+ *      RFC2131 4.1.1
+ *
+ *      The DHCPREQUEST message contains the same 'xid' as the DHCPOFFER
+ *      message.
+ *
  *      RFC2131 4.3.2
  *
  *      Client inserts the address of the selected server in 'server
@@ -499,12 +537,25 @@ int n_dhcp4_c_connection_discover_new(NDhcp4CConnection *connection,
  */
 int n_dhcp4_c_connection_select_new(NDhcp4CConnection *connection,
                                     NDhcp4Outgoing **requestp,
-                                    const struct in_addr *client,
-                                    const struct in_addr *server,
-                                    uint32_t xid,
+                                    NDhcp4Incoming *offer,
                                     uint32_t secs) {
         _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *message = NULL;
+        struct in_addr client;
+        struct in_addr server;
+        uint32_t xid;
         int r;
+
+        r = n_dhcp4_c_connection_incoming_get_xid(offer, &xid);
+        if (r)
+                return r;
+
+        r = n_dhcp4_c_connection_incoming_get_yiaddr(offer, &client);
+        if (r)
+                return r;
+
+        r = n_dhcp4_c_connection_incoming_get_server_identifier(offer, &server);
+        if (r)
+                return r;
 
         r = n_dhcp4_c_connection_new_message(connection, &message, N_DHCP4_C_MESSAGE_SELECT);
         if (r)
@@ -512,11 +563,11 @@ int n_dhcp4_c_connection_select_new(NDhcp4CConnection *connection,
 
         n_dhcp4_c_connection_outgoing_set_xid(message, xid, secs);
 
-        r = n_dhcp4_outgoing_append(message, N_DHCP4_OPTION_REQUESTED_IP_ADDRESS, client, sizeof(*client));
+        r = n_dhcp4_outgoing_append(message, N_DHCP4_OPTION_REQUESTED_IP_ADDRESS, &client, sizeof(client));
         if (r)
                 return r;
 
-        r = n_dhcp4_outgoing_append(message, N_DHCP4_OPTION_SERVER_IDENTIFIER, server, sizeof(*server));
+        r = n_dhcp4_outgoing_append(message, N_DHCP4_OPTION_SERVER_IDENTIFIER, &server, sizeof(server));
         if (r)
                 return r;
 
@@ -655,21 +706,30 @@ int n_dhcp4_c_connection_rebind_new(NDhcp4CConnection *connection,
  */
 int n_dhcp4_c_connection_decline_new(NDhcp4CConnection *connection,
                                      NDhcp4Outgoing **requestp,
-                                     const char *error,
-                                     const struct in_addr *client,
-                                     const struct in_addr *server) {
+                                     NDhcp4Incoming *ack,
+                                     const char *error) {
         _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *message = NULL;
+        struct in_addr client;
+        struct in_addr server;
         int r;
+
+        r = n_dhcp4_c_connection_incoming_get_yiaddr(ack, &client);
+        if (r)
+                return r;
+
+        r = n_dhcp4_c_connection_incoming_get_server_identifier(ack, &server);
+        if (r)
+                return r;
 
         r = n_dhcp4_c_connection_new_message(connection, &message, N_DHCP4_C_MESSAGE_DECLINE);
         if (r)
                 return r;
 
-        r = n_dhcp4_outgoing_append(message, N_DHCP4_OPTION_REQUESTED_IP_ADDRESS, client, sizeof(*client));
+        r = n_dhcp4_outgoing_append(message, N_DHCP4_OPTION_REQUESTED_IP_ADDRESS, &client, sizeof(client));
         if (r)
                 return r;
 
-        r = n_dhcp4_outgoing_append(message, N_DHCP4_OPTION_SERVER_IDENTIFIER, server, sizeof(*server));
+        r = n_dhcp4_outgoing_append(message, N_DHCP4_OPTION_SERVER_IDENTIFIER, &server, sizeof(server));
         if (r)
                 return r;
 
