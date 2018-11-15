@@ -122,7 +122,7 @@ static void test_discover(NDhcp4SConnection *connection_server,
         _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *reply_out = NULL;
         int r;
 
-        r = n_dhcp4_c_connection_discover_new(connection_client, &request_out, 1, 1);
+        r = n_dhcp4_c_connection_discover_new(connection_client, &request_out, 1);
         assert(!r);
 
         r = n_dhcp4_c_connection_send_request(connection_client, request_out);
@@ -176,7 +176,7 @@ static void test_reboot(NDhcp4SConnection *connection_server,
         _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *reply = NULL;
         int r;
 
-        r = n_dhcp4_c_connection_reboot_new(connection_client, &request_out, addr_server, 1, 1);
+        r = n_dhcp4_c_connection_reboot_new(connection_client, &request_out, addr_server, 1);
         assert(!r);
 
         r = n_dhcp4_c_connection_send_request(connection_client, request_out);
@@ -218,7 +218,7 @@ static void test_renew(NDhcp4SConnection *connection_server,
         _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *reply = NULL;
         int r;
 
-        r = n_dhcp4_c_connection_renew_new(connection_client, &request_out, 1, 1);
+        r = n_dhcp4_c_connection_renew_new(connection_client, &request_out, 1);
         assert(!r);
 
         r = n_dhcp4_c_connection_send_request(connection_client, request_out);
@@ -244,7 +244,7 @@ static void test_rebind(NDhcp4SConnection *connection_server,
         _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *reply = NULL;
         int r;
 
-        r = n_dhcp4_c_connection_rebind_new(connection_client, &request_out, 1, 1);
+        r = n_dhcp4_c_connection_rebind_new(connection_client, &request_out, 1);
         assert(!r);
 
         r = n_dhcp4_c_connection_send_request(connection_client, request_out);
@@ -308,6 +308,7 @@ int main(int argc, char **argv) {
 
         r = n_dhcp4_c_connection_init(&connection_client,
                                       &efd_client,
+                                      0,
                                       ifindex_client,
                                       ARPHRD_ETHER,
                                       ETH_ALEN,

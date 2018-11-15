@@ -247,7 +247,8 @@ struct NDhcp4CConnection {
         uint8_t chaddr[MAX_ADDR_LEN];   /* client hardware address */
         uint8_t bhaddr[MAX_ADDR_LEN];   /* broadcast hardware address */
 
-        uint32_t xid;                   /* pending transaction id */
+        struct drand48_data entropy;    /* entropy pool */
+        uint32_t xid;                   /* current transaction id */
 
         uint32_t client_ip;             /* client IP address, or 0 */
         uint32_t server_ip;             /* server IP address, or 0 */
@@ -382,6 +383,7 @@ NDhcp4CEventNode *n_dhcp4_c_event_node_free(NDhcp4CEventNode *node);
 
 int n_dhcp4_c_connection_init(NDhcp4CConnection *connection,
                               int *efd,
+                              uint64_t seed,
                               int ifindex,
                               uint8_t htype,
                               uint8_t hlen,
@@ -399,7 +401,6 @@ int n_dhcp4_c_connection_dispatch(NDhcp4CConnection *connection, NDhcp4Incoming 
 
 int n_dhcp4_c_connection_discover_new(NDhcp4CConnection *connection,
                                       NDhcp4Outgoing **request,
-                                      uint32_t xid,
                                       uint32_t secs);
 int n_dhcp4_c_connection_select_new(NDhcp4CConnection *connection,
                                     NDhcp4Outgoing **request,
@@ -408,15 +409,12 @@ int n_dhcp4_c_connection_select_new(NDhcp4CConnection *connection,
 int n_dhcp4_c_connection_reboot_new(NDhcp4CConnection *connection,
                                     NDhcp4Outgoing **request,
                                     const struct in_addr *client,
-                                    uint32_t xid,
                                     uint32_t secs);
 int n_dhcp4_c_connection_renew_new(NDhcp4CConnection *connection,
                                    NDhcp4Outgoing **request,
-                                   uint32_t xid,
                                    uint32_t secs);
 int n_dhcp4_c_connection_rebind_new(NDhcp4CConnection *connection,
                                     NDhcp4Outgoing **request,
-                                    uint32_t xid,
                                     uint32_t secs);
 int n_dhcp4_c_connection_decline_new(NDhcp4CConnection *connection,
                                      NDhcp4Outgoing **request,
@@ -424,7 +422,6 @@ int n_dhcp4_c_connection_decline_new(NDhcp4CConnection *connection,
                                      const char *error);
 int n_dhcp4_c_connection_inform_new(NDhcp4CConnection *connection,
                                     NDhcp4Outgoing **request,
-                                    uint32_t xid,
                                     uint32_t secs);
 int n_dhcp4_c_connection_release_new(NDhcp4CConnection *connection,
                                      NDhcp4Outgoing **request,

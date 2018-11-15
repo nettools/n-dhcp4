@@ -29,6 +29,7 @@ enum {
 
 int n_dhcp4_c_connection_init(NDhcp4CConnection *connection,
                               int *efd,
+                              uint64_t seed,
                               int ifindex,
                               uint8_t htype,
                               uint8_t hlen,
@@ -37,6 +38,9 @@ int n_dhcp4_c_connection_init(NDhcp4CConnection *connection,
                               size_t idlen,
                               const uint8_t *id,
                               bool request_broadcast) {
+        unsigned short int seed16v[3];
+        int r;
+
         assert(hlen > 0);
         assert(hlen <= sizeof(connection->chaddr));
         assert(chaddr);
@@ -50,6 +54,13 @@ int n_dhcp4_c_connection_init(NDhcp4CConnection *connection,
         connection->hlen = hlen;
         memcpy(connection->chaddr, chaddr, hlen);
         memcpy(connection->bhaddr, bhaddr, hlen);
+
+        seed16v[0] = seed;
+        seed16v[1] = seed >> 16;
+        seed16v[2] = (seed >> 32) ^ (seed >> 48);
+
+        r = seed48_r(seed16v, &connection->entropy);
+        assert(!r);
 
         if (idlen) {
                 connection->id = malloc(idlen);
@@ -418,7 +429,17 @@ static int n_dhcp4_c_connection_new_message(NDhcp4CConnection *connection,
         return 0;
 }
 
-static void n_dhcp4_c_connection_outgoing_set_xid(NDhcp4Outgoing *message, uint32_t xid, uint32_t secs) {
+static uint32_t n_dhcp4_c_connection_get_random(NDhcp4CConnection *connection) {
+        long int result;
+        int r;
+
+        r = mrand48_r(&connection->entropy, &result);
+        assert(!r);
+
+        return result;
+};
+
+static void n_dhcp4_c_connection_outgoing_set_secs(NDhcp4Outgoing *message, uint32_t secs) {
         NDhcp4Header *header = n_dhcp4_outgoing_get_header(message);
 
         /*
@@ -428,6 +449,11 @@ static void n_dhcp4_c_connection_outgoing_set_xid(NDhcp4Outgoing *message, uint3
         assert(secs != 0);
 
         header->secs = htonl(secs);
+}
+
+static void n_dhcp4_c_connection_outgoing_set_xid(NDhcp4Outgoing *message, uint32_t xid) {
+        NDhcp4Header *header = n_dhcp4_outgoing_get_header(message);
+
         header->xid = xid;
 }
 
@@ -506,7 +532,6 @@ static int n_dhcp4_c_connection_incoming_get_server_identifier(NDhcp4Incoming *m
  */
 int n_dhcp4_c_connection_discover_new(NDhcp4CConnection *connection,
                                       NDhcp4Outgoing **requestp,
-                                      uint32_t xid,
                                       uint32_t secs) {
         _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *message = NULL;
         int r;
@@ -515,7 +540,8 @@ int n_dhcp4_c_connection_discover_new(NDhcp4CConnection *connection,
         if (r)
                 return r;
 
-        n_dhcp4_c_connection_outgoing_set_xid(message, xid, secs);
+        n_dhcp4_c_connection_outgoing_set_xid(message, n_dhcp4_c_connection_get_random(connection));
+        n_dhcp4_c_connection_outgoing_set_secs(message, secs);
 
         *requestp = message;
         message = NULL;
@@ -561,7 +587,8 @@ int n_dhcp4_c_connection_select_new(NDhcp4CConnection *connection,
         if (r)
                 return r;
 
-        n_dhcp4_c_connection_outgoing_set_xid(message, xid, secs);
+        n_dhcp4_c_connection_outgoing_set_xid(message, xid);
+        n_dhcp4_c_connection_outgoing_set_secs(message, secs);
 
         r = n_dhcp4_outgoing_append(message, N_DHCP4_OPTION_REQUESTED_IP_ADDRESS, &client, sizeof(client));
         if (r)
@@ -589,7 +616,6 @@ int n_dhcp4_c_connection_select_new(NDhcp4CConnection *connection,
 int n_dhcp4_c_connection_reboot_new(NDhcp4CConnection *connection,
                                     NDhcp4Outgoing **requestp,
                                     const struct in_addr *client,
-                                    uint32_t xid,
                                     uint32_t secs) {
         _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *message = NULL;
         int r;
@@ -598,7 +624,8 @@ int n_dhcp4_c_connection_reboot_new(NDhcp4CConnection *connection,
         if (r)
                 return r;
 
-        n_dhcp4_c_connection_outgoing_set_xid(message, xid, secs);
+        n_dhcp4_c_connection_outgoing_set_xid(message, n_dhcp4_c_connection_get_random(connection));
+        n_dhcp4_c_connection_outgoing_set_secs(message, secs);
 
         r = n_dhcp4_outgoing_append(message, N_DHCP4_OPTION_REQUESTED_IP_ADDRESS, client, sizeof(*client));
         if (r)
@@ -638,7 +665,6 @@ int n_dhcp4_c_connection_reboot_new(NDhcp4CConnection *connection,
  */
 int n_dhcp4_c_connection_renew_new(NDhcp4CConnection *connection,
                                    NDhcp4Outgoing **requestp,
-                                   uint32_t xid,
                                    uint32_t secs) {
         _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *message = NULL;
         int r;
@@ -647,7 +673,8 @@ int n_dhcp4_c_connection_renew_new(NDhcp4CConnection *connection,
         if (r)
                 return r;
 
-        n_dhcp4_c_connection_outgoing_set_xid(message, xid, secs);
+        n_dhcp4_c_connection_outgoing_set_xid(message, n_dhcp4_c_connection_get_random(connection));
+        n_dhcp4_c_connection_outgoing_set_secs(message, secs);
 
         *requestp = message;
         message = NULL;
@@ -675,7 +702,6 @@ int n_dhcp4_c_connection_renew_new(NDhcp4CConnection *connection,
  */
 int n_dhcp4_c_connection_rebind_new(NDhcp4CConnection *connection,
                                     NDhcp4Outgoing **requestp,
-                                    uint32_t xid,
                                     uint32_t secs) {
         _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *message = NULL;
         int r;
@@ -684,7 +710,8 @@ int n_dhcp4_c_connection_rebind_new(NDhcp4CConnection *connection,
         if (r)
                 return r;
 
-        n_dhcp4_c_connection_outgoing_set_xid(message, xid, secs);
+        n_dhcp4_c_connection_outgoing_set_xid(message, n_dhcp4_c_connection_get_random(connection));
+        n_dhcp4_c_connection_outgoing_set_secs(message, secs);
 
         *requestp = message;
         message = NULL;
@@ -774,7 +801,6 @@ int n_dhcp4_c_connection_decline_new(NDhcp4CConnection *connection,
  */
 int n_dhcp4_c_connection_inform_new(NDhcp4CConnection *connection,
                                     NDhcp4Outgoing **requestp,
-                                    uint32_t xid,
                                     uint32_t secs) {
         _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *message = NULL;
         int r;
@@ -783,7 +809,8 @@ int n_dhcp4_c_connection_inform_new(NDhcp4CConnection *connection,
         if (r)
                 return r;
 
-        n_dhcp4_c_connection_outgoing_set_xid(message, xid, secs);
+        n_dhcp4_c_connection_outgoing_set_xid(message, n_dhcp4_c_connection_get_random(connection));
+        n_dhcp4_c_connection_outgoing_set_secs(message, secs);
 
         *requestp = message;
         message = NULL;
