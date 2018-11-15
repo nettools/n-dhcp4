@@ -128,6 +128,8 @@ struct NDhcp4Message {
 enum {
         _N_DHCP4_E_INTERNAL = _N_DHCP4_E_N,
 
+        N_DHCP4_E_UNEXPECTED,
+
         N_DHCP4_E_NO_SPACE,
         N_DHCP4_E_MALFORMED,
         N_DHCP4_E_UNSET,
@@ -245,6 +247,8 @@ struct NDhcp4CConnection {
         uint8_t chaddr[MAX_ADDR_LEN];   /* client hardware address */
         uint8_t bhaddr[MAX_ADDR_LEN];   /* broadcast hardware address */
 
+        uint32_t xid;                   /* pending transaction id */
+
         uint32_t client_ip;             /* client IP address, or 0 */
         uint32_t server_ip;             /* server IP address, or 0 */
         uint16_t mtu;                   /* client mtu, or 0 */
@@ -287,7 +291,6 @@ struct NDhcp4ClientProbe {
         uint64_t u_t2;                  /* next T2 timeout, or 0 */
         uint64_t u_lifetime;            /* next lifetime timeout, or 0 */
 
-        uint32_t xid;                   /* transaction id, or 0 */
         uint64_t u_starttime;           /* transaction start time, or 0 */
 
         NDhcp4CConnection connection;   /* client connection wrapper */

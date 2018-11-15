@@ -144,28 +144,53 @@ int n_dhcp4_c_connection_connect(NDhcp4CConnection *connection,
 static int n_dhcp4_c_connection_verify_incoming(NDhcp4CConnection *connection,
                                                 NDhcp4Incoming *message) {
         NDhcp4Header *header = n_dhcp4_incoming_get_header(message);
+        uint8_t *type;
+        size_t n_type;
         uint8_t *id = NULL;
         size_t idlen = 0;
         int r;
 
-        if (memcmp(connection->chaddr, header->chaddr, connection->hlen) != 0)
+        r = n_dhcp4_incoming_query(message, N_DHCP4_OPTION_MESSAGE_TYPE, &type, &n_type);
+        if (r) {
+                if (r == N_DHCP4_E_UNSET)
+                        return N_DHCP4_E_MALFORMED;
+                else
+                        return r;
+        } else if (n_type != sizeof(*type)) {
                 return N_DHCP4_E_MALFORMED;
+        }
+
+        switch (*type) {
+        case N_DHCP4_MESSAGE_OFFER:
+        case N_DHCP4_MESSAGE_ACK:
+        case N_DHCP4_MESSAGE_NAK:
+                if (header->xid != connection->xid)
+                        return N_DHCP4_E_UNEXPECTED;
+                break;
+        case N_DHCP4_MESSAGE_FORCERENEW:
+                break;
+        default:
+                return N_DHCP4_E_UNEXPECTED;
+        }
+
+        if (memcmp(connection->chaddr, header->chaddr, connection->hlen) != 0)
+                return N_DHCP4_E_UNEXPECTED;
 
         r = n_dhcp4_incoming_query(message, N_DHCP4_OPTION_CLIENT_IDENTIFIER, &id, &idlen);
         if (r) {
                 if (r == N_DHCP4_E_UNSET) {
                         if (connection->idlen)
-                                return N_DHCP4_E_MALFORMED;
+                                return N_DHCP4_E_UNEXPECTED;
                 } else {
                         return r;
                 }
         }
 
         if (idlen != connection->idlen)
-                return N_DHCP4_E_MALFORMED;
+                return N_DHCP4_E_UNEXPECTED;
 
         if (memcmp(connection->id, id, idlen) != 0)
-                return N_DHCP4_E_MALFORMED;
+                return N_DHCP4_E_UNEXPECTED;
 
         return 0;
 }
@@ -768,6 +793,7 @@ int n_dhcp4_c_connection_release_new(NDhcp4CConnection *connection,
 
 int n_dhcp4_c_connection_send_request(NDhcp4CConnection *connection,
                                       NDhcp4Outgoing *request) {
+        NDhcp4Header *header = n_dhcp4_outgoing_get_header(request);
         int r;
 
         switch (request->userdata.type) {
@@ -796,6 +822,8 @@ int n_dhcp4_c_connection_send_request(NDhcp4CConnection *connection,
         default:
                 assert(0);
         }
+
+        connection->xid = header->xid;
 
         return 0;
 }

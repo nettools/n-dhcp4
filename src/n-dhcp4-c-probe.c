@@ -350,7 +350,6 @@ int n_dhcp4_client_probe_dispatch_connection(NDhcp4ClientProbe *probe, uint32_t 
 
         for (unsigned int i = 0; i < 32; ++i) {
                 _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *message = NULL;
-                NDhcp4Header *header;
                 uint8_t *type;
                 size_t n_type;
 
@@ -363,10 +362,6 @@ int n_dhcp4_client_probe_dispatch_connection(NDhcp4ClientProbe *probe, uint32_t 
 
                 r = n_dhcp4_incoming_query(message, N_DHCP4_OPTION_MESSAGE_TYPE, &type, &n_type);
                 if (r == N_DHCP4_E_UNSET || n_type != sizeof(type))
-                        continue;
-
-                header = n_dhcp4_incoming_get_header(message);
-                if (header->xid != probe->xid)
                         continue;
 
                 switch (*type) {
