@@ -369,14 +369,17 @@ int n_dhcp4_client_probe_dispatch_connection(NDhcp4ClientProbe *probe, uint32_t 
                         r = n_dhcp4_client_probe_transition_offer(probe);
                         if (r)
                                 return r;
+                        break;
                 case N_DHCP4_MESSAGE_ACK:
                         r = n_dhcp4_client_probe_transition_ack(probe);
                         if (r)
                                 return r;
+                        break;
                 case N_DHCP4_MESSAGE_NAK:
                         r = n_dhcp4_client_probe_transition_nak(probe);
                         if (r)
                                 return r;
+                        break;
                 }
         }
 
