@@ -14,22 +14,22 @@
 #include "n-dhcp4-private.h"
 #include "util/packet.h"
 
-void n_dhcp4_s_connection_init(NDhcp4SConnection *connection, int *efd, int ifindex) {
+void n_dhcp4_s_connection_init(NDhcp4SConnection *connection, int *fd_epollp, int ifindex) {
         *connection = (NDhcp4SConnection)N_DHCP4_S_CONNECTION_NULL(*connection);
 
-        connection->efd = efd;
+        connection->fd_epollp = fd_epollp;
         connection->ifindex = ifindex;
 }
 
 void n_dhcp4_s_connection_deinit(NDhcp4SConnection *connection) {
-        if (*connection->efd >= 0) {
-                if (connection->ufd >= 0) {
-                        epoll_ctl(*connection->efd, EPOLL_CTL_DEL, connection->ufd, NULL);
-                        close(connection->ufd);
+        if (*connection->fd_epollp >= 0) {
+                if (connection->fd_udp >= 0) {
+                        epoll_ctl(*connection->fd_epollp, EPOLL_CTL_DEL, connection->fd_udp, NULL);
+                        close(connection->fd_udp);
                 }
 
-                if (connection->pfd >= 0) {
-                        close(connection->pfd);
+                if (connection->fd_packet >= 0) {
+                        close(connection->fd_packet);
                 }
         }
 
@@ -66,16 +66,16 @@ int n_dhcp4_s_connection_listen(NDhcp4SConnection *connection) {
         };
         int r;
 
-        r = n_dhcp4_s_socket_packet_new(&connection->pfd);
+        r = n_dhcp4_s_socket_packet_new(&connection->fd_packet);
         if (r)
                 return r;
 
-        r = n_dhcp4_s_socket_udp_new(&connection->ufd, connection->ifindex);
+        r = n_dhcp4_s_socket_udp_new(&connection->fd_udp, connection->ifindex);
         if (r)
                 return r;
 
         ev.data.u32 = N_DHCP4_SERVER_EPOLL_CONNECTION;
-        r = epoll_ctl(*connection->efd, EPOLL_CTL_ADD, connection->ufd, &ev);
+        r = epoll_ctl(*connection->fd_epollp, EPOLL_CTL_ADD, connection->fd_udp, &ev);
         if (r < 0)
                 return -errno;
 
@@ -83,7 +83,7 @@ int n_dhcp4_s_connection_listen(NDhcp4SConnection *connection) {
 }
 
 int n_dhcp4_s_connection_dispatch(NDhcp4SConnection *connection, NDhcp4Incoming **messagep) {
-        return n_dhcp4_s_socket_udp_recv(connection->ufd, messagep);
+        return n_dhcp4_s_socket_udp_recv(connection->fd_udp, messagep);
 }
 
 /*
@@ -109,7 +109,7 @@ int n_dhcp4_s_connection_send_reply(NDhcp4SConnection *connection,
         if (header->giaddr) {
                 const struct in_addr giaddr = { header->giaddr };
 
-                r = n_dhcp4_s_socket_udp_send(connection->ufd,
+                r = n_dhcp4_s_socket_udp_send(connection->fd_udp,
                                               server_addr,
                                               &giaddr,
                                               message);
@@ -118,20 +118,20 @@ int n_dhcp4_s_connection_send_reply(NDhcp4SConnection *connection,
         } else if (header->ciaddr) {
                 const struct in_addr ciaddr = { header->ciaddr };
 
-                r = n_dhcp4_s_socket_udp_send(connection->ufd,
+                r = n_dhcp4_s_socket_udp_send(connection->fd_udp,
                                               server_addr,
                                               &ciaddr,
                                               message);
                 if (r)
                         return r;
         } else if (header->flags & htons(N_DHCP4_MESSAGE_FLAG_BROADCAST)) {
-                r = n_dhcp4_s_socket_udp_broadcast(connection->ufd,
+                r = n_dhcp4_s_socket_udp_broadcast(connection->fd_udp,
                                                    server_addr,
                                                    message);
                 if (r)
                         return r;
         } else {
-                r = n_dhcp4_s_socket_packet_send(connection->pfd,
+                r = n_dhcp4_s_socket_packet_send(connection->fd_packet,
                                                  connection->ifindex,
                                                  server_addr,
                                                  header->chaddr,

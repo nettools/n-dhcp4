@@ -238,10 +238,10 @@ struct NDhcp4CEventNode {
 
 struct NDhcp4CConnection {
         unsigned int state;             /* current connection state */
-        int *efd;                       /* epoll fd */
+        int *fd_epollp;                 /* pointer to epoll fd */
         int ifindex;                    /* interface index */
-        int pfd;                        /* packet socket */
-        int ufd;                        /* udp socket */
+        int fd_packet;                  /* packet socket */
+        int fd_udp;                     /* udp socket */
 
         bool request_broadcast : 1;     /* request broadcast from server */
         bool send_chaddr : 1;           /* send chaddr to server */
@@ -264,8 +264,8 @@ struct NDhcp4CConnection {
 };
 
 #define N_DHCP4_C_CONNECTION_NULL(_x) {                                         \
-                .pfd = -1,                                                      \
-                .ufd = -1,                                                      \
+                .fd_packet = -1,                                                \
+                .fd_udp = -1,                                                   \
         }
 
 struct NDhcp4Client {
@@ -308,18 +308,18 @@ struct NDhcp4ClientProbe {
         }
 
 struct NDhcp4SConnection {
-        int *efd;                       /* epoll fd */
+        int *fd_epollp;                 /* epoll fd */
         int ifindex;                    /* interface index */
-        int pfd;                        /* packet socket */
-        int ufd;                        /* udp socket */
+        int fd_packet;                  /* packet socket */
+        int fd_udp;                     /* udp socket */
 
         /* XXX: support a set of server addresses */
         uint32_t server_address;        /* server IP address, or 0 */
 };
 
 #define N_DHCP4_S_CONNECTION_NULL(_x) {                                         \
-                .pfd = -1,                                                      \
-                .ufd = -1,                                                      \
+                .fd_packet = -1,                                                \
+                .fd_udp = -1,                                                   \
         }
 
 /* outgoing messages */
@@ -387,7 +387,7 @@ NDhcp4CEventNode *n_dhcp4_c_event_node_free(NDhcp4CEventNode *node);
 /* client connections */
 
 int n_dhcp4_c_connection_init(NDhcp4CConnection *connection,
-                              int *efd,
+                              int *fd_epollp,
                               uint64_t seed,
                               int ifindex,
                               uint8_t htype,
@@ -454,7 +454,7 @@ int n_dhcp4_client_probe_update_mtu(NDhcp4ClientProbe *probe, uint16_t mtu);
 
 /* server connections */
 
-void n_dhcp4_s_connection_init(NDhcp4SConnection *connection, int *efd, int ifindex);
+void n_dhcp4_s_connection_init(NDhcp4SConnection *connection, int *fd_epollp, int ifindex);
 void n_dhcp4_s_connection_deinit(NDhcp4SConnection *connection);
 
 int n_dhcp4_s_connection_add_server_address(NDhcp4SConnection *connection,

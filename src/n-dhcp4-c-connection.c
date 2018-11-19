@@ -28,7 +28,7 @@ enum {
 };
 
 int n_dhcp4_c_connection_init(NDhcp4CConnection *connection,
-                              int *efd,
+                              int *fd_epollp,
                               uint64_t seed,
                               int ifindex,
                               uint8_t htype,
@@ -47,7 +47,7 @@ int n_dhcp4_c_connection_init(NDhcp4CConnection *connection,
         assert(bhaddr);
 
         *connection = (NDhcp4CConnection)N_DHCP4_C_CONNECTION_NULL(*connection);
-        connection->efd = efd;
+        connection->fd_epollp = fd_epollp;
         connection->ifindex = ifindex;
         connection->request_broadcast = request_broadcast;
         connection->htype = htype;
@@ -84,15 +84,15 @@ int n_dhcp4_c_connection_init(NDhcp4CConnection *connection,
 }
 
 void n_dhcp4_c_connection_deinit(NDhcp4CConnection *connection) {
-        if (connection->efd) {
-                if (connection->ufd >= 0) {
-                        epoll_ctl(*connection->efd, EPOLL_CTL_DEL, connection->ufd, NULL);
-                        close(connection->ufd);
+        if (connection->fd_epollp) {
+                if (connection->fd_udp >= 0) {
+                        epoll_ctl(*connection->fd_epollp, EPOLL_CTL_DEL, connection->fd_udp, NULL);
+                        close(connection->fd_udp);
                 }
 
-                if (connection->pfd >= 0) {
-                        epoll_ctl(*connection->efd, EPOLL_CTL_DEL, connection->pfd, NULL);
-                        close(connection->pfd);
+                if (connection->fd_packet >= 0) {
+                        epoll_ctl(*connection->fd_epollp, EPOLL_CTL_DEL, connection->fd_packet, NULL);
+                        close(connection->fd_packet);
                 }
         }
 
@@ -108,12 +108,12 @@ int n_dhcp4_c_connection_listen(NDhcp4CConnection *connection) {
 
         assert(connection->state == N_DHCP4_C_CONNECTION_STATE_INIT);
 
-        r = n_dhcp4_c_socket_packet_new(&connection->pfd, connection->ifindex);
+        r = n_dhcp4_c_socket_packet_new(&connection->fd_packet, connection->ifindex);
         if (r)
                 return r;
 
         ev.data.u32 = N_DHCP4_CLIENT_EPOLL_CONNECTION;
-        r = epoll_ctl(*connection->efd, EPOLL_CTL_ADD, connection->pfd, &ev);
+        r = epoll_ctl(*connection->fd_epollp, EPOLL_CTL_ADD, connection->fd_packet, &ev);
         if (r < 0)
                 return -errno;
 
@@ -132,16 +132,16 @@ int n_dhcp4_c_connection_connect(NDhcp4CConnection *connection,
 
         assert(connection->state == N_DHCP4_C_CONNECTION_STATE_PACKET);
 
-        r = n_dhcp4_c_socket_udp_new(&connection->ufd, connection->ifindex, client, server);
+        r = n_dhcp4_c_socket_udp_new(&connection->fd_udp, connection->ifindex, client, server);
         if (r)
                 return r;
 
         ev.data.u32 = N_DHCP4_CLIENT_EPOLL_CONNECTION;
-        r = epoll_ctl(*connection->efd, EPOLL_CTL_ADD, connection->ufd, &ev);
+        r = epoll_ctl(*connection->fd_epollp, EPOLL_CTL_ADD, connection->fd_udp, &ev);
         if (r < 0)
                 return -errno;
 
-        r = packet_shutdown(connection->pfd);
+        r = packet_shutdown(connection->fd_packet);
         if (r < 0)
                 return r;
 
@@ -216,13 +216,13 @@ int n_dhcp4_c_connection_dispatch(NDhcp4CConnection *connection,
 
         switch (connection->state) {
         case N_DHCP4_C_CONNECTION_STATE_PACKET:
-                r = n_dhcp4_c_socket_packet_recv(connection->pfd, &message);
+                r = n_dhcp4_c_socket_packet_recv(connection->fd_packet, &message);
                 if (r)
                         return r;
 
                 break;
         case N_DHCP4_C_CONNECTION_STATE_DRAINING:
-                r = n_dhcp4_c_socket_packet_recv(connection->pfd, &message);
+                r = n_dhcp4_c_socket_packet_recv(connection->fd_packet, &message);
                 if (!r)
                         break;
                 else if (r != N_DHCP4_E_AGAIN)
@@ -233,13 +233,13 @@ int n_dhcp4_c_connection_dispatch(NDhcp4CConnection *connection,
                  * and drained, clean up the packet socket and fall through to
                  * dispatching the UDP socket.
                  */
-                epoll_ctl(*connection->efd, EPOLL_CTL_DEL, connection->pfd, NULL);
-                close(connection->pfd);
+                epoll_ctl(*connection->fd_epollp, EPOLL_CTL_DEL, connection->fd_packet, NULL);
+                close(connection->fd_packet);
                 connection->state = N_DHCP4_C_CONNECTION_STATE_UDP;
 
                 /* fall-through */
         case N_DHCP4_C_CONNECTION_STATE_UDP:
-                r = n_dhcp4_c_socket_udp_recv(connection->ufd, &message);
+                r = n_dhcp4_c_socket_udp_recv(connection->fd_udp, &message);
                 if (r)
                         return r;
         }
@@ -265,7 +265,7 @@ static int n_dhcp4_c_connection_packet_broadcast(NDhcp4CConnection *connection,
 
         assert(connection->state == N_DHCP4_C_CONNECTION_STATE_PACKET);
 
-        r = n_dhcp4_c_socket_packet_send(connection->pfd,
+        r = n_dhcp4_c_socket_packet_send(connection->fd_packet,
                                          connection->ifindex,
                                          connection->bhaddr,
                                          connection->hlen,
@@ -282,7 +282,7 @@ static int n_dhcp4_c_connection_udp_broadcast(NDhcp4CConnection *connection,
 
         assert(connection->state > N_DHCP4_C_CONNECTION_STATE_PACKET);
 
-        r = n_dhcp4_c_socket_udp_broadcast(connection->ufd, message);
+        r = n_dhcp4_c_socket_udp_broadcast(connection->fd_udp, message);
         if (r)
                 return r;
 
@@ -295,7 +295,7 @@ static int n_dhcp4_c_connection_udp_send(NDhcp4CConnection *connection,
 
         assert(connection->state > N_DHCP4_C_CONNECTION_STATE_PACKET);
 
-        r = n_dhcp4_c_socket_udp_send(connection->ufd, message);
+        r = n_dhcp4_c_socket_udp_send(connection->fd_udp, message);
         if (r)
                 return r;
 
