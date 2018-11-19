@@ -188,6 +188,10 @@ struct NDhcp4Incoming {
                 size_t size;
         } options[_N_DHCP4_OPTION_N];
 
+        struct {
+                uint64_t timestamp;
+        } userdata;
+
         size_t n_message;
         NDhcp4Message message;
         /* @message must be the last member */
@@ -249,6 +253,7 @@ struct NDhcp4CConnection {
 
         struct drand48_data entropy;    /* entropy pool */
         uint32_t xid;                   /* current transaction id */
+        uint64_t xts;                   /* current transaction timestamp */
 
         uint32_t client_ip;             /* client IP address, or 0 */
         uint32_t server_ip;             /* server IP address, or 0 */
@@ -428,7 +433,8 @@ int n_dhcp4_c_connection_release_new(NDhcp4CConnection *connection,
                                      const char *error);
 
 int n_dhcp4_c_connection_send_request(NDhcp4CConnection *connection,
-                                      NDhcp4Outgoing *request);
+                                      NDhcp4Outgoing *request,
+                                      uint64_t timestamp);
 
 /* clients */
 
