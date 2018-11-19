@@ -281,6 +281,25 @@ static int n_dhcp4_client_dispatch_timer(NDhcp4Client *client, struct epoll_even
         return 0;
 }
 
+static void n_dhcp4_client_arm_timer(NDhcp4Client *client) {
+        uint64_t timeout = 0;
+        int r;
+
+        if (client->current_probe)
+                n_dhcp4_client_probe_get_timeout(client->current_probe, &timeout);
+
+        r = timerfd_settime(client->fd_timer,
+                            TFD_TIMER_ABSTIME,
+                            &(struct itimerspec){
+                                .it_value = {
+                                        .tv_sec = timeout / UINT64_C(1000000000),
+                                        .tv_nsec = timeout % UINT64_C(1000000000),
+                                },
+                            },
+                            NULL);
+        assert(r >= 0);
+}
+
 static int n_dhcp4_client_dispatch_connection(NDhcp4Client *client, struct epoll_event *event) {
         int r;
 
@@ -325,6 +344,8 @@ _public_ int n_dhcp4_client_dispatch(NDhcp4Client *client) {
                 if (r)
                         return r;
         }
+
+        n_dhcp4_client_arm_timer(client);
 
         return client->preempted ? N_DHCP4_E_PREEMPTED : 0;
 }

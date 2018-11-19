@@ -185,6 +185,19 @@ void n_dhcp4_client_probe_uninstall(NDhcp4ClientProbe *probe) {
         probe->client->current_probe = NULL;
 }
 
+void n_dhcp4_client_probe_get_timeout(NDhcp4ClientProbe *probe, uint64_t *timeoutp) {
+        uint64_t timeout = 0;
+
+        if (probe->n_t1 && probe->n_t1 < timeout)
+                timeout = probe->n_t1;
+        if (probe->n_t2 && probe->n_t2 < timeout)
+                timeout = probe->n_t2;
+        if (probe->n_lifetime && probe->n_lifetime < timeout)
+                timeout = probe->n_lifetime;
+
+        *timeoutp = timeout;
+}
+
 static uint64_t n_dhcp4_client_probe_gettime(void) {
         struct timespec ts;
         int r;
@@ -325,17 +338,17 @@ int n_dhcp4_client_probe_dispatch_timer(NDhcp4ClientProbe *probe) {
         uint64_t now;
 
         now = n_dhcp4_client_probe_gettime();
-        if (now >= probe->u_lifetime) {
-                probe->u_t1 = 0;
-                probe->u_t2 = 0;
-                probe->u_lifetime = 0;
+        if (now >= probe->n_lifetime) {
+                probe->n_t1 = 0;
+                probe->n_t2 = 0;
+                probe->n_lifetime = 0;
                 return n_dhcp4_client_probe_transition_lifetime(probe);
-        } else if (now >= probe->u_t2) {
-                probe->u_t1 = 0;
-                probe->u_t2 = 0;
+        } else if (now >= probe->n_t2) {
+                probe->n_t1 = 0;
+                probe->n_t2 = 0;
                 return n_dhcp4_client_probe_transition_t2(probe);
-        } else if (now >= probe->u_t1) {
-                probe->u_t1 = 0;
+        } else if (now >= probe->n_t1) {
+                probe->n_t1 = 0;
                 return n_dhcp4_client_probe_transition_t1(probe);
         }
 

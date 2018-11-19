@@ -293,11 +293,11 @@ struct NDhcp4ClientProbe {
         void *userdata;
 
         unsigned int state;             /* current probe state */
-        uint64_t u_t1;                  /* next T1 timeout, or 0 */
-        uint64_t u_t2;                  /* next T2 timeout, or 0 */
-        uint64_t u_lifetime;            /* next lifetime timeout, or 0 */
+        uint64_t n_t1;                  /* next T1 timeout, or 0 */
+        uint64_t n_t2;                  /* next T2 timeout, or 0 */
+        uint64_t n_lifetime;            /* next lifetime timeout, or 0 */
 
-        uint64_t u_starttime;           /* transaction start time, or 0 */
+        uint64_t n_starttime;           /* transaction start time, or 0 */
 
         NDhcp4CConnection connection;   /* client connection wrapper */
 };
@@ -447,6 +447,7 @@ int n_dhcp4_client_probe_new(NDhcp4ClientProbe **probep, NDhcp4Client *client);
 int n_dhcp4_client_probe_raise(NDhcp4ClientProbe *probe, NDhcp4CEventNode **nodep, unsigned int event);
 int n_dhcp4_client_probe_install(NDhcp4ClientProbe *probe);
 void n_dhcp4_client_probe_uninstall(NDhcp4ClientProbe *probe);
+void n_dhcp4_client_probe_get_timeout(NDhcp4ClientProbe *probe, uint64_t *timeoutp);
 int n_dhcp4_client_probe_dispatch_timer(NDhcp4ClientProbe *probe);
 int n_dhcp4_client_probe_dispatch_connection(NDhcp4ClientProbe *probe, uint32_t events);
 int n_dhcp4_client_probe_update_mtu(NDhcp4ClientProbe *probe, uint16_t mtu);
