@@ -180,7 +180,7 @@ void n_dhcp4_client_probe_uninstall(NDhcp4ClientProbe *probe) {
         if (probe != probe->client->current_probe)
                 return;
 
-        /* XXX: uninstall epoll-events from probe->client->fd_epoll */
+        n_dhcp4_c_connection_deinit(&probe->connection);
 
         probe->client->current_probe = NULL;
 }
