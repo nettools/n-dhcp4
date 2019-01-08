@@ -184,6 +184,7 @@ struct NDhcp4Outgoing {
 
         struct {
                 uint8_t type;
+                uint64_t timestamp;
         } userdata;
 };
 
@@ -260,8 +261,7 @@ struct NDhcp4CConnection {
         uint8_t bhaddr[MAX_ADDR_LEN];   /* broadcast hardware address */
 
         struct drand48_data entropy;    /* entropy pool */
-        uint32_t xid;                   /* current transaction id */
-        uint64_t xts;                   /* current transaction timestamp */
+        NDhcp4Outgoing *request;        /* current request */
 
         uint32_t client_ip;             /* client IP address, or 0 */
         uint32_t server_ip;             /* server IP address, or 0 */

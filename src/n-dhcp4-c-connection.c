@@ -152,11 +152,19 @@ int n_dhcp4_c_connection_connect(NDhcp4CConnection *connection,
         return 0;
 }
 
+static void n_dhcp4_c_connection_outgoing_get_xid(NDhcp4Outgoing *message, uint32_t *xidp) {
+        NDhcp4Header *header = n_dhcp4_outgoing_get_header(message);
+
+        *xidp = header->xid;
+}
+
 static int n_dhcp4_c_connection_verify_incoming(NDhcp4CConnection *connection,
                                                 NDhcp4Incoming *message) {
         NDhcp4Header *header = n_dhcp4_incoming_get_header(message);
         uint8_t *type;
         size_t n_type;
+        uint32_t request_xid;
+        uint64_t timestamp = 0;
         uint8_t *id = NULL;
         size_t idlen = 0;
         int r;
@@ -175,11 +183,14 @@ static int n_dhcp4_c_connection_verify_incoming(NDhcp4CConnection *connection,
         case N_DHCP4_MESSAGE_OFFER:
         case N_DHCP4_MESSAGE_ACK:
         case N_DHCP4_MESSAGE_NAK:
-                if (header->xid != connection->xid)
+                if (!connection->request)
                         return N_DHCP4_E_UNEXPECTED;
-                message->userdata.timestamp = connection->xts;
-                connection->xid = 0;
-                connection->xts = 0;
+
+                n_dhcp4_c_connection_outgoing_get_xid(connection->request, &request_xid);
+                if (header->xid != request_xid)
+                        return N_DHCP4_E_UNEXPECTED;
+
+                timestamp = connection->request->userdata.timestamp;
                 break;
         case N_DHCP4_MESSAGE_FORCERENEW:
                 break;
@@ -205,6 +216,9 @@ static int n_dhcp4_c_connection_verify_incoming(NDhcp4CConnection *connection,
 
         if (memcmp(connection->id, id, idlen) != 0)
                 return N_DHCP4_E_UNEXPECTED;
+
+        connection->request = n_dhcp4_outgoing_free(connection->request);
+        message->userdata.timestamp = timestamp;
 
         return 0;
 }
@@ -894,7 +908,6 @@ int n_dhcp4_c_connection_release_new(NDhcp4CConnection *connection,
 int n_dhcp4_c_connection_send_request(NDhcp4CConnection *connection,
                                       NDhcp4Outgoing *request,
                                       uint64_t timestamp) {
-        NDhcp4Header *header = n_dhcp4_outgoing_get_header(request);
         int r;
 
         switch (request->userdata.type) {
@@ -924,8 +937,9 @@ int n_dhcp4_c_connection_send_request(NDhcp4CConnection *connection,
                 assert(0);
         }
 
-        connection->xid = header->xid;
-        connection->xts = timestamp;
+        request->userdata.timestamp = timestamp;
+        n_dhcp4_outgoing_free(connection->request);
+        connection->request = request;
 
         return 0;
 }

@@ -127,6 +127,7 @@ static void test_discover(NDhcp4SConnection *connection_server,
 
         r = n_dhcp4_c_connection_send_request(connection_client, request_out, 0);
         assert(!r);
+        request_out = NULL;
 
         test_server_receive(connection_server, N_DHCP4_MESSAGE_DISCOVER, &request_in);
 
@@ -154,6 +155,7 @@ static void test_select(NDhcp4SConnection *connection_server,
 
         r = n_dhcp4_c_connection_send_request(connection_client, request_out, 0);
         assert(!r);
+        request_out = NULL;
 
         test_server_receive(connection_server, N_DHCP4_MESSAGE_REQUEST, &request_in);
 
@@ -181,6 +183,7 @@ static void test_reboot(NDhcp4SConnection *connection_server,
 
         r = n_dhcp4_c_connection_send_request(connection_client, request_out, 0);
         assert(!r);
+        request_out = NULL;
 
         test_server_receive(connection_server, N_DHCP4_MESSAGE_REQUEST, &request_in);
 
@@ -204,6 +207,7 @@ static void test_decline(NDhcp4SConnection *connection_server,
 
         r = n_dhcp4_c_connection_send_request(connection_client, request_out, 0);
         assert(!r);
+        request_out = NULL;
 
         test_server_receive(connection_server, N_DHCP4_MESSAGE_DECLINE, NULL);
 }
@@ -223,6 +227,7 @@ static void test_renew(NDhcp4SConnection *connection_server,
 
         r = n_dhcp4_c_connection_send_request(connection_client, request_out, 0);
         assert(!r);
+        request_out = NULL;
 
         test_server_receive(connection_server, N_DHCP4_MESSAGE_REQUEST, &request_in);
 
@@ -249,6 +254,7 @@ static void test_rebind(NDhcp4SConnection *connection_server,
 
         r = n_dhcp4_c_connection_send_request(connection_client, request_out, 0);
         assert(!r);
+        request_out = NULL;
 
         test_server_receive(connection_server, N_DHCP4_MESSAGE_REQUEST, &request_in);
 
@@ -273,6 +279,7 @@ static void test_release(NDhcp4SConnection *connection_server,
 
         r = n_dhcp4_c_connection_send_request(connection_client, request_out, 0);
         assert(!r);
+        request_out = NULL;
 
         test_server_receive(connection_server, N_DHCP4_MESSAGE_RELEASE, NULL);
 }
