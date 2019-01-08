@@ -13,6 +13,7 @@ libndhcp4_private = static_library(
         'ndhcp4-private',
         [
                 'n-dhcp4-c-connection.c',
+                'n-dhcp4-c-lease.c',
                 'n-dhcp4-c-probe.c',
                 'n-dhcp4-client.c',
                 'n-dhcp4-incoming.c',

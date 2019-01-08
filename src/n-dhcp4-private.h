@@ -163,6 +163,14 @@ enum {
 };
 
 enum {
+        N_DHCP4_CLIENT_LEASE_STATE_INIT,
+        N_DHCP4_CLIENT_LEASE_STATE_OFFERED,
+        N_DHCP4_CLIENT_LEASE_STATE_SELECTED,
+        N_DHCP4_CLIENT_LEASE_STATE_DECLINED,
+        N_DHCP4_CLIENT_LEASE_STATE_ACKED,
+};
+
+enum {
         N_DHCP4_SERVER_EPOLL_CONNECTION,
 };
 
@@ -290,21 +298,42 @@ struct NDhcp4Client {
 struct NDhcp4ClientProbe {
         NDhcp4Client *client;
         CList event_list;
+        CList lease_list;
         void *userdata;
 
-        unsigned int state;             /* current probe state */
-        uint64_t n_t1;                  /* next T1 timeout, or 0 */
-        uint64_t n_t2;                  /* next T2 timeout, or 0 */
-        uint64_t n_lifetime;            /* next lifetime timeout, or 0 */
+        unsigned int state;                     /* current probe state */
+        NDhcp4ClientLease *current_lease;       /* current lease */
+        uint64_t n_t1;                          /* next T1 timeout, or 0 */
+        uint64_t n_t2;                          /* next T2 timeout, or 0 */
+        uint64_t n_lifetime;                    /* next lifetime timeout, or 0 */
 
-        uint64_t n_starttime;           /* transaction start time, or 0 */
+        uint64_t n_starttime;                   /* transaction start time, or 0 */
 
-        NDhcp4CConnection connection;   /* client connection wrapper */
+        NDhcp4CConnection connection;           /* client connection wrapper */
 };
 
 #define N_DHCP4_CLIENT_PROBE_NULL(_x) {                                         \
                 .event_list = C_LIST_INIT((_x).event_list),                     \
+                .lease_list = C_LIST_INIT((_x).lease_list),                     \
                 .connection = N_DHCP4_C_CONNECTION_NULL((_x).connection),       \
+        }
+
+struct NDhcp4ClientLease {
+        unsigned long n_refs;
+
+        NDhcp4ClientProbe *probe;
+        CList probe_link;
+
+        NDhcp4Incoming *message;
+
+        unsigned int state;
+
+        uint64_t n_starttime;
+};
+
+#define N_DHCP4_CLIENT_LEASE_NULL(_x) {                                         \
+                .n_refs = 1,                                                    \
+                .probe_link = C_LIST_INIT((_x).probe_link),                     \
         }
 
 struct NDhcp4SConnection {
