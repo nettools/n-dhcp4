@@ -74,13 +74,13 @@ void netns_new(int *netnsp) {
  * `/run/netns/@name`. It is the responsibility of the caller to guarantee
  * @name is not used by anyone else in parallel. This function will abort if
  * @name is already in use.
- *
- * Currently, this function temporarily switches the current thread to the
- * network namespace given as @netns.
  */
 void netns_pin(int netns, const char *name) {
-        char *netns_path;
-        int r, fd, oldns;
+        char *fd_path, *netns_path;
+        int r, fd;
+
+        r = asprintf(&fd_path, "/proc/self/fd/%d", netns);
+        assert(r >= 0);
 
         r = asprintf(&netns_path, "/run/netns/%s", name);
         assert(r >= 0);
@@ -89,13 +89,11 @@ void netns_pin(int netns, const char *name) {
         assert(fd >= 0);
         close(fd);
 
-        netns_get(&oldns);
-        netns_set(netns);
-        r = mount("/proc/self/ns/net", netns_path, "none", MS_BIND, NULL);
+        r = mount(fd_path, netns_path, "none", MS_BIND, NULL);
         assert(r >= 0);
-        netns_set(oldns);
 
         free(netns_path);
+        free(fd_path);
 }
 
 /**
