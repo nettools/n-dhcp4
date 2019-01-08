@@ -7,8 +7,8 @@
 #include <net/if_arp.h>
 #include <stdlib.h>
 #include <string.h>
-#include "packet.h"
-#include "../test.h"
+#include "util/packet.h"
+#include "test.h"
 
 typedef struct Blob {
         uint16_t checksum;
