@@ -10,10 +10,6 @@
 #include <netinet/in.h>
 #include <stdlib.h>
 
-void test_netns_new(int *netnsp);
-void test_netns_get(int *netnsp);
-void test_netns_set(int netns);
-
 void test_socket_new(int netns, int *sockfdp, int family, int ifindex);
 
 void test_add_ip(int netns, int ifindex, const struct in_addr *addr, unsigned int prefix);

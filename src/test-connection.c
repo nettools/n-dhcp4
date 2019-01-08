@@ -15,6 +15,7 @@
 #include <sys/epoll.h>
 #include "n-dhcp4-private.h"
 #include "test.h"
+#include "util/netns.h"
 #include "util/packet.h"
 
 static void test_poll(int efd, unsigned int u32) {
@@ -30,25 +31,25 @@ static void test_poll(int efd, unsigned int u32) {
 static void test_s_connection_listen(int netns, NDhcp4SConnection *connection) {
         int r, oldns;
 
-        test_netns_get(&oldns);
-        test_netns_set(netns);
+        netns_get(&oldns);
+        netns_set(netns);
 
         r = n_dhcp4_s_connection_listen(connection);
         assert(!r);
 
-        test_netns_set(oldns);
+        netns_set(oldns);
 }
 
 static void test_c_connection_listen(int netns, NDhcp4CConnection *connection) {
         int r, oldns;
 
-        test_netns_get(&oldns);
-        test_netns_set(netns);
+        netns_get(&oldns);
+        netns_set(netns);
 
         r = n_dhcp4_c_connection_listen(connection);
         assert(!r);
 
-        test_netns_set(oldns);
+        netns_set(oldns);
 }
 
 static void test_c_connection_connect(int netns,
@@ -57,13 +58,13 @@ static void test_c_connection_connect(int netns,
                                       const struct in_addr *server) {
         int r, oldns;
 
-        test_netns_get(&oldns);
-        test_netns_set(netns);
+        netns_get(&oldns);
+        netns_set(netns);
 
         r = n_dhcp4_c_connection_connect(connection, client, server);
         assert(!r);
 
-        test_netns_set(oldns);
+        netns_set(oldns);
 }
 
 static void test_server_receive(NDhcp4SConnection *connection, uint8_t type, NDhcp4Incoming **messagep) {
@@ -302,8 +303,8 @@ int main(int argc, char **argv) {
 
         test_setup();
 
-        test_netns_new(&ns_server);
-        test_netns_new(&ns_client);
+        netns_new(&ns_server);
+        netns_new(&ns_client);
 
         test_veth_new(ns_server, &ifindex_server, NULL, ns_client, &ifindex_client, &mac_client);
         test_add_ip(ns_server, ifindex_server, &addr_server, 8);

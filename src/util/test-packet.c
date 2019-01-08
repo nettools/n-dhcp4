@@ -7,6 +7,7 @@
 #include <net/if_arp.h>
 #include <stdlib.h>
 #include <string.h>
+#include "util/netns.h"
 #include "util/packet.h"
 #include "test.h"
 
@@ -315,8 +316,8 @@ int main(int argc, char **argv) {
 
         test_setup();
 
-        test_netns_new(&ns_src);
-        test_netns_new(&ns_dst);
+        netns_new(&ns_src);
+        netns_new(&ns_dst);
 
         test_veth_new(ns_src, &ifindex_src, NULL, ns_dst, &ifindex_dst, &haddr_dst);
 

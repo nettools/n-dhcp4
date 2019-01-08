@@ -13,6 +13,7 @@
 #include <string.h>
 #include "n-dhcp4-private.h"
 #include "test.h"
+#include "util/netns.h"
 #include "util/packet.h"
 
 static void test_poll(int sk) {
@@ -25,13 +26,13 @@ static void test_poll(int sk) {
 static void test_client_packet_socket_new(int netns, int *skp, int ifindex) {
         int r, oldns;
 
-        test_netns_get(&oldns);
-        test_netns_set(netns);
+        netns_get(&oldns);
+        netns_set(netns);
 
         r = n_dhcp4_c_socket_packet_new(skp, ifindex);
         assert(r >= 0);
 
-        test_netns_set(oldns);
+        netns_set(oldns);
 }
 
 static void test_client_udp_socket_new(int netns,
@@ -41,37 +42,37 @@ static void test_client_udp_socket_new(int netns,
                                        const struct in_addr *addr_server) {
         int r, oldns;
 
-        test_netns_get(&oldns);
-        test_netns_set(netns);
+        netns_get(&oldns);
+        netns_set(netns);
 
         r = n_dhcp4_c_socket_udp_new(skp, ifindex, addr_client, addr_server);
         assert(r >= 0);
 
-        test_netns_set(oldns);
+        netns_set(oldns);
 }
 
 static void test_server_packet_socket_new(int netns, int *skp) {
         int r, oldns;
 
-        test_netns_get(&oldns);
-        test_netns_set(netns);
+        netns_get(&oldns);
+        netns_set(netns);
 
         r = n_dhcp4_s_socket_packet_new(skp);
         assert(r >= 0);
 
-        test_netns_set(oldns);
+        netns_set(oldns);
 }
 
 static void test_server_udp_socket_new(int netns, int *skp, int ifindex) {
         int r, oldns;
 
-        test_netns_get(&oldns);
-        test_netns_set(netns);
+        netns_get(&oldns);
+        netns_set(netns);
 
         r = n_dhcp4_s_socket_udp_new(skp, ifindex);
         assert(r >= 0);
 
-        test_netns_set(oldns);
+        netns_set(oldns);
 }
 
 static void test_client_server_packet(int ns_server,
@@ -239,7 +240,7 @@ static void test_server_client_udp(int ns_server,
 static void test_multiple_servers(void) {
         int netns, ifindex1, ifindex2, sk1, sk2;
 
-        test_netns_new(&netns);
+        netns_new(&netns);
 
         test_veth_new(netns, &ifindex1, NULL, netns, &ifindex2, NULL);
 
@@ -257,8 +258,8 @@ int main(int argc, char **argv) {
 
         test_setup();
 
-        test_netns_new(&ns_server);
-        test_netns_new(&ns_client);
+        netns_new(&ns_server);
+        netns_new(&ns_client);
 
         test_veth_new(ns_server, &ifindex_server, NULL, ns_client, &ifindex_client, &mac_client);
 
