@@ -288,6 +288,8 @@ static void n_dhcp4_client_arm_timer(NDhcp4Client *client) {
         if (client->current_probe)
                 n_dhcp4_client_probe_get_timeout(client->current_probe, &timeout);
 
+        /* XXX: avoid syscall if it didn't change */
+
         r = timerfd_settime(client->fd_timer,
                             TFD_TIMER_ABSTIME,
                             &(struct itimerspec){
