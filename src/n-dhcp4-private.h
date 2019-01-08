@@ -148,7 +148,7 @@ enum {
 
 enum {
         N_DHCP4_CLIENT_EPOLL_TIMER,
-        N_DHCP4_CLIENT_EPOLL_CONNECTION,
+        N_DHCP4_CLIENT_EPOLL_IO,
 };
 
 enum {
@@ -171,7 +171,7 @@ enum {
 };
 
 enum {
-        N_DHCP4_SERVER_EPOLL_CONNECTION,
+        N_DHCP4_SERVER_EPOLL_IO,
 };
 
 struct NDhcp4Outgoing {
@@ -431,7 +431,7 @@ void n_dhcp4_c_connection_deinit(NDhcp4CConnection *connection);
 int n_dhcp4_c_connection_listen(NDhcp4CConnection *connection);
 int n_dhcp4_c_connection_connect(NDhcp4CConnection *connection, const struct in_addr *client, const struct in_addr *server);
 
-int n_dhcp4_c_connection_dispatch(NDhcp4CConnection *connection, NDhcp4Incoming **messagep);
+int n_dhcp4_c_connection_dispatch_io(NDhcp4CConnection *connection, NDhcp4Incoming **messagep);
 
 int n_dhcp4_c_connection_discover_new(NDhcp4CConnection *connection,
                                       NDhcp4Outgoing **request,
@@ -478,7 +478,7 @@ int n_dhcp4_client_probe_install(NDhcp4ClientProbe *probe);
 void n_dhcp4_client_probe_uninstall(NDhcp4ClientProbe *probe);
 void n_dhcp4_client_probe_get_timeout(NDhcp4ClientProbe *probe, uint64_t *timeoutp);
 int n_dhcp4_client_probe_dispatch_timer(NDhcp4ClientProbe *probe);
-int n_dhcp4_client_probe_dispatch_connection(NDhcp4ClientProbe *probe, uint32_t events);
+int n_dhcp4_client_probe_dispatch_io(NDhcp4ClientProbe *probe, uint32_t events);
 int n_dhcp4_client_probe_update_mtu(NDhcp4ClientProbe *probe, uint16_t mtu);
 
 /* server connections */
@@ -493,7 +493,7 @@ int n_dhcp4_s_connection_remove_server_address(NDhcp4SConnection *connection,
 
 int n_dhcp4_s_connection_listen(NDhcp4SConnection *connection);
 
-int n_dhcp4_s_connection_dispatch(NDhcp4SConnection *connection, NDhcp4Incoming **messagep);
+int n_dhcp4_s_connection_dispatch_io(NDhcp4SConnection *connection, NDhcp4Incoming **messagep);
 
 int n_dhcp4_s_connection_offer_new(NDhcp4SConnection *connection,
                                    NDhcp4Outgoing **replyp,

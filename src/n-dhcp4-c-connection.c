@@ -112,7 +112,7 @@ int n_dhcp4_c_connection_listen(NDhcp4CConnection *connection) {
         if (r)
                 return r;
 
-        ev.data.u32 = N_DHCP4_CLIENT_EPOLL_CONNECTION;
+        ev.data.u32 = N_DHCP4_CLIENT_EPOLL_IO;
         r = epoll_ctl(*connection->fd_epollp, EPOLL_CTL_ADD, connection->fd_packet, &ev);
         if (r < 0)
                 return -errno;
@@ -136,7 +136,7 @@ int n_dhcp4_c_connection_connect(NDhcp4CConnection *connection,
         if (r)
                 return r;
 
-        ev.data.u32 = N_DHCP4_CLIENT_EPOLL_CONNECTION;
+        ev.data.u32 = N_DHCP4_CLIENT_EPOLL_IO;
         r = epoll_ctl(*connection->fd_epollp, EPOLL_CTL_ADD, connection->fd_udp, &ev);
         if (r < 0)
                 return -errno;
@@ -209,8 +209,8 @@ static int n_dhcp4_c_connection_verify_incoming(NDhcp4CConnection *connection,
         return 0;
 }
 
-int n_dhcp4_c_connection_dispatch(NDhcp4CConnection *connection,
-                                  NDhcp4Incoming **messagep) {
+int n_dhcp4_c_connection_dispatch_io(NDhcp4CConnection *connection,
+                                     NDhcp4Incoming **messagep) {
         _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *message = NULL;
         int r;
 

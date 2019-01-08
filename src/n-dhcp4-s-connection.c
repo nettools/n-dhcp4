@@ -74,7 +74,7 @@ int n_dhcp4_s_connection_listen(NDhcp4SConnection *connection) {
         if (r)
                 return r;
 
-        ev.data.u32 = N_DHCP4_SERVER_EPOLL_CONNECTION;
+        ev.data.u32 = N_DHCP4_SERVER_EPOLL_IO;
         r = epoll_ctl(*connection->fd_epollp, EPOLL_CTL_ADD, connection->fd_udp, &ev);
         if (r < 0)
                 return -errno;
@@ -82,7 +82,7 @@ int n_dhcp4_s_connection_listen(NDhcp4SConnection *connection) {
         return 0;
 }
 
-int n_dhcp4_s_connection_dispatch(NDhcp4SConnection *connection, NDhcp4Incoming **messagep) {
+int n_dhcp4_s_connection_dispatch_io(NDhcp4SConnection *connection, NDhcp4Incoming **messagep) {
         return n_dhcp4_s_socket_udp_recv(connection->fd_udp, messagep);
 }
 

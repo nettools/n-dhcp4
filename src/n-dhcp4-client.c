@@ -300,12 +300,12 @@ static void n_dhcp4_client_arm_timer(NDhcp4Client *client) {
         assert(r >= 0);
 }
 
-static int n_dhcp4_client_dispatch_connection(NDhcp4Client *client, struct epoll_event *event) {
+static int n_dhcp4_client_dispatch_io(NDhcp4Client *client, struct epoll_event *event) {
         int r;
 
         if (client->current_probe)
-                r = n_dhcp4_client_probe_dispatch_connection(client->current_probe,
-                                                             event->events);
+                r = n_dhcp4_client_probe_dispatch_io(client->current_probe,
+                                                     event->events);
         else
                 return -ENOTRECOVERABLE;
 
@@ -332,8 +332,8 @@ _public_ int n_dhcp4_client_dispatch(NDhcp4Client *client) {
                 case N_DHCP4_CLIENT_EPOLL_TIMER:
                         r = n_dhcp4_client_dispatch_timer(client, events + i);
                         break;
-                case N_DHCP4_CLIENT_EPOLL_CONNECTION:
-                        r = n_dhcp4_client_dispatch_connection(client, events + i);
+                case N_DHCP4_CLIENT_EPOLL_IO:
+                        r = n_dhcp4_client_dispatch_io(client, events + i);
                         break;
                 default:
                         assert(0);

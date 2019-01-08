@@ -358,7 +358,7 @@ int n_dhcp4_client_probe_dispatch_timer(NDhcp4ClientProbe *probe) {
 /**
  * n_dhcp4_client_probe_dispatch_connection() - XXX
  */
-int n_dhcp4_client_probe_dispatch_connection(NDhcp4ClientProbe *probe, uint32_t events) {
+int n_dhcp4_client_probe_dispatch_io(NDhcp4ClientProbe *probe, uint32_t events) {
         int r;
 
         for (unsigned int i = 0; i < 32; ++i) {
@@ -366,7 +366,7 @@ int n_dhcp4_client_probe_dispatch_connection(NDhcp4ClientProbe *probe, uint32_t 
                 uint8_t *type;
                 size_t n_type;
 
-                r = n_dhcp4_c_connection_dispatch(&probe->connection, &message);
+                r = n_dhcp4_c_connection_dispatch_io(&probe->connection, &message);
                 if (r)
                         return r;
 

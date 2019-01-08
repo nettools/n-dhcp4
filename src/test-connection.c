@@ -72,9 +72,9 @@ static void test_server_receive(NDhcp4SConnection *connection, uint8_t type, NDh
         size_t size;
         int r;
 
-        test_poll(*connection->fd_epollp, N_DHCP4_SERVER_EPOLL_CONNECTION);
+        test_poll(*connection->fd_epollp, N_DHCP4_SERVER_EPOLL_IO);
 
-        r = n_dhcp4_s_connection_dispatch(connection, &message);
+        r = n_dhcp4_s_connection_dispatch_io(connection, &message);
         assert(!r);
         assert(message);
 
@@ -95,9 +95,9 @@ static void test_client_receive(NDhcp4CConnection *connection, uint8_t type, NDh
         size_t size;
         int r;
 
-        test_poll(*connection->fd_epollp, N_DHCP4_CLIENT_EPOLL_CONNECTION);
+        test_poll(*connection->fd_epollp, N_DHCP4_CLIENT_EPOLL_IO);
 
-        r = n_dhcp4_c_connection_dispatch(connection, &message);
+        r = n_dhcp4_c_connection_dispatch_io(connection, &message);
         assert(!r);
         assert(message);
 
