@@ -153,7 +153,7 @@ void test_veth_new(int parent_ns,
          * Temporarily enter a new network namespace to make sure the
          * interface names are fresh.
          */
-        netns_set(-1);
+        netns_set_anonymous();
 
         r = system("ip link add veth-parent type veth peer name veth-child");
         assert(r == 0);

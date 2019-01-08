@@ -25,20 +25,28 @@ void netns_get(int *netnsp) {
 
 /**
  * setns_set() - change the current network namespace
- * @netns:              netns to set, or -1
+ * @netns:              netns to set
  *
  * This changes the current network namespace to the netns given by the
- * file-descriptor @netns. If @netns is not a valid file-descriptor (i.e., it
- * is smaller than 0), this creates a new anonymous network namespace and
- * enters it.
+ * file-descriptor @netns.
  */
 void netns_set(int netns) {
         int r;
 
-        if (netns >= 0)
-                r = setns(netns, CLONE_NEWNET);
-        else
-                r = unshare(CLONE_NEWNET);
+        r = setns(netns, CLONE_NEWNET);
+        assert(r >= 0);
+}
+
+/**
+ * netns_set_anonymous() - enter an anonymous network namespace
+ *
+ * This is a helper that creates a new network namespace, enters it, and then
+ * forgets about it.
+ */
+void netns_set_anonymous(void) {
+        int r;
+
+        r = unshare(CLONE_NEWNET);
         assert(r >= 0);
 }
 
