@@ -152,10 +152,68 @@ int n_dhcp4_c_connection_connect(NDhcp4CConnection *connection,
         return 0;
 }
 
+static uint32_t n_dhcp4_c_connection_get_random(NDhcp4CConnection *connection) {
+        long int result;
+        int r;
+
+        r = mrand48_r(&connection->entropy, &result);
+        assert(!r);
+
+        return result;
+};
+
+static void n_dhcp4_c_connection_outgoing_set_secs(NDhcp4Outgoing *message, uint32_t secs) {
+        NDhcp4Header *header = n_dhcp4_outgoing_get_header(message);
+
+        /*
+         * Some DHCP servers will reject DISCOVER or REQUEST messages if 'secs'
+         * is not set (i.e., set to 0), even though the spec allows it.
+         */
+        assert(secs != 0);
+
+        header->secs = htonl(secs);
+}
+
+static void n_dhcp4_c_connection_outgoing_set_xid(NDhcp4Outgoing *message, uint32_t xid) {
+        NDhcp4Header *header = n_dhcp4_outgoing_get_header(message);
+
+        header->xid = xid;
+}
+
 static void n_dhcp4_c_connection_outgoing_get_xid(NDhcp4Outgoing *message, uint32_t *xidp) {
         NDhcp4Header *header = n_dhcp4_outgoing_get_header(message);
 
         *xidp = header->xid;
+}
+
+static void n_dhcp4_c_connection_incoming_get_xid(NDhcp4Incoming *message, uint32_t *xidp) {
+        NDhcp4Header *header = n_dhcp4_incoming_get_header(message);
+
+        *xidp = header->xid;
+}
+
+static int n_dhcp4_c_connection_incoming_get_yiaddr(NDhcp4Incoming *message, struct in_addr *yiaddr) {
+        NDhcp4Header *header = n_dhcp4_incoming_get_header(message);
+
+        yiaddr->s_addr = header->yiaddr;
+
+        return 0;
+}
+
+static int n_dhcp4_c_connection_incoming_get_server_identifier(NDhcp4Incoming *message, struct in_addr *server_identifier) {
+        uint8_t *data;
+        size_t n_data;
+        int r;
+
+        r = n_dhcp4_incoming_query(message, N_DHCP4_OPTION_SERVER_IDENTIFIER, &data, &n_data);
+        if (r)
+                return r;
+        else if (n_data != sizeof(*server_identifier))
+                return N_DHCP4_E_MALFORMED;
+
+        memcpy(server_identifier, data, n_data);
+
+        return 0;
 }
 
 static int n_dhcp4_c_connection_verify_incoming(NDhcp4CConnection *connection,
@@ -456,66 +514,6 @@ static int n_dhcp4_c_connection_new_message(NDhcp4CConnection *connection,
         return 0;
 }
 
-static uint32_t n_dhcp4_c_connection_get_random(NDhcp4CConnection *connection) {
-        long int result;
-        int r;
-
-        r = mrand48_r(&connection->entropy, &result);
-        assert(!r);
-
-        return result;
-};
-
-static void n_dhcp4_c_connection_outgoing_set_secs(NDhcp4Outgoing *message, uint32_t secs) {
-        NDhcp4Header *header = n_dhcp4_outgoing_get_header(message);
-
-        /*
-         * Some DHCP servers will reject DISCOVER or REQUEST messages if 'secs'
-         * is not set (i.e., set to 0), even though the spec allows it.
-         */
-        assert(secs != 0);
-
-        header->secs = htonl(secs);
-}
-
-static void n_dhcp4_c_connection_outgoing_set_xid(NDhcp4Outgoing *message, uint32_t xid) {
-        NDhcp4Header *header = n_dhcp4_outgoing_get_header(message);
-
-        header->xid = xid;
-}
-
-static int n_dhcp4_c_connection_incoming_get_xid(NDhcp4Incoming *message, uint32_t *xidp) {
-        NDhcp4Header *header = n_dhcp4_incoming_get_header(message);
-
-        *xidp = header->xid;
-
-        return 0;
-}
-
-static int n_dhcp4_c_connection_incoming_get_yiaddr(NDhcp4Incoming *message, struct in_addr *yiaddr) {
-        NDhcp4Header *header = n_dhcp4_incoming_get_header(message);
-
-        yiaddr->s_addr = header->yiaddr;
-
-        return 0;
-}
-
-static int n_dhcp4_c_connection_incoming_get_server_identifier(NDhcp4Incoming *message, struct in_addr *server_identifier) {
-        uint8_t *data;
-        size_t n_data;
-        int r;
-
-        r = n_dhcp4_incoming_query(message, N_DHCP4_OPTION_SERVER_IDENTIFIER, &data, &n_data);
-        if (r)
-                return r;
-        else if (n_data != sizeof(*server_identifier))
-                return N_DHCP4_E_MALFORMED;
-
-        memcpy(server_identifier, data, n_data);
-
-        return 0;
-}
-
 /*
  *      RFC2131 3.1
  *
@@ -598,9 +596,7 @@ int n_dhcp4_c_connection_select_new(NDhcp4CConnection *connection,
         uint32_t xid;
         int r;
 
-        r = n_dhcp4_c_connection_incoming_get_xid(offer, &xid);
-        if (r)
-                return r;
+        n_dhcp4_c_connection_incoming_get_xid(offer, &xid);
 
         r = n_dhcp4_c_connection_incoming_get_yiaddr(offer, &client);
         if (r)
