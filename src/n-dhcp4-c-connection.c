@@ -209,6 +209,16 @@ static int n_dhcp4_c_connection_verify_incoming(NDhcp4CConnection *connection,
         return 0;
 }
 
+void n_dhcp4_c_connection_get_timeout(NDhcp4CConnection *connection, uint64_t *timeoutp) {
+        /* XXX */
+        *timeoutp = 0;
+}
+
+int n_dhcp4_c_connection_dispatch_timer(NDhcp4CConnection *connection) {
+        /* XXX */
+        return 0;
+}
+
 int n_dhcp4_c_connection_dispatch_io(NDhcp4CConnection *connection,
                                      NDhcp4Incoming **messagep) {
         _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *message = NULL;
