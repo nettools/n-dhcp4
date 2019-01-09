@@ -22,10 +22,4 @@ void test_veth_new(int parent_ns,
                    int *child_indexp,
                    struct ether_addr *child_macp);
 
-void test_bridge_new(int netns,
-                     int *indexp,
-                     struct ether_addr *macp);
-
-void test_enslave_link(int netns, int master, int slave);
-
 void test_setup(void);

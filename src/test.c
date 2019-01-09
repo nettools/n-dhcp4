@@ -24,119 +24,25 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include "test.h"
+#include "util/link.h"
 #include "util/netns.h"
 
 void test_socket_new(int netns, int *sockfdp, int family, int ifindex) {
-        char ifname[IF_NAMESIZE];
-        char *p;
-        int r, sockfd, oldns;
+        Link l = { .netns = netns, .ifindex = ifindex };
 
-        netns_get(&oldns);
-        netns_set(netns);
-
-        p = if_indextoname(ifindex, ifname);
-        assert(p);
-
-        sockfd = socket(family, SOCK_DGRAM | SOCK_CLOEXEC, 0);
-        assert(sockfd >= 0);
-
-        netns_set(oldns);
-
-        r = setsockopt(sockfd, SOL_SOCKET, SO_BINDTODEVICE, ifname, strlen(ifname));
-        assert(r >= 0);
-
-        *sockfdp = sockfd;
+        link_socket(&l, sockfdp, family, SOCK_DGRAM | SOCK_CLOEXEC);
 }
 
 void test_add_ip(int netns, int ifindex, const struct in_addr *addr, unsigned int prefix) {
-        char ifname[IF_NAMESIZE];
-        char *p;
-        int r, oldns;
+        Link l = { .netns = netns, .ifindex = ifindex };
 
-        netns_get(&oldns);
-        netns_set(netns);
-
-        p = if_indextoname(ifindex, ifname);
-        assert(p);
-
-        r = asprintf(&p, "ip addr add %s/%u dev %s", inet_ntoa(*addr), prefix, ifname);
-        assert(r >= 0);
-
-        r = system(p);
-        assert(r == 0);
-
-        netns_set(oldns);
-
-        free(p);
+        link_add_ip4(&l, addr, prefix);
 }
 
 void test_del_ip(int netns, int ifindex, const struct in_addr *addr, unsigned int prefix) {
-        char ifname[IF_NAMESIZE];
-        char *p;
-        int r, oldns;
+        Link l = { .netns = netns, .ifindex = ifindex };
 
-        netns_get(&oldns);
-        netns_set(netns);
-
-        p = if_indextoname(ifindex, ifname);
-        assert(p);
-
-        r = asprintf(&p, "ip addr del %s/%u dev %s", inet_ntoa(*addr), prefix, ifname);
-        assert(r >= 0);
-
-        r = system(p);
-        assert(r == 0);
-
-        netns_set(oldns);
-
-        free(p);
-}
-
-static void test_if_query(int netns, const char *name, int *indexp, struct ether_addr *macp) {
-        struct ifreq ifr = {};
-        size_t l;
-        int r, s, oldns;
-
-        l = strlen(name);
-        assert(l <= IF_NAMESIZE);
-
-        netns_get(&oldns);
-        netns_set(netns);
-
-        if (indexp) {
-                *indexp = if_nametoindex(name);
-                assert(*indexp > 0);
-        }
-
-        if (macp) {
-                s = socket(AF_INET, SOCK_DGRAM, 0);
-                assert(s >= 0);
-
-                strncpy(ifr.ifr_name, name, l + 1);
-                r = ioctl(s, SIOCGIFHWADDR, &ifr);
-                assert(r >= 0);
-
-                memcpy(macp->ether_addr_octet, ifr.ifr_hwaddr.sa_data, ETH_ALEN);
-
-                close(s);
-        }
-
-        netns_set(oldns);
-}
-
-static void test_netns_move_link(int netns, const char *ifname) {
-        char *p;
-        int r;
-
-        r = asprintf(&p, "ip link set %s up netns ns-test", ifname);
-        assert(r > 0);
-
-        netns_pin(netns, "ns-test");
-        r = system(p);
-        assert(r == 0);
-        netns_unpin("ns-test");
-
-        free(p);
+        link_del_ip4(&l, addr, prefix);
 }
 
 void test_veth_new(int parent_ns,
@@ -145,71 +51,21 @@ void test_veth_new(int parent_ns,
                    int child_ns,
                    int *child_indexp,
                    struct ether_addr *child_macp) {
-        int r, oldns;
+        Link v1, v2;
 
-        netns_get(&oldns);
+        link_new_veth(&v1, &v2, parent_ns, child_ns);
 
-        /*
-         * Temporarily enter a new network namespace to make sure the
-         * interface names are fresh.
-         */
-        netns_set_anonymous();
+        if (parent_indexp)
+                *parent_indexp = v1.ifindex;
+        if (parent_macp)
+                *parent_macp = v1.mac;
+        if (child_indexp)
+                *child_indexp = v2.ifindex;
+        if (child_macp)
+                *child_macp = v2.mac;
 
-        r = system("ip link add veth-parent type veth peer name veth-child");
-        assert(r == 0);
-        r = system("ip link set veth-parent up addrgenmode none");
-        assert(r == 0);
-        r = system("ip link set veth-child up addrgenmode none");
-        assert(r == 0);
-
-        test_netns_move_link(parent_ns, "veth-parent");
-        test_netns_move_link(child_ns, "veth-child");
-
-        netns_set(oldns);
-
-        test_if_query(parent_ns, "veth-parent", parent_indexp, parent_macp);
-        test_if_query(child_ns, "veth-child", child_indexp, child_macp);
-}
-
-void test_bridge_new(int netns,
-                     int *indexp,
-                     struct ether_addr *macp) {
-        int r, oldns;
-
-        netns_get(&oldns);
-        netns_set(netns);
-        r = system("ip link add test-bridge type bridge");
-        assert(r == 0);
-        r = system("ip link set test-bridge up addrgenmode none");
-        assert(r == 0);
-        netns_set(oldns);
-
-        test_if_query(netns, "test-bridge", indexp, macp);
-}
-
-void test_enslave_link(int netns, int master, int slave) {
-        char ifname_master[IF_NAMESIZE], ifname_slave[IF_NAMESIZE];
-        char *p;
-        int r, oldns;
-
-        netns_get(&oldns);
-        netns_set(netns);
-
-        p = if_indextoname(master, ifname_master);
-        assert(p);
-
-        p = if_indextoname(slave, ifname_slave);
-        assert(p);
-
-        r = asprintf(&p, "ip link set %s master %s", ifname_slave, ifname_master);
-        assert(r > 0);
-
-        r = system(p);
-        assert(r == 0);
-
-        netns_set(oldns);
-
-        free(p);
+        link_deinit(&v2);
+        link_deinit(&v1);
 }
 
 static void test_unshare_user_namespace(void) {
