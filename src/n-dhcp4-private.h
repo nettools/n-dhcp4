@@ -463,9 +463,9 @@ int n_dhcp4_c_connection_release_new(NDhcp4CConnection *connection,
                                      NDhcp4Outgoing **request,
                                      const char *error);
 
-int n_dhcp4_c_connection_send_request(NDhcp4CConnection *connection,
-                                      NDhcp4Outgoing *request,
-                                      uint64_t timestamp);
+int n_dhcp4_c_connection_start_request(NDhcp4CConnection *connection,
+                                       NDhcp4Outgoing *request,
+                                       uint64_t timestamp);
 
 /* clients */
 
