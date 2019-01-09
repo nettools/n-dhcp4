@@ -199,7 +199,8 @@ struct NDhcp4Incoming {
         } options[_N_DHCP4_OPTION_N];
 
         struct {
-                uint64_t timestamp;
+                uint64_t start_time;
+                uint64_t send_time;
         } userdata;
 
         size_t n_message;
