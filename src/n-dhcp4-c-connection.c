@@ -301,13 +301,13 @@ int n_dhcp4_c_connection_dispatch_io(NDhcp4CConnection *connection,
 
         switch (connection->state) {
         case N_DHCP4_C_CONNECTION_STATE_PACKET:
-                r = n_dhcp4_c_socket_packet_recv(connection->fd_packet, &message);
+                r = n_dhcp4_c_socket_packet_recv(connection->fd_packet, connection->buf, sizeof(connection->buf), &message);
                 if (r)
                         return r;
 
                 break;
         case N_DHCP4_C_CONNECTION_STATE_DRAINING:
-                r = n_dhcp4_c_socket_packet_recv(connection->fd_packet, &message);
+                r = n_dhcp4_c_socket_packet_recv(connection->fd_packet, connection->buf, sizeof(connection->buf), &message);
                 if (!r)
                         break;
                 else if (r != N_DHCP4_E_AGAIN)
@@ -324,7 +324,7 @@ int n_dhcp4_c_connection_dispatch_io(NDhcp4CConnection *connection,
 
                 /* fall-through */
         case N_DHCP4_C_CONNECTION_STATE_UDP:
-                r = n_dhcp4_c_socket_udp_recv(connection->fd_udp, &message);
+                r = n_dhcp4_c_socket_udp_recv(connection->fd_udp, connection->buf, sizeof(connection->buf), &message);
                 if (r)
                         return r;
         }

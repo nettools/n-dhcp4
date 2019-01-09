@@ -547,13 +547,14 @@ int n_dhcp4_s_socket_udp_broadcast(int sockfd,
 }
 
 int n_dhcp4_c_socket_packet_recv(int sockfd,
+                                 uint8_t *buf,
+                                 size_t n_buf,
                                  NDhcp4Incoming **messagep) {
         _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *message = NULL;
-        uint8_t buf[UINT16_MAX];
         ssize_t len;
         int r;
 
-        len = packet_recv_udp(sockfd, buf, sizeof(buf));
+        len = packet_recv_udp(sockfd, buf, n_buf);
         if (len < 0) {
                 if (errno == ENETDOWN)
                         return N_DHCP4_E_DOWN;
@@ -582,13 +583,14 @@ int n_dhcp4_c_socket_packet_recv(int sockfd,
 }
 
 static int n_dhcp4_socket_udp_recv(int sockfd,
+                                   uint8_t *buf,
+                                   size_t n_buf,
                                    NDhcp4Incoming **messagep) {
         _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *message = NULL;
-        uint8_t buf[UINT16_MAX];
         ssize_t len;
         int r;
 
-        len = recv(sockfd, buf, sizeof(buf), MSG_TRUNC);
+        len = recv(sockfd, buf, n_buf, MSG_TRUNC);
         if (len < 0) {
                 if (errno == ENETDOWN)
                         return N_DHCP4_E_DOWN;
@@ -596,7 +598,7 @@ static int n_dhcp4_socket_udp_recv(int sockfd,
                         return N_DHCP4_E_AGAIN;
                 else
                         return -errno;
-        } else if (len == 0 || len > sizeof(buf)) {
+        } else if (len == 0 || len > n_buf) {
                 *messagep = NULL;
                 return 0;
         }
@@ -617,11 +619,15 @@ static int n_dhcp4_socket_udp_recv(int sockfd,
 }
 
 int n_dhcp4_c_socket_udp_recv(int sockfd,
+                              uint8_t *buf,
+                              size_t n_buf,
                               NDhcp4Incoming **messagep) {
-        return n_dhcp4_socket_udp_recv(sockfd, messagep);
+        return n_dhcp4_socket_udp_recv(sockfd, buf, n_buf, messagep);
 }
 
 int n_dhcp4_s_socket_udp_recv(int sockfd,
+                              uint8_t *buf,
+                              size_t n_buf,
                               NDhcp4Incoming **messagep) {
-        return n_dhcp4_socket_udp_recv(sockfd, messagep);
+        return n_dhcp4_socket_udp_recv(sockfd, buf, n_buf, messagep);
 }

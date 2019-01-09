@@ -82,6 +82,7 @@ static void test_client_server_packet(int ns_server,
         _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *outgoing = NULL;
         _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *incoming = NULL;
         int sk_server, sk_client;
+        uint8_t buf[UINT16_MAX];
         int r;
 
         test_client_packet_socket_new(ns_client, &sk_client, ifindex_client);
@@ -100,7 +101,7 @@ static void test_client_server_packet(int ns_server,
 
         test_poll(sk_server);
 
-        r = n_dhcp4_s_socket_udp_recv(sk_server, &incoming);
+        r = n_dhcp4_s_socket_udp_recv(sk_server, buf, sizeof(buf), &incoming);
         assert(!r);
         assert(incoming);
 
@@ -116,7 +117,9 @@ static void test_client_server_udp(int ns_server,
         _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *incoming = NULL;
         struct in_addr addr_client = (struct in_addr){ htonl(10 << 24 | 2) };
         struct in_addr addr_server = (struct in_addr){ htonl(10 << 24 | 1) };
-        int r, sk_server, sk_client;
+        int sk_server, sk_client;
+        uint8_t buf[UINT16_MAX];
+        int r;
 
         test_add_ip(ns_client, ifindex_client, &addr_client, 8);
         test_client_udp_socket_new(ns_client, &sk_client, ifindex_client, &addr_client, &addr_server);
@@ -132,7 +135,7 @@ static void test_client_server_udp(int ns_server,
 
         test_poll(sk_server);
 
-        r = n_dhcp4_s_socket_udp_recv(sk_server, &incoming);
+        r = n_dhcp4_s_socket_udp_recv(sk_server, buf, sizeof(buf), &incoming);
         assert(!r);
         assert(incoming);
 
@@ -152,6 +155,7 @@ static void test_server_client_packet(int ns_server,
         _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *incoming1 = NULL, *incoming2 = NULL;
         struct in_addr addr_client = (struct in_addr){ htonl(10 << 24 | 2) };
         struct in_addr addr_server = (struct in_addr){ htonl(10 << 24 | 1) };
+        uint8_t buf[UINT16_MAX];
         int sk_server, sk_client;
         int r;
 
@@ -182,13 +186,13 @@ static void test_server_client_packet(int ns_server,
 
         test_poll(sk_client);
 
-        r = n_dhcp4_c_socket_packet_recv(sk_client, &incoming1);
+        r = n_dhcp4_c_socket_packet_recv(sk_client, buf, sizeof(buf), &incoming1);
         assert(!r);
         assert(incoming1);
 
         test_poll(sk_client);
 
-        r = n_dhcp4_c_socket_packet_recv(sk_client, &incoming2);
+        r = n_dhcp4_c_socket_packet_recv(sk_client, buf, sizeof(buf), &incoming2);
         assert(!r);
         assert(incoming2);
 
@@ -207,6 +211,7 @@ static void test_server_client_udp(int ns_server,
         struct in_addr addr_client = (struct in_addr){ htonl(10 << 24 | 2) };
         struct in_addr addr_server = (struct in_addr){ htonl(10 << 24 | 1) };
         int sk_server, sk_client;
+        uint8_t buf[UINT16_MAX];
         int r;
 
         test_add_ip(ns_client, ifindex_client, &addr_client, 8);
@@ -226,7 +231,7 @@ static void test_server_client_udp(int ns_server,
 
         test_poll(sk_client);
 
-        r = n_dhcp4_c_socket_udp_recv(sk_client, &incoming);
+        r = n_dhcp4_c_socket_udp_recv(sk_client, buf, sizeof(buf), &incoming);
         assert(!r);
         assert(incoming);
 

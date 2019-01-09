@@ -253,6 +253,7 @@ struct NDhcp4CConnection {
         int ifindex;                    /* interface index */
         int fd_packet;                  /* packet socket */
         int fd_udp;                     /* udp socket */
+        uint8_t buf[UINT16_MAX];        /* scratch receive buffer */
 
         bool request_broadcast : 1;     /* request broadcast from server */
         bool send_chaddr : 1;           /* send chaddr to server */
@@ -343,6 +344,7 @@ struct NDhcp4SConnection {
         int ifindex;                    /* interface index */
         int fd_packet;                  /* packet socket */
         int fd_udp;                     /* udp socket */
+        uint8_t buf[UINT16_MAX];        /* scratch recevie buffer */
 
         /* XXX: support a set of server addresses */
         uint32_t server_address;        /* server IP address, or 0 */
@@ -404,10 +406,16 @@ int n_dhcp4_s_socket_udp_broadcast(int sockfd,
                                    NDhcp4Outgoing *message);
 
 int n_dhcp4_c_socket_packet_recv(int sockfd,
+                                 uint8_t *buf,
+                                 size_t n_buf,
                                  NDhcp4Incoming **messagep);
 int n_dhcp4_c_socket_udp_recv(int sockfd,
+                              uint8_t *buf,
+                              size_t n_buf,
                               NDhcp4Incoming **messagep);
 int n_dhcp4_s_socket_udp_recv(int sockfd,
+                              uint8_t *buf,
+                              size_t n_buf,
                               NDhcp4Incoming **messagep);
 
 /* client events */

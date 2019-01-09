@@ -83,7 +83,7 @@ int n_dhcp4_s_connection_listen(NDhcp4SConnection *connection) {
 }
 
 int n_dhcp4_s_connection_dispatch_io(NDhcp4SConnection *connection, NDhcp4Incoming **messagep) {
-        return n_dhcp4_s_socket_udp_recv(connection->fd_udp, messagep);
+        return n_dhcp4_s_socket_udp_recv(connection->fd_udp, connection->buf, sizeof(connection->buf), messagep);
 }
 
 /*
