@@ -248,11 +248,11 @@ ssize_t packet_recvfrom_udp(int sockfd,
         union {
                 struct iphdr hdr;
                 /*
-                 * Maximum IP-header length is 16 * 4, since it is specified in
+                 * Maximum IP-header length is 15 * 4, since it is specified in
                  * the `ihl` field, which is four bits and interpreted as
-                 * factor of 4. So maximum `ihl` value is `2^4 * 4`.
+                 * factor of 4. So maximum `ihl` value is `(2^4 - 1) * 4`.
                  */
-                uint8_t data[16 * 4];
+                uint8_t data[15 * 4];
         } ip_hdr;
         struct udphdr udp_hdr;
         struct iovec iov[3] = {
