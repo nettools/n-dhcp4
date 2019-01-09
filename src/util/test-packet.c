@@ -1,5 +1,5 @@
 /*
- * Test for raw packet utility library
+ * Packet Socket Tests
  */
 
 #include <assert.h>
@@ -21,6 +21,14 @@ typedef struct Blob {
 static void test_checksum_one(Blob *blob, size_t size) {
         uint16_t checksum;
 
+        /*
+         * The only important property of the internet-checksum is that if the
+         * target blob is amended with its own checksum, the checksum
+         * calculation will become 0. So here we simply calculate the checksum
+         * with a dummy 0 in place, then put the checksum in and verify that
+         * the resulting checksum becomes 0.
+         */
+
         blob->checksum = 0;
         blob->checksum = packet_internet_checksum((uint8_t*)blob, size);
 
@@ -28,41 +36,54 @@ static void test_checksum_one(Blob *blob, size_t size) {
         assert(!checksum);
 }
 
-static void test_checksum_generic(void) {
+static void test_checksum_udp_one(Blob *blob, size_t size) {
+        uint16_t checksum;
+
+        /*
+         * Like test_checksum_one(), here we calculate the target checksum,
+         * then place it in the source blob and calculate the checksum again.
+         * We expect it to be 0 in the end (i.e., pass the checksum test).
+         *
+         * Unlike the generic version, we must pass dummy UDP data into the
+         * helpers and also avoid a 0 checksum in the original source.
+         */
+
+        checksum = packet_internet_checksum_udp(&(struct in_addr){ htonl((10 << 24) | 2)},
+                                                &(struct in_addr){ htonl((10 << 24) | 1)},
+                                                67,
+                                                68,
+                                                blob->data,
+                                                sizeof(blob->data),
+                                                0);
+        checksum = checksum ?: 0xffff;
+        checksum = packet_internet_checksum_udp(&(struct in_addr){ htonl((10 << 24) | 2)},
+                                                &(struct in_addr){ htonl((10 << 24) | 1)},
+                                                67,
+                                                68,
+                                                blob->data,
+                                                sizeof(blob->data),
+                                                checksum);
+        assert(!checksum);
+}
+
+/*
+ * This generates some pseudo-random bytes and verifies that
+ * packet_internet_checksum{,_udp}() correctly calculates the checksum on this
+ * random-data.
+ */
+static void test_checksum(void) {
         Blob blob = {};
 
+        /* fill @blob.data with some pseudo-random bytes */
         for (size_t i = 0; i < sizeof(blob.data); ++i)
-                blob.data[i] = (i & 0xffff) ^ (i << 16);
+                blob.data[i] = i ^ (i >> 8) ^ (i >> 16) ^ (i >> 24);
 
+        /* take chunks of @blob.data and verify their checksum */
         for (size_t j = 0; j < sizeof(uint64_t); ++j) {
                 for (uint32_t i = 0; i <= 0xffff; ++i) {
                         blob.data[0] = i & 0xff;
                         blob.data[1] = i >> 8;
                         test_checksum_one(&blob, sizeof(blob) - j);
-                }
-        }
-}
-
-static void test_checksum_udp_one(Blob *blob, size_t size) {
-        uint16_t checksum;
-
-        checksum = packet_internet_checksum_udp(&(struct in_addr){htonl(10<<24 | 2)}, &(struct in_addr){htonl(10<<24 | 1)},
-                                                67, 68, blob->data, sizeof(blob->data), 0) ?: 0xffff;
-        checksum = packet_internet_checksum_udp(&(struct in_addr){htonl(10<<24 | 2)}, &(struct in_addr){htonl(10<<24 | 1)},
-                                                67, 68, blob->data, sizeof(blob->data), checksum);
-        assert(!checksum);
-}
-
-static void test_checksum_udp(void) {
-        Blob blob = {};
-
-        for (size_t i = 0; i < sizeof(blob.data); ++i)
-                blob.data[i] = (i & 0xffff) ^ (i << 16);
-
-        for (size_t j = 0; j < sizeof(uint64_t); ++j) {
-                for (uint32_t i = 0; i <= 0xffff; ++i) {
-                        blob.data[0] = i & 0xff;
-                        blob.data[1] = i >> 8;
                         test_checksum_udp_one(&blob, sizeof(blob) - j);
                 }
         }
@@ -286,6 +307,13 @@ static void test_shutdown(Link *link_src,
         link_del_ip4(link_src, &paddr_src->sin_addr, 8);
 }
 
+/*
+ * This test verifies that we can send packets from/to packet/udp sockets. It
+ * tests all combinations: packet->packet, packet->udp, udp->packet, udp->udp
+ *
+ * Furthermore, this test checks for some of the behavioural properties of our
+ * packet socket helpers.
+ */
 static void test_packet(void) {
         _cleanup_(netns_closep) int ns_src = -1, ns_dst = -1;
         _cleanup_(link_deinit) Link link_src = LINK_NULL(link_src);
@@ -314,7 +342,7 @@ static void test_packet(void) {
         test_udp_packet(&link_src, &link_dst, &paddr_src, &paddr_dst);
         test_udp_udp(&link_src, &link_dst, &paddr_src, &paddr_dst);
 
-        /* management tests */
+        /* behavior tests */
 
         test_shutdown(&link_src, &link_dst, &paddr_src, &paddr_dst);
 }
@@ -322,8 +350,7 @@ static void test_packet(void) {
 int main(int argc, char **argv) {
         test_setup();
 
-        test_checksum_generic();
-        test_checksum_udp();
+        test_checksum();
         test_packet();
 
         return 0;
