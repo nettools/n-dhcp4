@@ -145,7 +145,6 @@ uint16_t packet_internet_checksum_udp(const struct in_addr *src_addr,
  * @sockfd:             AF_PACKET/SOCK_DGRAM socket
  * @buf:                payload
  * @len:                length of payload in bytes
- * @flags:              flags, see sendto(2)
  * @src_paddr:          source protocol address, see ip(7)
  * @dest_haddr:         destination hardware address, see packet(7)
  * @dest_paddr:         destination protocol address, see ip(7)
@@ -161,7 +160,6 @@ uint16_t packet_internet_checksum_udp(const struct in_addr *src_addr,
 ssize_t packet_sendto_udp(int sockfd,
                           const void *buf,
                           size_t len,
-                          int flags,
                           const struct sockaddr_in *src_paddr,
                           const struct packet_sockaddr_ll2 *dest_haddr,
                           const struct sockaddr_in *dest_paddr) {
@@ -220,7 +218,7 @@ ssize_t packet_sendto_udp(int sockfd,
          */
         udp_hdr.check = udp_hdr.check ?: 0xffff;
 
-        pktlen = sendmsg(sockfd, &msg, flags);
+        pktlen = sendmsg(sockfd, &msg, 0);
         if (pktlen < 0)
                 return pktlen;
 
@@ -234,7 +232,6 @@ ssize_t packet_sendto_udp(int sockfd,
  * @sockfd:             AF_PACKET/SOCK_DGRAM socket
  * @buf:                buffor for payload
  * @len:                max length of payload in bytes
- * @flags:              flags, see recvfrom(2)
  * @src:                return argumnet for source address, or NULL, see ip(7)
  *
  * Receives an UDP packet on a AF_PACKET socket. The difference between
@@ -247,7 +244,6 @@ ssize_t packet_sendto_udp(int sockfd,
 ssize_t packet_recvfrom_udp(int sockfd,
                             void *buf,
                             size_t len,
-                            int flags,
                             struct sockaddr_in *src) {
         union {
                 struct iphdr hdr;
@@ -285,7 +281,7 @@ ssize_t packet_recvfrom_udp(int sockfd,
         size_t hdrlen;
 
         /* Peek packet to obtain the real IP header length */
-        pktlen = recv(sockfd, &ip_hdr.hdr, sizeof(ip_hdr.hdr), MSG_PEEK | flags);
+        pktlen = recv(sockfd, &ip_hdr.hdr, sizeof(ip_hdr.hdr), MSG_PEEK);
         if (pktlen < 0)
                 return pktlen;
 
@@ -321,7 +317,7 @@ ssize_t packet_recvfrom_udp(int sockfd,
          * read the entire packet into the correct buffers.
          */
         iov[0].iov_len = hdrlen;
-        pktlen = recvmsg(sockfd, &msg, flags);
+        pktlen = recvmsg(sockfd, &msg, 0);
         if (pktlen < 0)
                 return pktlen;
 

@@ -39,20 +39,18 @@ uint16_t packet_internet_checksum_udp(const struct in_addr *src_addr,
 ssize_t packet_sendto_udp(int sockfd,
                           const void *buf,
                           size_t len,
-                          int flags,
                           const struct sockaddr_in *src_paddr,
                           const struct packet_sockaddr_ll2 *dest_haddr,
                           const struct sockaddr_in *dest_paddr);
 ssize_t packet_recvfrom_udp(int sockfd,
                             void *buf,
                             size_t len,
-                            int flags,
                             struct sockaddr_in *src);
 
 int packet_shutdown(int sockfd);
 
 /* inline helpers */
 
-static inline ssize_t packet_recv_udp(int sockfd, void *buf, size_t len, int flags) {
-        return packet_recvfrom_udp(sockfd, buf, len, flags, NULL);
+static inline ssize_t packet_recv_udp(int sockfd, void *buf, size_t len) {
+        return packet_recvfrom_udp(sockfd, buf, len, NULL);
 }

@@ -99,7 +99,7 @@ static void test_packet_unicast(int ifindex, int sk, void *buf, size_t n_buf,
 
         memcpy(addr.sll_addr, haddr_dst, ETH_ALEN);
 
-        len = packet_sendto_udp(sk, buf, n_buf, 0, paddr_src, &addr, paddr_dst);
+        len = packet_sendto_udp(sk, buf, n_buf, paddr_src, &addr, paddr_dst);
         assert(len == (ssize_t)n_buf);
 }
 
@@ -116,7 +116,7 @@ static void test_packet_broadcast(int ifindex, int sk, void *buf, size_t n_buf,
 
         memcpy(addr.sll_addr, (unsigned char[]){ 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, }, ETH_ALEN);
 
-        len = packet_sendto_udp(sk, buf, n_buf, 0, paddr_src, &addr, paddr_dst);
+        len = packet_sendto_udp(sk, buf, n_buf, paddr_src, &addr, paddr_dst);
         assert(len == (ssize_t)n_buf);
 }
 
@@ -134,10 +134,10 @@ static void test_packet_packet(Link *link_src,
         test_packet_unicast(link_src->ifindex, sk_src, buf, sizeof(buf) - 1, paddr_src, paddr_dst, &link_dst->mac);
         test_packet_broadcast(link_src->ifindex, sk_src, buf, sizeof(buf) - 1, paddr_src, paddr_dst);
 
-        len = packet_recvfrom_udp(sk_dst, buf, sizeof(buf), 0, NULL);
+        len = packet_recvfrom_udp(sk_dst, buf, sizeof(buf), NULL);
         assert(len == (ssize_t)sizeof(buf) - 1);
 
-        len = packet_recvfrom_udp(sk_dst, buf, sizeof(buf), 0, NULL);
+        len = packet_recvfrom_udp(sk_dst, buf, sizeof(buf), NULL);
         assert(len == (ssize_t)sizeof(buf) - 1);
 }
 
@@ -186,7 +186,7 @@ static void test_udp_packet(Link *link_src,
                      (struct sockaddr*)paddr_dst, sizeof(*paddr_dst));
         assert(len == (ssize_t)sizeof(buf) - 1);
 
-        len = packet_recvfrom_udp(sk_dst, buf, sizeof(buf), 0, NULL);
+        len = packet_recvfrom_udp(sk_dst, buf, sizeof(buf), NULL);
         assert(len == (ssize_t)sizeof(buf) - 1);
 
         link_del_ip4(link_dst, &paddr_dst->sin_addr, 8);
@@ -261,9 +261,9 @@ static void test_shutdown(Link *link_src,
         assert(len == (ssize_t)sizeof(buf));
 
         /* receive 1 and 2 on the packet socket */
-        len = packet_recvfrom_udp(sk_dst1, buf, sizeof(buf), 0, NULL);
+        len = packet_recvfrom_udp(sk_dst1, buf, sizeof(buf), NULL);
         assert(len == (ssize_t)sizeof(buf));
-        len = packet_recvfrom_udp(sk_dst1, buf, sizeof(buf), 0, NULL);
+        len = packet_recvfrom_udp(sk_dst1, buf, sizeof(buf), NULL);
         assert(len == (ssize_t)sizeof(buf));
 
         /* make sure there is nothing more pending on the packet socket */

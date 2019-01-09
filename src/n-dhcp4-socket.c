@@ -354,7 +354,7 @@ static int n_dhcp4_socket_packet_send(int sockfd,
 
         n_buf = n_dhcp4_outgoing_get_raw(message, &buf);
 
-        len = packet_sendto_udp(sockfd, buf, n_buf, 0, src_paddr, &haddr, dest_paddr);
+        len = packet_sendto_udp(sockfd, buf, n_buf, src_paddr, &haddr, dest_paddr);
         if (len < 0) {
                 if (errno == EAGAIN || errno == ENOBUFS)
                         return N_DHCP4_E_DROPPED;
@@ -553,7 +553,7 @@ int n_dhcp4_c_socket_packet_recv(int sockfd,
         ssize_t len;
         int r;
 
-        len = packet_recv_udp(sockfd, buf, sizeof(buf), 0);
+        len = packet_recv_udp(sockfd, buf, sizeof(buf));
         if (len < 0) {
                 if (errno == ENETDOWN)
                         return N_DHCP4_E_DOWN;
