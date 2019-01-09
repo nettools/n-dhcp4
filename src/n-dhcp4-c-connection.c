@@ -567,8 +567,6 @@ int n_dhcp4_c_connection_discover_new(NDhcp4CConnection *connection,
         if (r)
                 return r;
 
-        n_dhcp4_c_connection_outgoing_set_xid(message, n_dhcp4_c_connection_get_random(connection));
-
         *requestp = message;
         message = NULL;
         return 0;
@@ -612,7 +610,6 @@ int n_dhcp4_c_connection_select_new(NDhcp4CConnection *connection,
         if (r)
                 return r;
 
-        n_dhcp4_c_connection_outgoing_set_xid(message, xid);
         n_dhcp4_c_connection_outgoing_set_secs(message, secs);
 
         r = n_dhcp4_outgoing_append(message, N_DHCP4_OPTION_REQUESTED_IP_ADDRESS, &client, sizeof(client));
@@ -647,8 +644,6 @@ int n_dhcp4_c_connection_reboot_new(NDhcp4CConnection *connection,
         r = n_dhcp4_c_connection_new_message(connection, &message, N_DHCP4_C_MESSAGE_REBOOT);
         if (r)
                 return r;
-
-        n_dhcp4_c_connection_outgoing_set_xid(message, n_dhcp4_c_connection_get_random(connection));
 
         r = n_dhcp4_outgoing_append(message, N_DHCP4_OPTION_REQUESTED_IP_ADDRESS, client, sizeof(*client));
         if (r)
@@ -695,8 +690,6 @@ int n_dhcp4_c_connection_renew_new(NDhcp4CConnection *connection,
         if (r)
                 return r;
 
-        n_dhcp4_c_connection_outgoing_set_xid(message, n_dhcp4_c_connection_get_random(connection));
-
         *requestp = message;
         message = NULL;
         return 0;
@@ -729,8 +722,6 @@ int n_dhcp4_c_connection_rebind_new(NDhcp4CConnection *connection,
         r = n_dhcp4_c_connection_new_message(connection, &message, N_DHCP4_C_MESSAGE_REBIND);
         if (r)
                 return r;
-
-        n_dhcp4_c_connection_outgoing_set_xid(message, n_dhcp4_c_connection_get_random(connection));
 
         *requestp = message;
         message = NULL;
@@ -827,8 +818,6 @@ int n_dhcp4_c_connection_inform_new(NDhcp4CConnection *connection,
         if (r)
                 return r;
 
-        n_dhcp4_c_connection_outgoing_set_xid(message, n_dhcp4_c_connection_get_random(connection));
-
         *requestp = message;
         message = NULL;
         return 0;
@@ -900,6 +889,27 @@ static int n_dhcp4_c_connection_send_request(NDhcp4CConnection *connection,
                                       uint64_t timestamp) {
         uint32_t secs;
         int r;
+
+        /*
+         * Reset the xid where applicable.
+         */
+        switch (request->userdata.type) {
+        case N_DHCP4_C_MESSAGE_DISCOVER:
+        case N_DHCP4_C_MESSAGE_SELECT:
+        case N_DHCP4_C_MESSAGE_REBOOT:
+        case N_DHCP4_C_MESSAGE_REBIND:
+        case N_DHCP4_C_MESSAGE_RENEW:
+        case N_DHCP4_C_MESSAGE_INFORM:
+                n_dhcp4_c_connection_outgoing_set_xid(request, n_dhcp4_c_connection_get_random(connection));
+
+                break;
+        case N_DHCP4_C_MESSAGE_DECLINE:
+        case N_DHCP4_C_MESSAGE_RELEASE:
+                break;
+        default:
+                assert(0);
+        }
+
 
         /*
          * Increment the secs field where applicable.
