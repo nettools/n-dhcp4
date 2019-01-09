@@ -82,6 +82,10 @@ void netns_new(int *netnsp) {
  * `/run/netns/@name`. It is the responsibility of the caller to guarantee
  * @name is not used by anyone else in parallel. This function will abort if
  * @name is already in use.
+ *
+ * The namespace in `/run/netns/` is compatible with the namespace provided by
+ * the ip(1) tool, and can be used to pass network namespaces to invocations of
+ * ip(1).
  */
 void netns_pin(int netns, const char *name) {
         char *fd_path, *netns_path;
@@ -111,6 +115,8 @@ void netns_pin(int netns, const char *name) {
  * This removes a network namespace pin from the file-system. It expects the
  * pin to be located at `/run/netns/@name`. This function aborts if the pin
  * does not exist.
+ *
+ * See netns_pin() for ways to create such pins.
  */
 void netns_unpin(const char *name) {
         char *netns_path;

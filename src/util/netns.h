@@ -3,7 +3,8 @@
 /*
  * Network Namespaces
  *
- * XXX
+ * The netns utility provides an object-based API to network namespaces. It is
+ * meant for testing purposes only.
  */
 
 #include <stdlib.h>
