@@ -13,6 +13,57 @@
 #include "util/netns.h"
 
 /**
+ * netns_new() - create a new network namespace
+ * @netnsp:             output argument to store netns fd
+ *
+ * This creates a new network namespace and returns a netns fd that refers to
+ * the new network namespace. Note that there is no native API to create an
+ * anonymous network namespace, so this call has to temporarily switch to a new
+ * network namespace (using unshare(2)). This temporary switch does not affect
+ * any other threads or processes, however, it can be observed by other
+ * processes.
+ */
+void netns_new(int *netnsp) {
+        int r, oldns;
+
+        netns_get(&oldns);
+
+        r = unshare(CLONE_NEWNET);
+        assert(r >= 0);
+
+        netns_get(netnsp);
+        netns_set(oldns);
+}
+
+/**
+ * netns_new_dup() - duplicate network namespace descriptor
+ * @newnsp:             output argument for duplicated descriptor
+ * @netns:              netns descriptor to duplicate
+ *
+ * This duplicates the network namespace file descriptor. The duplicate still
+ * refers to the same network namespace, but is an independent file descriptor.
+ */
+void netns_new_dup(int *newnsp, int netns) {
+        *newnsp = fcntl(netns, F_DUPFD_CLOEXEC, 0);
+        assert(*newnsp >= 0);
+}
+
+/**
+ * netns_close() - destroy a network namespace descriptor
+ * @netns:              netns to operate on, or <0
+ *
+ * This closes the given network namespace descriptor. If @netns is negative,
+ * this is a no-op.
+ *
+ * Return: -1 is returned.
+ */
+int netns_close(int netns) {
+        if (netns >= 0)
+                close(netns);
+        return -1;
+}
+
+/**
  * netns_get() - retrieve the current network namespace
  * @netnsp:             output argument to store netns fd
  *
@@ -48,29 +99,6 @@ void netns_set_anonymous(void) {
 
         r = unshare(CLONE_NEWNET);
         assert(r >= 0);
-}
-
-/**
- * netns_new() - create a new network namespace
- * @netnsp:             output argument to store netns fd
- *
- * This creates a new network namespace and returns a netns fd that refers to
- * the new network namespace. Note that there is no native API to create an
- * anonymous network namespace, so this call has to temporarily switch to a new
- * network namespace (using unshare(2)). This temporary switch does not affect
- * any other threads or processes, however, it can be observed by other
- * processes.
- */
-void netns_new(int *netnsp) {
-        int r, oldns;
-
-        netns_get(&oldns);
-
-        r = unshare(CLONE_NEWNET);
-        assert(r >= 0);
-
-        netns_get(netnsp);
-        netns_set(oldns);
 }
 
 /**
