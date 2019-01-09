@@ -10,10 +10,73 @@
 #include "n-dhcp4.h"
 #include "n-dhcp4-private.h"
 
+static int n_dhcp4_incoming_query_u32(NDhcp4Incoming *message, uint8_t option, uint32_t *u32p) {
+        uint8_t *data;
+        size_t n_data;
+        uint32_t be32;
+        int r;
+
+        r = n_dhcp4_incoming_query(message, option, &data, &n_data);
+        if (r)
+                return r;
+        else if (n_data != be32)
+                return N_DHCP4_E_MALFORMED;
+
+        memcpy(&be32, data, sizeof(be32));
+
+        if (be32 == (uint32_t)-1)
+                *u32p = 0;
+        else
+                *u32p = ntohl(be32);
+        return 0;
+}
+
+static int n_dhcp4_client_lease_get_timeouts(NDhcp4ClientLease *lease, uint64_t *t1p, uint64_t *t2p, uint64_t *lifetimep) {
+        uint64_t lifetime, t2, t1;
+        uint32_t u32;
+        int r;
+
+        r = n_dhcp4_incoming_query_u32(lease->message, N_DHCP4_OPTION_IP_ADDRESS_LEASE_TIME, &u32);
+        if (r == N_DHCP4_E_UNSET) {
+                lifetime = 0;
+        } else if (r) {
+                return r;
+        } else {
+                lifetime = u32 * (1000000000ULL);
+        }
+
+        r = n_dhcp4_incoming_query_u32(lease->message, N_DHCP4_OPTION_REBINDING_T2_TIME, &u32);
+        if (r == N_DHCP4_E_UNSET) {
+                t2 = (lifetime * 7) / 8;
+        } else if (r) {
+                return r;
+        } else {
+                t2 = u32 * (1000000000ULL);
+                if (t2 > lifetime)
+                        t2 = (lifetime * 7) / 8;
+        }
+
+        r = n_dhcp4_incoming_query_u32(lease->message, N_DHCP4_OPTION_RENEWAL_T1_TIME, &u32);
+        if (r == N_DHCP4_E_UNSET) {
+                t1 = (t2 * 4) / 7;
+        } else if (r) {
+                return r;
+        } else {
+                t1 = u32 * (1000000000ULL);
+                if (t1 > t2)
+                        t1 = (t2 * 4) / 7;
+        }
+
+        *lifetimep = lifetime;
+        *t2p = t2;
+        *t1p = t1;
+        return 0;
+}
+
 /**
  * n_dhcp4_client_lease_new() - XXX
  */
-int n_dhcp4_client_lease_new(NDhcp4ClientLease **leasep, NDhcp4Incoming *message) {
+int n_dhcp4_client_lease_new(NDhcp4ClientLease **leasep, NDhcp4Incoming *message, uint64_t base_time) {
         _cleanup_(n_dhcp4_client_lease_unrefp) NDhcp4ClientLease *lease = NULL;
         uint8_t *type;
         size_t n_type;
@@ -42,7 +105,14 @@ int n_dhcp4_client_lease_new(NDhcp4ClientLease **leasep, NDhcp4Incoming *message
                 return N_DHCP4_E_MALFORMED;
         }
 
+        r = n_dhcp4_client_lease_get_timeouts(lease, &lease->t1, &lease->t2, &lease->lifetime);
+        if (r)
+                return r;
+
         lease->message = message;
+        lease->t1 += base_time;
+        lease->t2 += base_time;
+        lease->lifetime += base_time;
 
         *leasep = lease;
         lease = NULL;

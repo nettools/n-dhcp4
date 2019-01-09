@@ -332,7 +332,9 @@ struct NDhcp4ClientLease {
 
         unsigned int state;
 
-        uint64_t ns_starttime;
+        uint64_t t1;
+        uint64_t t2;
+        uint64_t lifetime;
 };
 
 #define N_DHCP4_CLIENT_LEASE_NULL(_x) {                                         \
@@ -471,6 +473,9 @@ int n_dhcp4_c_connection_release_new(NDhcp4CConnection *connection,
 int n_dhcp4_c_connection_start_request(NDhcp4CConnection *connection,
                                        NDhcp4Outgoing *request,
                                        uint64_t timestamp);
+
+/* client leases */
+int n_dhcp4_client_lease_new(NDhcp4ClientLease **leasep, NDhcp4Incoming *message, uint64_t base_time);
 
 /* clients */
 
