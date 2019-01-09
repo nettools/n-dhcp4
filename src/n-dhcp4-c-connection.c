@@ -960,6 +960,7 @@ static int n_dhcp4_c_connection_send_request(NDhcp4CConnection *connection,
         }
 
         request->userdata.send_time = timestamp;
+        ++request->userdata.n_send;
 
         return 0;
 }
@@ -970,6 +971,7 @@ int n_dhcp4_c_connection_start_request(NDhcp4CConnection *connection,
         int r;
 
         request->userdata.start_time = timestamp;
+        request->userdata.n_send = 0;
 
         n_dhcp4_outgoing_free(connection->request);
         connection->request = request;
