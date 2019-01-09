@@ -559,8 +559,7 @@ static int n_dhcp4_c_connection_new_message(NDhcp4CConnection *connection,
  *      silently discarded.
  */
 int n_dhcp4_c_connection_discover_new(NDhcp4CConnection *connection,
-                                      NDhcp4Outgoing **requestp,
-                                      uint32_t secs) {
+                                      NDhcp4Outgoing **requestp) {
         _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *message = NULL;
         int r;
 
@@ -569,7 +568,6 @@ int n_dhcp4_c_connection_discover_new(NDhcp4CConnection *connection,
                 return r;
 
         n_dhcp4_c_connection_outgoing_set_xid(message, n_dhcp4_c_connection_get_random(connection));
-        n_dhcp4_c_connection_outgoing_set_secs(message, secs);
 
         *requestp = message;
         message = NULL;
@@ -591,15 +589,16 @@ int n_dhcp4_c_connection_discover_new(NDhcp4CConnection *connection,
  */
 int n_dhcp4_c_connection_select_new(NDhcp4CConnection *connection,
                                     NDhcp4Outgoing **requestp,
-                                    NDhcp4Incoming *offer,
-                                    uint32_t secs) {
+                                    NDhcp4Incoming *offer) {
         _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *message = NULL;
         struct in_addr client;
         struct in_addr server;
         uint32_t xid;
+        uint32_t secs;
         int r;
 
         n_dhcp4_c_connection_incoming_get_xid(offer, &xid);
+        secs = 1 + (offer->userdata.send_time - offer->userdata.start_time) / 1000000000ULL;
 
         r = n_dhcp4_c_connection_incoming_get_yiaddr(offer, &client);
         if (r)
@@ -641,8 +640,7 @@ int n_dhcp4_c_connection_select_new(NDhcp4CConnection *connection,
  */
 int n_dhcp4_c_connection_reboot_new(NDhcp4CConnection *connection,
                                     NDhcp4Outgoing **requestp,
-                                    const struct in_addr *client,
-                                    uint32_t secs) {
+                                    const struct in_addr *client) {
         _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *message = NULL;
         int r;
 
@@ -651,7 +649,6 @@ int n_dhcp4_c_connection_reboot_new(NDhcp4CConnection *connection,
                 return r;
 
         n_dhcp4_c_connection_outgoing_set_xid(message, n_dhcp4_c_connection_get_random(connection));
-        n_dhcp4_c_connection_outgoing_set_secs(message, secs);
 
         r = n_dhcp4_outgoing_append(message, N_DHCP4_OPTION_REQUESTED_IP_ADDRESS, client, sizeof(*client));
         if (r)
@@ -690,8 +687,7 @@ int n_dhcp4_c_connection_reboot_new(NDhcp4CConnection *connection,
  *      message.
  */
 int n_dhcp4_c_connection_renew_new(NDhcp4CConnection *connection,
-                                   NDhcp4Outgoing **requestp,
-                                   uint32_t secs) {
+                                   NDhcp4Outgoing **requestp) {
         _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *message = NULL;
         int r;
 
@@ -700,7 +696,6 @@ int n_dhcp4_c_connection_renew_new(NDhcp4CConnection *connection,
                 return r;
 
         n_dhcp4_c_connection_outgoing_set_xid(message, n_dhcp4_c_connection_get_random(connection));
-        n_dhcp4_c_connection_outgoing_set_secs(message, secs);
 
         *requestp = message;
         message = NULL;
@@ -727,8 +722,7 @@ int n_dhcp4_c_connection_renew_new(NDhcp4CConnection *connection,
  *      identifier' in the DHCPREQUEST message.
  */
 int n_dhcp4_c_connection_rebind_new(NDhcp4CConnection *connection,
-                                    NDhcp4Outgoing **requestp,
-                                    uint32_t secs) {
+                                    NDhcp4Outgoing **requestp) {
         _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *message = NULL;
         int r;
 
@@ -737,7 +731,6 @@ int n_dhcp4_c_connection_rebind_new(NDhcp4CConnection *connection,
                 return r;
 
         n_dhcp4_c_connection_outgoing_set_xid(message, n_dhcp4_c_connection_get_random(connection));
-        n_dhcp4_c_connection_outgoing_set_secs(message, secs);
 
         *requestp = message;
         message = NULL;
@@ -826,8 +819,7 @@ int n_dhcp4_c_connection_decline_new(NDhcp4CConnection *connection,
  *      directed to the 'DHCP server' UDP port.
  */
 int n_dhcp4_c_connection_inform_new(NDhcp4CConnection *connection,
-                                    NDhcp4Outgoing **requestp,
-                                    uint32_t secs) {
+                                    NDhcp4Outgoing **requestp) {
         _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *message = NULL;
         int r;
 
@@ -836,7 +828,6 @@ int n_dhcp4_c_connection_inform_new(NDhcp4CConnection *connection,
                 return r;
 
         n_dhcp4_c_connection_outgoing_set_xid(message, n_dhcp4_c_connection_get_random(connection));
-        n_dhcp4_c_connection_outgoing_set_secs(message, secs);
 
         *requestp = message;
         message = NULL;
@@ -907,7 +898,29 @@ int n_dhcp4_c_connection_release_new(NDhcp4CConnection *connection,
 static int n_dhcp4_c_connection_send_request(NDhcp4CConnection *connection,
                                       NDhcp4Outgoing *request,
                                       uint64_t timestamp) {
+        uint32_t secs;
         int r;
+
+        /*
+         * Increment the secs field where applicable.
+         */
+        switch (request->userdata.type) {
+        case N_DHCP4_C_MESSAGE_DISCOVER:
+        case N_DHCP4_C_MESSAGE_INFORM:
+        case N_DHCP4_C_MESSAGE_REBOOT:
+        case N_DHCP4_C_MESSAGE_REBIND:
+        case N_DHCP4_C_MESSAGE_RENEW:
+                secs = 1 + (timestamp - request->userdata.start_time) / 1000000000ULL;
+                n_dhcp4_c_connection_outgoing_set_secs(request, secs);
+
+                break;
+        case N_DHCP4_C_MESSAGE_SELECT:
+        case N_DHCP4_C_MESSAGE_DECLINE:
+        case N_DHCP4_C_MESSAGE_RELEASE:
+                break;
+        default:
+                assert(0);
+        }
 
         switch (request->userdata.type) {
         case N_DHCP4_C_MESSAGE_DISCOVER:

@@ -438,29 +438,23 @@ int n_dhcp4_c_connection_dispatch_timer(NDhcp4CConnection *connection);
 int n_dhcp4_c_connection_dispatch_io(NDhcp4CConnection *connection, NDhcp4Incoming **messagep);
 
 int n_dhcp4_c_connection_discover_new(NDhcp4CConnection *connection,
-                                      NDhcp4Outgoing **request,
-                                      uint32_t secs);
+                                      NDhcp4Outgoing **request);
 int n_dhcp4_c_connection_select_new(NDhcp4CConnection *connection,
                                     NDhcp4Outgoing **request,
-                                    NDhcp4Incoming *offer,
-                                    uint32_t secs);
+                                    NDhcp4Incoming *offer);
 int n_dhcp4_c_connection_reboot_new(NDhcp4CConnection *connection,
                                     NDhcp4Outgoing **request,
-                                    const struct in_addr *client,
-                                    uint32_t secs);
+                                    const struct in_addr *client);
 int n_dhcp4_c_connection_renew_new(NDhcp4CConnection *connection,
-                                   NDhcp4Outgoing **request,
-                                   uint32_t secs);
+                                   NDhcp4Outgoing **request);
 int n_dhcp4_c_connection_rebind_new(NDhcp4CConnection *connection,
-                                    NDhcp4Outgoing **request,
-                                    uint32_t secs);
+                                    NDhcp4Outgoing **request);
 int n_dhcp4_c_connection_decline_new(NDhcp4CConnection *connection,
                                      NDhcp4Outgoing **request,
                                      NDhcp4Incoming *ack,
                                      const char *error);
 int n_dhcp4_c_connection_inform_new(NDhcp4CConnection *connection,
-                                    NDhcp4Outgoing **request,
-                                    uint32_t secs);
+                                    NDhcp4Outgoing **request);
 int n_dhcp4_c_connection_release_new(NDhcp4CConnection *connection,
                                      NDhcp4Outgoing **request,
                                      const char *error);

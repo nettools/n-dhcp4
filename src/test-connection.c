@@ -123,7 +123,7 @@ static void test_discover(NDhcp4SConnection *connection_server,
         _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *reply_out = NULL;
         int r;
 
-        r = n_dhcp4_c_connection_discover_new(connection_client, &request_out, 1);
+        r = n_dhcp4_c_connection_discover_new(connection_client, &request_out);
         assert(!r);
 
         r = n_dhcp4_c_connection_start_request(connection_client, request_out, 0);
@@ -151,7 +151,7 @@ static void test_select(NDhcp4SConnection *connection_server,
         _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *reply = NULL;
         int r;
 
-        r = n_dhcp4_c_connection_select_new(connection_client, &request_out, offer, 1);
+        r = n_dhcp4_c_connection_select_new(connection_client, &request_out, offer);
         assert(!r);
 
         r = n_dhcp4_c_connection_start_request(connection_client, request_out, 0);
@@ -179,7 +179,7 @@ static void test_reboot(NDhcp4SConnection *connection_server,
         _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *reply = NULL;
         int r;
 
-        r = n_dhcp4_c_connection_reboot_new(connection_client, &request_out, addr_server, 1);
+        r = n_dhcp4_c_connection_reboot_new(connection_client, &request_out, addr_server);
         assert(!r);
 
         r = n_dhcp4_c_connection_start_request(connection_client, request_out, 0);
@@ -223,7 +223,7 @@ static void test_renew(NDhcp4SConnection *connection_server,
         _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *reply = NULL;
         int r;
 
-        r = n_dhcp4_c_connection_renew_new(connection_client, &request_out, 1);
+        r = n_dhcp4_c_connection_renew_new(connection_client, &request_out);
         assert(!r);
 
         r = n_dhcp4_c_connection_start_request(connection_client, request_out, 0);
@@ -250,7 +250,7 @@ static void test_rebind(NDhcp4SConnection *connection_server,
         _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *reply = NULL;
         int r;
 
-        r = n_dhcp4_c_connection_rebind_new(connection_client, &request_out, 1);
+        r = n_dhcp4_c_connection_rebind_new(connection_client, &request_out);
         assert(!r);
 
         r = n_dhcp4_c_connection_start_request(connection_client, request_out, 0);
