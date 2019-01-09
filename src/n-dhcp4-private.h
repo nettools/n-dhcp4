@@ -307,11 +307,6 @@ struct NDhcp4ClientProbe {
 
         unsigned int state;                     /* current probe state */
         NDhcp4ClientLease *current_lease;       /* current lease */
-        uint64_t ns_t1;                          /* next T1 timeout, or 0 */
-        uint64_t ns_t2;                          /* next T2 timeout, or 0 */
-        uint64_t ns_lifetime;                    /* next lifetime timeout, or 0 */
-
-        uint64_t ns_starttime;                   /* transaction start time, or 0 */
 
         NDhcp4CConnection connection;           /* client connection wrapper */
 };
