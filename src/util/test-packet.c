@@ -267,7 +267,7 @@ static void test_shutdown(Link *link_src,
         assert(len == (ssize_t)sizeof(buf));
 
         /* make sure there is nothing more pending on the packet socket */
-        len = packet_recvfrom_udp(sk_dst1, buf, sizeof(buf), MSG_DONTWAIT, NULL);
+        len = recv(sk_dst1, buf, sizeof(buf), MSG_DONTWAIT);
         assert(len < 0);
         assert(errno == EAGAIN);
 
@@ -278,7 +278,7 @@ static void test_shutdown(Link *link_src,
         assert(len == (ssize_t)sizeof(buf));
 
         /* make sure there is nothing more pending on the UDP socket */
-        len = recv(sk_dst2, buf, sizeof(buf), MSG_DONTWAIT);
+        len = recv(sk_dst1, buf, sizeof(buf), MSG_DONTWAIT);
         assert(len < 0);
         assert(errno == EAGAIN);
 
