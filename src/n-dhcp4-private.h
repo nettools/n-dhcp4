@@ -185,6 +185,7 @@ struct NDhcp4Outgoing {
         struct {
                 uint8_t type;
                 uint64_t start_time;
+                uint64_t base_time;
                 uint64_t send_time;
                 size_t n_send;
         } userdata;
@@ -201,7 +202,7 @@ struct NDhcp4Incoming {
 
         struct {
                 uint64_t start_time;
-                uint64_t send_time;
+                uint64_t base_time;
         } userdata;
 
         size_t n_message;
@@ -470,7 +471,7 @@ int n_dhcp4_c_connection_start_request(NDhcp4CConnection *connection,
                                        uint64_t timestamp);
 
 /* client leases */
-int n_dhcp4_client_lease_new(NDhcp4ClientLease **leasep, NDhcp4Incoming *message, uint64_t base_time);
+int n_dhcp4_client_lease_new(NDhcp4ClientLease **leasep, NDhcp4Incoming *message);
 
 /* clients */
 

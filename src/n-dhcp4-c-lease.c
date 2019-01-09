@@ -76,7 +76,7 @@ static int n_dhcp4_client_lease_get_timeouts(NDhcp4ClientLease *lease, uint64_t 
 /**
  * n_dhcp4_client_lease_new() - XXX
  */
-int n_dhcp4_client_lease_new(NDhcp4ClientLease **leasep, NDhcp4Incoming *message, uint64_t base_time) {
+int n_dhcp4_client_lease_new(NDhcp4ClientLease **leasep, NDhcp4Incoming *message) {
         _cleanup_(n_dhcp4_client_lease_unrefp) NDhcp4ClientLease *lease = NULL;
         uint8_t *type;
         size_t n_type;
@@ -110,9 +110,9 @@ int n_dhcp4_client_lease_new(NDhcp4ClientLease **leasep, NDhcp4Incoming *message
                 return r;
 
         lease->message = message;
-        lease->t1 += base_time;
-        lease->t2 += base_time;
-        lease->lifetime += base_time;
+        lease->t1 += message->userdata.base_time;
+        lease->t2 += message->userdata.base_time;
+        lease->lifetime += message->userdata.base_time;
 
         *leasep = lease;
         lease = NULL;

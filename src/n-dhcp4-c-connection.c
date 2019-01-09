@@ -223,7 +223,7 @@ static int n_dhcp4_c_connection_verify_incoming(NDhcp4CConnection *connection,
         size_t n_type;
         uint32_t request_xid;
         uint64_t start_time = 0;
-        uint64_t send_time = 0;
+        uint64_t base_time = 0;
         uint8_t *id = NULL;
         size_t idlen = 0;
         int r;
@@ -250,7 +250,7 @@ static int n_dhcp4_c_connection_verify_incoming(NDhcp4CConnection *connection,
                         return N_DHCP4_E_UNEXPECTED;
 
                 start_time = connection->request->userdata.start_time;
-                send_time = connection->request->userdata.send_time;
+                base_time = connection->request->userdata.base_time;
                 break;
         case N_DHCP4_MESSAGE_FORCERENEW:
                 break;
@@ -277,14 +277,7 @@ static int n_dhcp4_c_connection_verify_incoming(NDhcp4CConnection *connection,
         if (memcmp(connection->id, id, idlen) != 0)
                 return N_DHCP4_E_UNEXPECTED;
 
-        if (connection->request && connection->request->userdata.type != N_DHCP4_C_MESSAGE_SELECT) {
-                /*
-                 * We do not match individual ACKs to SELECTs, so when the
-                 * reply comes in response to a SELECT, we cannot know
-                 * the send_time to attach.
-                 */
-                message->userdata.send_time = send_time;
-        }
+        message->userdata.base_time = base_time;
         message->userdata.start_time = start_time;
         connection->request = n_dhcp4_outgoing_free(connection->request);
 
@@ -595,7 +588,7 @@ int n_dhcp4_c_connection_select_new(NDhcp4CConnection *connection,
         int r;
 
         n_dhcp4_c_connection_incoming_get_xid(offer, &xid);
-        secs = 1 + (offer->userdata.send_time - offer->userdata.start_time) / 1000000000ULL;
+        secs = 1 + (offer->userdata.base_time - offer->userdata.start_time) / 1000000000ULL;
 
         r = n_dhcp4_c_connection_incoming_get_yiaddr(offer, &client);
         if (r)
@@ -609,6 +602,7 @@ int n_dhcp4_c_connection_select_new(NDhcp4CConnection *connection,
         if (r)
                 return r;
 
+        message->userdata.base_time = offer->userdata.base_time;
         n_dhcp4_c_connection_outgoing_set_xid(message, xid);
         n_dhcp4_c_connection_outgoing_set_secs(message, secs);
 
@@ -903,6 +897,8 @@ static int n_dhcp4_c_connection_send_request(NDhcp4CConnection *connection,
         case N_DHCP4_C_MESSAGE_REBIND:
         case N_DHCP4_C_MESSAGE_RENEW:
                 n_dhcp4_c_connection_outgoing_set_xid(request, n_dhcp4_c_connection_get_random(connection));
+
+                request->userdata.base_time = timestamp;
 
                 secs = 1 + (timestamp - request->userdata.start_time) / 1000000000ULL;
                 n_dhcp4_c_connection_outgoing_set_secs(request, secs);
