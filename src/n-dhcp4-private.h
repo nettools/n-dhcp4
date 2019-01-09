@@ -184,7 +184,8 @@ struct NDhcp4Outgoing {
 
         struct {
                 uint8_t type;
-                uint64_t timestamp;
+                uint64_t start_time;
+                uint64_t send_time;
         } userdata;
 };
 
