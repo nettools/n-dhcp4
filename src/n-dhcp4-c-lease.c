@@ -19,7 +19,7 @@ static int n_dhcp4_incoming_query_u32(NDhcp4Incoming *message, uint8_t option, u
         r = n_dhcp4_incoming_query(message, option, &data, &n_data);
         if (r)
                 return r;
-        else if (n_data != be32)
+        else if (n_data != sizeof(be32))
                 return N_DHCP4_E_MALFORMED;
 
         memcpy(&be32, data, sizeof(be32));
