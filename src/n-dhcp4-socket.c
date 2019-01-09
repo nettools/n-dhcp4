@@ -110,9 +110,7 @@ int n_dhcp4_c_socket_packet_new(int *sockfdp, int ifindex) {
         if (r < 0)
                 return -errno;
 
-        /*
-         * We need the flag that tells us if the checksum is correct.
-         */
+        /* We need the flag that tells us if the checksum is correct. */
         r = setsockopt(sockfd, SOL_PACKET, PACKET_AUXDATA, &on, sizeof(on));
         if (r < 0)
                 return -errno;
