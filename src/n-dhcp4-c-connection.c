@@ -172,7 +172,7 @@ static void n_dhcp4_c_connection_outgoing_set_secs(NDhcp4Outgoing *message) {
          *
          * XXX: give a better intuition for what base time represents.
          */
-        secs = (offer->userdata.base_time - offer->userdata.start_time) / 1000000000ULL;
+        secs = (message->userdata.base_time - message->userdata.start_time) / 1000000000ULL;
 
         /*
          * Some DHCP servers will reject DISCOVER or REQUEST messages if 'secs'
@@ -911,7 +911,6 @@ int n_dhcp4_c_connection_release_new(NDhcp4CConnection *connection,
 static int n_dhcp4_c_connection_send_request(NDhcp4CConnection *connection,
                                       NDhcp4Outgoing *request,
                                       uint64_t timestamp) {
-        uint32_t secs;
         int r;
 
         /*
