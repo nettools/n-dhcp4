@@ -307,6 +307,42 @@ static void test_shutdown(Link *link_src,
         link_del_ip4(link_src, &paddr_src->sin_addr, 8);
 }
 
+static void test_ip_hdr(Link *link_src,
+                        Link *link_dst,
+                        const struct sockaddr_in *paddr_src,
+                        const struct sockaddr_in *paddr_dst) {
+        _cleanup_(n_dhcp4_closep) int sk_src = -1, sk_dst = -1;
+        uint8_t ipopts[5] = { 1, 1, 1, 1, 1 };
+        uint8_t buf[1024];
+        ssize_t len;
+        int r;
+
+        /*
+         * This test sends a packet from a UDP socket to a packet socket, but
+         * appends 5-bytes of IPOPT_NOOP ip-options. With this we verify our
+         * packet socket correctly skips additional ip-options and does not
+         * interpret the ip-header as a fixed size header.
+         */
+
+        link_socket(link_src, &sk_src, AF_INET, SOCK_DGRAM | SOCK_CLOEXEC);
+        test_new_packet_socket(link_dst, &sk_dst);
+        link_add_ip4(link_src, &paddr_src->sin_addr, 8);
+        link_add_ip4(link_dst, &paddr_dst->sin_addr, 8);
+
+        r = setsockopt(sk_src, IPPROTO_IP, IP_OPTIONS, ipopts, sizeof(ipopts));
+        assert(r >= 0);
+
+        len = sendto(sk_src, buf, sizeof(buf) - 1, 0,
+                     (struct sockaddr*)paddr_dst, sizeof(*paddr_dst));
+        assert(len == (ssize_t)sizeof(buf) - 1);
+
+        len = packet_recvfrom_udp(sk_dst, buf, sizeof(buf), NULL);
+        assert(len == (ssize_t)sizeof(buf) - 1);
+
+        link_del_ip4(link_dst, &paddr_dst->sin_addr, 8);
+        link_del_ip4(link_src, &paddr_src->sin_addr, 8);
+}
+
 /*
  * This test verifies that we can send packets from/to packet/udp sockets. It
  * tests all combinations: packet->packet, packet->udp, udp->packet, udp->udp
@@ -345,6 +381,7 @@ static void test_packet(void) {
         /* behavior tests */
 
         test_shutdown(&link_src, &link_dst, &paddr_src, &paddr_dst);
+        test_ip_hdr(&link_src, &link_dst, &paddr_src, &paddr_dst);
 }
 
 int main(int argc, char **argv) {
