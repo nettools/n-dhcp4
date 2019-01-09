@@ -162,14 +162,24 @@ static uint32_t n_dhcp4_c_connection_get_random(NDhcp4CConnection *connection) {
         return result;
 };
 
-static void n_dhcp4_c_connection_outgoing_set_secs(NDhcp4Outgoing *message, uint32_t secs) {
+static void n_dhcp4_c_connection_outgoing_set_secs(NDhcp4Outgoing *message) {
         NDhcp4Header *header = n_dhcp4_outgoing_get_header(message);
+        uint32_t secs;
+
+        /*
+         * secs is the time (in seconds) between the start of the current
+         * transaction and the base time.
+         *
+         * XXX: give a better intuition for what base time represents.
+         */
+        secs = (offer->userdata.base_time - offer->userdata.start_time) / 1000000000ULL;
 
         /*
          * Some DHCP servers will reject DISCOVER or REQUEST messages if 'secs'
-         * is not set (i.e., set to 0), even though the spec allows it.
+         * is not set (i.e., set to 0), even though the spec allows it. Simply
+         * increment all secs value by one.
          */
-        assert(secs != 0);
+        ++secs;
 
         header->secs = htonl(secs);
 }
@@ -242,6 +252,10 @@ static int n_dhcp4_c_connection_verify_incoming(NDhcp4CConnection *connection,
         case N_DHCP4_MESSAGE_OFFER:
         case N_DHCP4_MESSAGE_ACK:
         case N_DHCP4_MESSAGE_NAK:
+                /*
+                 * Only accept replies if there is a pending request, and it
+                 * has a matching transaction id.
+                 */
                 if (!connection->request)
                         return N_DHCP4_E_UNEXPECTED;
 
@@ -249,15 +263,29 @@ static int n_dhcp4_c_connection_verify_incoming(NDhcp4CConnection *connection,
                 if (header->xid != request_xid)
                         return N_DHCP4_E_UNEXPECTED;
 
+                /*
+                 * Remember the start time of the transaction, and the base
+                 * time of any relative timestamps from the pending request.
+                 * Thes same times applies to the response, and sholud be
+                 * copied over.
+                 */
                 start_time = connection->request->userdata.start_time;
                 base_time = connection->request->userdata.base_time;
                 break;
         case N_DHCP4_MESSAGE_FORCERENEW:
+                /*
+                 * Force renew messages are triggered by a server, and do not
+                 * match a pending request.
+                 */
                 break;
         default:
                 return N_DHCP4_E_UNEXPECTED;
         }
 
+        /*
+         * Both the hardware address and the client identifier in the incoming
+         * mesage must match our own.
+         */
         if (memcmp(connection->chaddr, header->chaddr, connection->hlen) != 0)
                 return N_DHCP4_E_UNEXPECTED;
 
@@ -584,11 +612,7 @@ int n_dhcp4_c_connection_select_new(NDhcp4CConnection *connection,
         struct in_addr client;
         struct in_addr server;
         uint32_t xid;
-        uint32_t secs;
         int r;
-
-        n_dhcp4_c_connection_incoming_get_xid(offer, &xid);
-        secs = 1 + (offer->userdata.base_time - offer->userdata.start_time) / 1000000000ULL;
 
         r = n_dhcp4_c_connection_incoming_get_yiaddr(offer, &client);
         if (r)
@@ -602,10 +626,6 @@ int n_dhcp4_c_connection_select_new(NDhcp4CConnection *connection,
         if (r)
                 return r;
 
-        message->userdata.base_time = offer->userdata.base_time;
-        n_dhcp4_c_connection_outgoing_set_xid(message, xid);
-        n_dhcp4_c_connection_outgoing_set_secs(message, secs);
-
         r = n_dhcp4_outgoing_append(message, N_DHCP4_OPTION_REQUESTED_IP_ADDRESS, &client, sizeof(client));
         if (r)
                 return r;
@@ -613,6 +633,16 @@ int n_dhcp4_c_connection_select_new(NDhcp4CConnection *connection,
         r = n_dhcp4_outgoing_append(message, N_DHCP4_OPTION_SERVER_IDENTIFIER, &server, sizeof(server));
         if (r)
                 return r;
+
+        /*
+         * SELECT continues the transaction started by DISCOVER, and as such
+         * keeps the same start time. We also have to preserve the base time
+         * of the selected lease as well as the transaction ID.
+         */
+        message->userdata.start_time = offer->userdata.start_time;
+        message->userdata.base_time = offer->userdata.base_time;
+        n_dhcp4_c_connection_incoming_get_xid(offer, &xid);
+        n_dhcp4_c_connection_outgoing_set_xid(message, xid);
 
         *requestp = message;
         message = NULL;
@@ -885,7 +915,7 @@ static int n_dhcp4_c_connection_send_request(NDhcp4CConnection *connection,
         int r;
 
         /*
-         * Increment the secs field and reset the xid field,
+         * Increment the base time and reset the xid field,
          * where applicable. We never alter the header on
          * resends of SELECT, as it must always match the
          * OFFER message they are in reply to.
@@ -896,12 +926,8 @@ static int n_dhcp4_c_connection_send_request(NDhcp4CConnection *connection,
         case N_DHCP4_C_MESSAGE_REBOOT:
         case N_DHCP4_C_MESSAGE_REBIND:
         case N_DHCP4_C_MESSAGE_RENEW:
-                n_dhcp4_c_connection_outgoing_set_xid(request, n_dhcp4_c_connection_get_random(connection));
-
                 request->userdata.base_time = timestamp;
-
-                secs = 1 + (timestamp - request->userdata.start_time) / 1000000000ULL;
-                n_dhcp4_c_connection_outgoing_set_secs(request, secs);
+                n_dhcp4_c_connection_outgoing_set_xid(request, n_dhcp4_c_connection_get_random(connection));
 
                 break;
         case N_DHCP4_C_MESSAGE_SELECT:
@@ -911,6 +937,9 @@ static int n_dhcp4_c_connection_send_request(NDhcp4CConnection *connection,
         default:
                 assert(0);
         }
+
+        request->userdata.send_time = timestamp;
+        n_dhcp4_c_connection_outgoing_set_secs(request);
 
         switch (request->userdata.type) {
         case N_DHCP4_C_MESSAGE_DISCOVER:
@@ -939,9 +968,7 @@ static int n_dhcp4_c_connection_send_request(NDhcp4CConnection *connection,
                 assert(0);
         }
 
-        request->userdata.send_time = timestamp;
         ++request->userdata.n_send;
-
         return 0;
 }
 
@@ -950,8 +977,14 @@ int n_dhcp4_c_connection_start_request(NDhcp4CConnection *connection,
                                        uint64_t timestamp) {
         int r;
 
-        request->userdata.start_time = timestamp;
-        request->userdata.n_send = 0;
+        /*
+         * This function starts a request, but in the case of SELECT it
+         * continues a previous transaction, so we do not want to reset
+         * the start time. Only set the start time if it was not already
+         * set.
+         */
+        if (request->userdata.start_time == 0)
+                request->userdata.start_time = timestamp;
 
         n_dhcp4_outgoing_free(connection->request);
         connection->request = request;
