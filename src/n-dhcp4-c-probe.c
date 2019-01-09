@@ -361,7 +361,7 @@ int n_dhcp4_client_probe_dispatch_timer(NDhcp4ClientProbe *probe) {
                         return r;
         }
 
-        r = n_dhcp4_c_connection_dispatch_timer(&probe->connection);
+        r = n_dhcp4_c_connection_dispatch_timer(&probe->connection, now);
         if (r)
                 return r;
 

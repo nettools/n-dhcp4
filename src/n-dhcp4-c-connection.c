@@ -285,8 +285,55 @@ static int n_dhcp4_c_connection_verify_incoming(NDhcp4CConnection *connection,
 }
 
 void n_dhcp4_c_connection_get_timeout(NDhcp4CConnection *connection, uint64_t *timeoutp) {
-        /* XXX */
-        *timeoutp = 0;
+        uint64_t timeout;
+        size_t n_send;
+
+        if (!connection->request) {
+                *timeoutp = 0;
+                return;
+        }
+
+        switch (connection->request->userdata.type) {
+        case N_DHCP4_C_MESSAGE_DISCOVER:
+        case N_DHCP4_C_MESSAGE_SELECT:
+        case N_DHCP4_C_MESSAGE_REBOOT:
+        case N_DHCP4_C_MESSAGE_INFORM:
+                /*
+                 * Resend with an exponintial backoff and a one second random
+                 * slack, from a minimum of two seconds to a maximum of sixty
+                 * four.
+                 *
+                 * Note that the RFC says to start at four rather than two
+                 * seconds, and use [-1,1] slack, rather than [0,1].
+                 */
+                n_send = connection->request->userdata.n_send;
+                if (n_send >= 6)
+                        n_send = 6;
+
+                timeout = connection->request->userdata.send_time + ((1ULL << n_send) * 1000000000ULL) + (n_dhcp4_c_connection_get_random(connection) % 1000000000ULL);
+
+                break;
+        case N_DHCP4_C_MESSAGE_REBIND:
+        case N_DHCP4_C_MESSAGE_RENEW:
+                /*
+                 * Resend every sixty seconds with a one second random slack.
+                 *
+                 * Note that the RFC says to do this at most once, but we do
+                 * it until we are cancelled.
+                 */
+                timeout = connection->request->userdata.send_time + (60ULL * 1000000000ULL) + (n_dhcp4_c_connection_get_random(connection) % 1000000000ULL);
+
+                break;
+        case N_DHCP4_C_MESSAGE_DECLINE:
+        case N_DHCP4_C_MESSAGE_RELEASE:
+                /* XXX make sure these message types are never pinned? */
+                timeout = 0;
+                break;
+        default:
+                assert(0);
+        }
+
+        *timeoutp = timeout;
 }
 
 static int n_dhcp4_c_connection_packet_broadcast(NDhcp4CConnection *connection,
@@ -928,8 +975,22 @@ int n_dhcp4_c_connection_start_request(NDhcp4CConnection *connection,
         return 0;
 }
 
-int n_dhcp4_c_connection_dispatch_timer(NDhcp4CConnection *connection) {
-        /* XXX */
+int n_dhcp4_c_connection_dispatch_timer(NDhcp4CConnection *connection, uint64_t timestamp) {
+        uint64_t timeout;
+        int r;
+
+        if (!connection->request)
+                return 0;
+
+        n_dhcp4_c_connection_get_timeout(connection, &timeout);
+
+        if (timeout > timestamp)
+                return 0;
+
+        r = n_dhcp4_c_connection_send_request(connection, connection->request, timestamp);
+        if (r)
+                return r;
+
         return 0;
 }
 
