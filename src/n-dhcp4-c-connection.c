@@ -277,9 +277,16 @@ static int n_dhcp4_c_connection_verify_incoming(NDhcp4CConnection *connection,
         if (memcmp(connection->id, id, idlen) != 0)
                 return N_DHCP4_E_UNEXPECTED;
 
-        connection->request = n_dhcp4_outgoing_free(connection->request);
+        if (connection->request && connection->request->userdata.type != N_DHCP4_C_MESSAGE_SELECT) {
+                /*
+                 * We do not match individual ACKs to SELECTs, so when the
+                 * reply comes in response to a SELECT, we cannot know
+                 * the send_time to attach.
+                 */
+                message->userdata.send_time = send_time;
+        }
         message->userdata.start_time = start_time;
-        message->userdata.send_time = send_time;
+        connection->request = n_dhcp4_outgoing_free(connection->request);
 
         return 0;
 }
@@ -883,35 +890,19 @@ static int n_dhcp4_c_connection_send_request(NDhcp4CConnection *connection,
         int r;
 
         /*
-         * Reset the xid where applicable.
+         * Increment the secs field and reset the xid field,
+         * where applicable. We never alter the header on
+         * resends of SELECT, as it must always match the
+         * OFFER message they are in reply to.
          */
         switch (request->userdata.type) {
         case N_DHCP4_C_MESSAGE_DISCOVER:
-        case N_DHCP4_C_MESSAGE_SELECT:
+        case N_DHCP4_C_MESSAGE_INFORM:
         case N_DHCP4_C_MESSAGE_REBOOT:
         case N_DHCP4_C_MESSAGE_REBIND:
         case N_DHCP4_C_MESSAGE_RENEW:
-        case N_DHCP4_C_MESSAGE_INFORM:
                 n_dhcp4_c_connection_outgoing_set_xid(request, n_dhcp4_c_connection_get_random(connection));
 
-                break;
-        case N_DHCP4_C_MESSAGE_DECLINE:
-        case N_DHCP4_C_MESSAGE_RELEASE:
-                break;
-        default:
-                assert(0);
-        }
-
-
-        /*
-         * Increment the secs field where applicable.
-         */
-        switch (request->userdata.type) {
-        case N_DHCP4_C_MESSAGE_DISCOVER:
-        case N_DHCP4_C_MESSAGE_INFORM:
-        case N_DHCP4_C_MESSAGE_REBOOT:
-        case N_DHCP4_C_MESSAGE_REBIND:
-        case N_DHCP4_C_MESSAGE_RENEW:
                 secs = 1 + (timestamp - request->userdata.start_time) / 1000000000ULL;
                 n_dhcp4_c_connection_outgoing_set_secs(request, secs);
 
