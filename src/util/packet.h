@@ -13,11 +13,11 @@
 
 /*
  * `struct sockaddr_ll` is too small to fit the Infiniband hardware address.
- * Introduce `struct packet_sockaddr_ll2` which is the same as the original,
+ * Introduce `struct packet_sockaddr_ll` which is the same as the original,
  * except the `sl_addr` field is extended to fit all the supported hardware
  * addresses.
  */
-struct packet_sockaddr_ll2 {
+struct packet_sockaddr_ll {
         unsigned short  sll_family;
         __be16          sll_protocol;
         int             sll_ifindex;
@@ -40,7 +40,7 @@ ssize_t packet_sendto_udp(int sockfd,
                           const void *buf,
                           size_t len,
                           const struct sockaddr_in *src_paddr,
-                          const struct packet_sockaddr_ll2 *dest_haddr,
+                          const struct packet_sockaddr_ll *dest_haddr,
                           const struct sockaddr_in *dest_paddr);
 ssize_t packet_recvfrom_udp(int sockfd,
                             void *buf,

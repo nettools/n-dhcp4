@@ -161,7 +161,7 @@ ssize_t packet_sendto_udp(int sockfd,
                           const void *buf,
                           size_t len,
                           const struct sockaddr_in *src_paddr,
-                          const struct packet_sockaddr_ll2 *dest_haddr,
+                          const struct packet_sockaddr_ll *dest_haddr,
                           const struct sockaddr_in *dest_paddr) {
         struct iphdr ip_hdr = {
                 .version = IPVERSION,
