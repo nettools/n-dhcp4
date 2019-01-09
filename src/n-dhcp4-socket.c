@@ -588,7 +588,7 @@ static int n_dhcp4_socket_udp_recv(int sockfd,
         ssize_t len;
         int r;
 
-        len = recv(sockfd, buf, sizeof(buf), 0);
+        len = recv(sockfd, buf, sizeof(buf), MSG_TRUNC);
         if (len < 0) {
                 if (errno == ENETDOWN)
                         return N_DHCP4_E_DOWN;
@@ -596,7 +596,7 @@ static int n_dhcp4_socket_udp_recv(int sockfd,
                         return N_DHCP4_E_AGAIN;
                 else
                         return -errno;
-        } else if (len == 0) {
+        } else if (len == 0 || len > sizeof(buf)) {
                 *messagep = NULL;
                 return 0;
         }
