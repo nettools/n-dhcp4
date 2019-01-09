@@ -1,5 +1,5 @@
 /*
- * Raw packet utility library
+ * Packet Sockets
  */
 
 #include <assert.h>
@@ -23,15 +23,13 @@
  * @data:               the data to checksum
  * @size:               the length of @data in bytes
  *
- * Computes the internet checksum for a given blob according
- * to RFC1071. @data must be 4-byte aligned.
+ * Computes the internet checksum for a given blob according to RFC1071.
  *
- * The internet checksum is the one's complement of the one's
- * complement sum of the 16-bit words of the data, padded with
- * zero-bytes if the data does not end on a 16-bit
- * boundary.
+ * The internet checksum is the one's complement of the one's complement sum of
+ * the 16-bit words of the data, padded with zero-bytes if the data does not
+ * end on a 16-bit boundary.
  *
- * Return: the checksum.
+ * Return: Checksum is returned.
  */
 uint16_t packet_internet_checksum(const uint8_t *data, size_t size) {
         uint64_t acc = 0;
@@ -58,9 +56,9 @@ uint16_t packet_internet_checksum(const uint8_t *data, size_t size) {
 }
 
 /**
- * packet_internet_checskum_udp() - compute the internet checkum for a UDP packet
+ * packet_internet_checksum_udp() - compute the internet checkum for UDP packets
  * @src_addr:           source IP address
- * @dst_addr:           destinaiton IP address
+ * @dst_addr:           destination IP address
  * @src_port:           source port
  * @dst_port:           destination port
  * @data:               payload
@@ -68,15 +66,27 @@ uint16_t packet_internet_checksum(const uint8_t *data, size_t size) {
  * @checksum:           current checksum, or 0
  *
  * Computes the internet checksum for a UDP packet, given the relevant IP and
- * UDP header fields. Note that the resulting checksum should be 0x0000 if verifying
- * a packet, but if computing the checksum for a packet the result must be flipped
- * to 0xffff if it is 0x0000, before inserting it into a packet header.
+ * UDP header fields.
  *
- * Return: the checksum.
+ * Note that since a UDP packet contains the checksum itself, the resulting
+ * checksum will always be 0 (this fact is used to verify that a UDP packet is
+ * valid).
+ * Inversely, when calculating the checksum for outgoing packets, you have to
+ * specify 0 as @checksum, and this function will return the checksum for the
+ * caller to use for the packet. In this case, though, the caller must check
+ * whether the returned checksum might coincidentally be 0, in which case it
+ * must be flipped to -1 (0xffff), since 0 is not allowed as checksum in UDP
+ * packets, and -1 is arithmetically equivalent in the checksum calculation.
+ *
+ * Return: Checksum is returned.
  */
-uint16_t packet_internet_checksum_udp(const struct in_addr *src_addr, const struct in_addr *dst_addr,
-                                      uint16_t src_port, uint16_t dst_port,
-                                      const uint8_t *data, size_t size, uint16_t checksum) {
+uint16_t packet_internet_checksum_udp(const struct in_addr *src_addr,
+                                      const struct in_addr *dst_addr,
+                                      uint16_t src_port,
+                                      uint16_t dst_port,
+                                      const uint8_t *data,
+                                      size_t size,
+                                      uint16_t checksum) {
         struct {
                 uint32_t src;
                 uint32_t dst;
@@ -148,25 +158,28 @@ uint16_t packet_internet_checksum_udp(const struct in_addr *src_addr, const stru
  *
  * Return: the number of payload bytes sent on success, or -1 on error.
  */
-ssize_t packet_sendto_udp(int sockfd, const void *buf, size_t len, int flags,
+ssize_t packet_sendto_udp(int sockfd,
+                          const void *buf,
+                          size_t len,
+                          int flags,
                           const struct sockaddr_in *src_paddr,
-                          const struct sockaddr_ll2 *dest_haddr,
+                          const struct packet_sockaddr_ll2 *dest_haddr,
                           const struct sockaddr_in *dest_paddr) {
-        struct udphdr udp_hdr = {
-                .source = src_paddr->sin_port,
-                .dest = dest_paddr->sin_port,
-                .len = htons(sizeof(udp_hdr) + len),
-        };
         struct iphdr ip_hdr = {
                 .version = IPVERSION,
                 .ihl = sizeof(ip_hdr) / 4, /* Length of header in multiples of four bytes */
                 .tos = IPTOS_CLASS_CS6, /* Class Selector for network control */
-                .tot_len = htons(sizeof(ip_hdr) + sizeof(udp_hdr) + len),
+                .tot_len = htons(sizeof(struct iphdr) + sizeof(struct udphdr) + len),
                 .frag_off = htons(IP_DF), /* Do not fragment */
                 .ttl = IPDEFTTL,
                 .protocol = IPPROTO_UDP,
                 .saddr = src_paddr->sin_addr.s_addr,
                 .daddr = dest_paddr->sin_addr.s_addr,
+        };
+        struct udphdr udp_hdr = {
+                .source = src_paddr->sin_port,
+                .dest = dest_paddr->sin_port,
+                .len = htons(sizeof(udp_hdr) + len),
         };
         struct iovec iov[3] = {
                 {
@@ -191,14 +204,21 @@ ssize_t packet_sendto_udp(int sockfd, const void *buf, size_t len, int flags,
         ssize_t pktlen;
 
         ip_hdr.check = packet_internet_checksum((void*)&ip_hdr, sizeof(ip_hdr));
+        udp_hdr.check = packet_internet_checksum_udp(&src_paddr->sin_addr,
+                                                     &dest_paddr->sin_addr,
+                                                     ntohs(src_paddr->sin_port),
+                                                     ntohs(dest_paddr->sin_port),
+                                                     buf,
+                                                     len,
+                                                     0);
+
         /*
-         * 0x0000 and 0xffff are equivalent for computing the checksum,
-         * but 0x0000 is reserved to mean that the checksum is not set
-         * and should be ignored by the receiver.
+         * 0x0000 and 0xffff are equivalent for computing the UDP checksum,
+         * but 0x0000 is reserved in UDP headers, to mean that the checksum is
+         * not set and should be ignored by the receiver. Hence, flip it to
+         * 0xffff in that case.
          */
-        udp_hdr.check = packet_internet_checksum_udp(&src_paddr->sin_addr, &dest_paddr->sin_addr,
-                                                     ntohs(src_paddr->sin_port), ntohs(dest_paddr->sin_port),
-                                                     buf, len, 0) ?: 0xffff;
+        udp_hdr.check = udp_hdr.check ?: 0xffff;
 
         pktlen = sendmsg(sockfd, &msg, flags);
         if (pktlen < 0)
@@ -224,15 +244,19 @@ ssize_t packet_sendto_udp(int sockfd, const void *buf, size_t len, int flags,
  *
  * Return: the number of payload bytes received on success, or -1 on error.
  */
-ssize_t packet_recvfrom_udp(int sockfd, void *buf, size_t len, int flags,
+ssize_t packet_recvfrom_udp(int sockfd,
+                            void *buf,
+                            size_t len,
+                            int flags,
                             struct sockaddr_in *src) {
         union {
                 struct iphdr hdr;
-                uint8_t data[2^4 * 4]; /*
-                                        * The ihl field is four bits, representing the
-                                        * length of the header as multiples of four
-                                        * bytes, determining the max IP header length.
-                                        */
+                /*
+                 * Maximum IP-header length is 16 * 4, since it is specified in
+                 * the `ihl` field, which is four bits and interpreted as
+                 * factor of 4. So maximum `ihl` value is `2^4 * 4`.
+                 */
+                uint8_t data[16 * 4];
         } ip_hdr;
         struct udphdr udp_hdr;
         struct iovec iov[3] = {
@@ -283,7 +307,6 @@ ssize_t packet_recvfrom_udp(int sockfd, void *buf, size_t len, int flags,
         }
 
         hdrlen = ip_hdr.hdr.ihl * 4;
-
         if (hdrlen < sizeof(ip_hdr.hdr)) {
                 /*
                  * The length given in the header is smaller than the minimum
@@ -294,13 +317,10 @@ ssize_t packet_recvfrom_udp(int sockfd, void *buf, size_t len, int flags,
         }
 
         /*
-         * Set the length of the IP header in the incoming packet.
+         * Now that we know the ip-header length, we can prepare the iovec to
+         * read the entire packet into the correct buffers.
          */
         iov[0].iov_len = hdrlen;
-
-        /*
-         * Read the full packet.
-         */
         pktlen = recvmsg(sockfd, &msg, flags);
         if (pktlen < 0)
                 return pktlen;
@@ -310,61 +330,55 @@ ssize_t packet_recvfrom_udp(int sockfd, void *buf, size_t len, int flags,
                 if (cmsg->cmsg_level == SOL_PACKET &&
                     cmsg->cmsg_type == PACKET_AUXDATA &&
                     cmsg->cmsg_len == CMSG_LEN(sizeof(struct tpacket_auxdata))) {
-                        struct tpacket_auxdata *aux = (struct tpacket_auxdata*)CMSG_DATA(cmsg);
-
-                        /* The checksum has not yet been fully computed, so the
-                         * value is garbage and should be ignored. */
+                        struct tpacket_auxdata *aux = (void *)CMSG_DATA(cmsg);
                         checksum = !(aux->tp_status & TP_STATUS_CSUMNOTREADY);
                 }
         }
 
-        /* Bounds checks */
+        if ((size_t)pktlen < hdrlen + sizeof(udp_hdr)) {
+                /*
+                 * The packet is too small to even contain an entire UDP
+                 * header, so discard it entirely.
+                 */
+                return 0;
+        } else if ((size_t)pktlen < hdrlen + ntohs(udp_hdr.len)) {
+                /*
+                 * The UDP header specified a longer length than the returned
+                 * packet, so discard it entirely.
+                 */
+                return 0;
+        }
 
-        if ((size_t)pktlen < hdrlen + sizeof(udp_hdr))
-                /*
-                 * The packet is too small to contain an UDP header, discard it.
-                 */
-                return 0;
-        else if ((size_t)pktlen < hdrlen + ntohs(udp_hdr.len))
-                /*
-                 * The received packet is smaller than the declared size, discard it.
-                 */
-                return 0;
-        else
-                /*
-                 * Make @pktlen the length of the packet payload, without IP/UDP headers.
-                 */
-                pktlen = ntohs(udp_hdr.len) - sizeof(struct udphdr);
+        /*
+         * Make @pktlen the length of the packet payload, without IP/UDP
+         * headers, since that is what the caller is interested in.
+         */
+        pktlen = ntohs(udp_hdr.len) - sizeof(struct udphdr);
 
         /* IP */
 
         if (ip_hdr.hdr.protocol != IPPROTO_UDP)
-                /*
-                 * The packet is not UDP, discard it.
-                 */
-                return 0;
-
+                return 0; /* not a UDP packet, discard it */
         if (ip_hdr.hdr.frag_off & htons(IP_MF | IP_OFFMASK))
-                /*
-                 * This is a packet fragment, discard it.
-                 */
-                return 0;
-
+                return 0; /* fragmented packet, discard it */
         if (checksum && packet_internet_checksum(ip_hdr.data, hdrlen))
-                /*
-                 * The IP checksum is invalid, discard the packet.
-                 */
-                return 0;
+                return 0; /* invalid checksum, discard it */
 
         /* UDP */
 
         if (checksum && udp_hdr.check) {
-               if (packet_internet_checksum_udp(&(struct in_addr){ ip_hdr.hdr.saddr }, &(struct in_addr){ ip_hdr.hdr.daddr },
-                                                ntohs(udp_hdr.source), ntohs(udp_hdr.dest),
-                                                buf, pktlen, udp_hdr.check)) {
-                        /*
-                         * The UDP checsum is invalid, discard the packet.
-                         */
+                /*
+                 * Computing the checksum of a packet that has the checksum set
+                 * must yield 0. If it does not yield 0, the packet is invalid,
+                 * in which case we discard it.
+                 */
+               if (packet_internet_checksum_udp(&(struct in_addr){ ip_hdr.hdr.saddr },
+                                                &(struct in_addr){ ip_hdr.hdr.daddr },
+                                                ntohs(udp_hdr.source),
+                                                ntohs(udp_hdr.dest),
+                                                buf,
+                                                pktlen,
+                                                udp_hdr.check)) {
                         return 0;
                }
         }
@@ -375,9 +389,7 @@ ssize_t packet_recvfrom_udp(int sockfd, void *buf, size_t len, int flags,
                 src->sin_port = udp_hdr.source;
         }
 
-        /*
-         * Return the length of the received payload written to @buf, not including the IP and UDP header.
-         */
+        /* Return length of UDP payload (i.e., data written to @buf). */
         return pktlen;
 }
 

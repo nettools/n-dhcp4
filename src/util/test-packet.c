@@ -7,6 +7,8 @@
 #include <net/if_arp.h>
 #include <stdlib.h>
 #include <string.h>
+#include "n-dhcp4-private.h"
+#include "util/link.h"
 #include "util/netns.h"
 #include "util/packet.h"
 #include "test.h"
@@ -26,7 +28,7 @@ static void test_checksum_one(Blob *blob, size_t size) {
         assert(!checksum);
 }
 
-static void test_checksum(void) {
+static void test_checksum_generic(void) {
         Blob blob = {};
 
         for (size_t i = 0; i < sizeof(blob.data); ++i)
@@ -66,15 +68,15 @@ static void test_checksum_udp(void) {
         }
 }
 
-static void test_packet_socket_new(int ns, int *skp, int ifindex) {
+static void test_new_packet_socket(Link *link, int *skp) {
         struct sockaddr_ll addr = {
                 .sll_family = AF_PACKET,
                 .sll_protocol = htons(ETH_P_IP),
-                .sll_ifindex = ifindex,
+                .sll_ifindex = link->ifindex,
         };
         int r, on = 1;
 
-        test_socket_new(ns, skp, AF_PACKET, ifindex);
+        link_socket(link, skp, AF_PACKET, SOCK_DGRAM | SOCK_CLOEXEC);
 
         r = setsockopt(*skp, SOL_PACKET, PACKET_AUXDATA, &on, sizeof(on));
         assert(r >= 0);
@@ -87,7 +89,7 @@ static void test_packet_unicast(int ifindex, int sk, void *buf, size_t n_buf,
                                 const struct sockaddr_in *paddr_src,
                                 const struct sockaddr_in *paddr_dst,
                                 const struct ether_addr *haddr_dst) {
-        struct sockaddr_ll2 addr = {
+        struct packet_sockaddr_ll2 addr = {
                 .sll_family = AF_PACKET,
                 .sll_protocol = htons(ETH_P_IP),
                 .sll_ifindex = ifindex,
@@ -104,7 +106,7 @@ static void test_packet_unicast(int ifindex, int sk, void *buf, size_t n_buf,
 static void test_packet_broadcast(int ifindex, int sk, void *buf, size_t n_buf,
                                   const struct sockaddr_in *paddr_src,
                                   const struct sockaddr_in *paddr_dst) {
-        struct sockaddr_ll2 addr = {
+        struct packet_sockaddr_ll2 addr = {
                 .sll_family = AF_PACKET,
                 .sll_protocol = htons(ETH_P_IP),
                 .sll_ifindex = ifindex,
@@ -118,74 +120,67 @@ static void test_packet_broadcast(int ifindex, int sk, void *buf, size_t n_buf,
         assert(len == (ssize_t)n_buf);
 }
 
-static void test_packet_packet(int ns_src, int ifindex_src,
-                               int ns_dst, int ifindex_dst,
+static void test_packet_packet(Link *link_src,
+                               Link *link_dst,
                                const struct sockaddr_in *paddr_src,
-                               const struct sockaddr_in *paddr_dst,
-                               const struct ether_addr *haddr_dst) {
+                               const struct sockaddr_in *paddr_dst) {
+        _cleanup_(n_dhcp4_closep) int sk_src = -1, sk_dst = -1;
         uint8_t buf[1024];
-        int sk_src, sk_dst;
         ssize_t len;
 
-        test_socket_new(ns_src, &sk_src, AF_PACKET, ifindex_src);
-        test_packet_socket_new(ns_dst, &sk_dst, ifindex_dst);
+        link_socket(link_src, &sk_src, AF_PACKET, SOCK_DGRAM | SOCK_CLOEXEC);
+        test_new_packet_socket(link_dst, &sk_dst);
 
-        test_packet_unicast(ifindex_src, sk_src, buf, sizeof(buf) - 1, paddr_src, paddr_dst, haddr_dst);
-        test_packet_broadcast(ifindex_src, sk_src, buf, sizeof(buf) - 1, paddr_src, paddr_dst);
+        test_packet_unicast(link_src->ifindex, sk_src, buf, sizeof(buf) - 1, paddr_src, paddr_dst, &link_dst->mac);
+        test_packet_broadcast(link_src->ifindex, sk_src, buf, sizeof(buf) - 1, paddr_src, paddr_dst);
 
         len = packet_recvfrom_udp(sk_dst, buf, sizeof(buf), 0, NULL);
         assert(len == (ssize_t)sizeof(buf) - 1);
 
         len = packet_recvfrom_udp(sk_dst, buf, sizeof(buf), 0, NULL);
         assert(len == (ssize_t)sizeof(buf) - 1);
-
-        close(sk_dst);
-        close(sk_src);
 }
 
-static void test_packet_udp(int ns_src, int ifindex_src,
-                            int ns_dst, int ifindex_dst,
-                            const struct sockaddr_in *paddr_src,
-                            const struct sockaddr_in *paddr_dst,
-                            const struct ether_addr *haddr_dst) {
-        uint8_t buf[1024];
-        int sk_src, sk_dst;
-        ssize_t len;
-        int r;
-
-        test_socket_new(ns_src, &sk_src, AF_PACKET, ifindex_src);
-        test_socket_new(ns_dst, &sk_dst, AF_INET, ifindex_dst);
-        test_add_ip(ns_dst, ifindex_dst, &paddr_dst->sin_addr, 8);
-
-        r = bind(sk_dst, (struct sockaddr*)paddr_dst, sizeof(*paddr_dst));
-        assert(r >= 0);
-
-        test_packet_unicast(ifindex_src, sk_src, buf, sizeof(buf) - 1, paddr_src, paddr_dst, haddr_dst);
-        test_packet_broadcast(ifindex_src, sk_src, buf, sizeof(buf) - 1, paddr_src, paddr_dst);
-
-        len = recv(sk_dst, buf, sizeof(buf), 0);
-        assert(len == (ssize_t)sizeof(buf) - 1);
-
-        len = recv(sk_dst, buf, sizeof(buf), 0);
-        assert(len == (ssize_t)sizeof(buf) - 1);
-
-        test_del_ip(ns_dst, ifindex_dst, &paddr_dst->sin_addr, 8);
-        close(sk_dst);
-        close(sk_src);
-}
-
-static void test_udp_packet(int ns_src, int ifindex_src,
-                            int ns_dst, int ifindex_dst,
+static void test_packet_udp(Link *link_src,
+                            Link *link_dst,
                             const struct sockaddr_in *paddr_src,
                             const struct sockaddr_in *paddr_dst) {
+        _cleanup_(n_dhcp4_closep) int sk_src = -1, sk_dst = -1;
         uint8_t buf[1024];
-        int sk_src, sk_dst;
+        ssize_t len;
+        int r;
+
+        link_socket(link_src, &sk_src, AF_PACKET, SOCK_DGRAM | SOCK_CLOEXEC);
+        link_socket(link_dst, &sk_dst, AF_INET, SOCK_DGRAM | SOCK_CLOEXEC);
+        link_add_ip4(link_dst, &paddr_dst->sin_addr, 8);
+
+        r = bind(sk_dst, (struct sockaddr*)paddr_dst, sizeof(*paddr_dst));
+        assert(r >= 0);
+
+        test_packet_unicast(link_src->ifindex, sk_src, buf, sizeof(buf) - 1, paddr_src, paddr_dst, &link_dst->mac);
+        test_packet_broadcast(link_src->ifindex, sk_src, buf, sizeof(buf) - 1, paddr_src, paddr_dst);
+
+        len = recv(sk_dst, buf, sizeof(buf), 0);
+        assert(len == (ssize_t)sizeof(buf) - 1);
+
+        len = recv(sk_dst, buf, sizeof(buf), 0);
+        assert(len == (ssize_t)sizeof(buf) - 1);
+
+        link_del_ip4(link_dst, &paddr_dst->sin_addr, 8);
+}
+
+static void test_udp_packet(Link *link_src,
+                            Link *link_dst,
+                            const struct sockaddr_in *paddr_src,
+                            const struct sockaddr_in *paddr_dst) {
+        _cleanup_(n_dhcp4_closep) int sk_src = -1, sk_dst = -1;
+        uint8_t buf[1024];
         ssize_t len;
 
-        test_socket_new(ns_src, &sk_src, AF_INET, ifindex_src);
-        test_packet_socket_new(ns_dst, &sk_dst, ifindex_dst);
-        test_add_ip(ns_src, ifindex_src, &paddr_src->sin_addr, 8);
-        test_add_ip(ns_dst, ifindex_dst, &paddr_dst->sin_addr, 8);
+        link_socket(link_src, &sk_src, AF_INET, SOCK_DGRAM | SOCK_CLOEXEC);
+        test_new_packet_socket(link_dst, &sk_dst);
+        link_add_ip4(link_src, &paddr_src->sin_addr, 8);
+        link_add_ip4(link_dst, &paddr_dst->sin_addr, 8);
 
         len = sendto(sk_src, buf, sizeof(buf) - 1, 0,
                      (struct sockaddr*)paddr_dst, sizeof(*paddr_dst));
@@ -194,25 +189,23 @@ static void test_udp_packet(int ns_src, int ifindex_src,
         len = packet_recvfrom_udp(sk_dst, buf, sizeof(buf), 0, NULL);
         assert(len == (ssize_t)sizeof(buf) - 1);
 
-        test_del_ip(ns_dst, ifindex_dst, &paddr_dst->sin_addr, 8);
-        test_del_ip(ns_src, ifindex_src, &paddr_src->sin_addr, 8);
-        close(sk_dst);
-        close(sk_src);
+        link_del_ip4(link_dst, &paddr_dst->sin_addr, 8);
+        link_del_ip4(link_src, &paddr_src->sin_addr, 8);
 }
 
-static void test_udp_udp(int ns_src, int ifindex_src,
-                         int ns_dst, int ifindex_dst,
+static void test_udp_udp(Link *link_src,
+                         Link *link_dst,
                          const struct sockaddr_in *paddr_src,
                          const struct sockaddr_in *paddr_dst) {
+        _cleanup_(n_dhcp4_closep) int sk_src = -1, sk_dst = -1;
         uint8_t buf[1024];
-        int sk_src, sk_dst;
         ssize_t len;
         int r;
 
-        test_socket_new(ns_src, &sk_src, AF_INET, ifindex_src);
-        test_socket_new(ns_dst, &sk_dst, AF_INET, ifindex_dst);
-        test_add_ip(ns_src, ifindex_src, &paddr_src->sin_addr, 8);
-        test_add_ip(ns_dst, ifindex_dst, &paddr_dst->sin_addr, 8);
+        link_socket(link_src, &sk_src, AF_INET, SOCK_DGRAM | SOCK_CLOEXEC);
+        link_socket(link_dst, &sk_dst, AF_INET, SOCK_DGRAM | SOCK_CLOEXEC);
+        link_add_ip4(link_src, &paddr_src->sin_addr, 8);
+        link_add_ip4(link_dst, &paddr_dst->sin_addr, 8);
 
         r = bind(sk_dst, (struct sockaddr*)paddr_dst, sizeof(*paddr_dst));
         assert(r >= 0);
@@ -224,24 +217,23 @@ static void test_udp_udp(int ns_src, int ifindex_src,
         len = recv(sk_dst, buf, sizeof(buf), 0);
         assert(len == (ssize_t)sizeof(buf) - 1);
 
-        test_del_ip(ns_dst, ifindex_dst, &paddr_dst->sin_addr, 8);
-        test_del_ip(ns_src, ifindex_src, &paddr_src->sin_addr, 8);
-        close(sk_dst);
-        close(sk_src);
+        link_del_ip4(link_dst, &paddr_dst->sin_addr, 8);
+        link_del_ip4(link_src, &paddr_src->sin_addr, 8);
 }
 
-static void test_shutdown(int ns_src, int ifindex_src,
-                          int ns_dst, int ifindex_dst,
+static void test_shutdown(Link *link_src,
+                          Link *link_dst,
                           const struct sockaddr_in *paddr_src,
                           const struct sockaddr_in *paddr_dst) {
+        _cleanup_(n_dhcp4_closep) int sk_src = -1, sk_dst1 = -1, sk_dst2 = -1;
         uint8_t buf[1024];
-        int r, sk_src, sk_dst1, sk_dst2;
         ssize_t len;
+        int r;
 
-        test_socket_new(ns_src, &sk_src, AF_INET, ifindex_src);
-        test_packet_socket_new(ns_dst, &sk_dst1, ifindex_dst);
-        test_add_ip(ns_src, ifindex_src, &paddr_src->sin_addr, 8);
-        test_add_ip(ns_dst, ifindex_dst, &paddr_dst->sin_addr, 8);
+        link_socket(link_src, &sk_src, AF_INET, SOCK_DGRAM | SOCK_CLOEXEC);
+        test_new_packet_socket(link_dst, &sk_dst1);
+        link_add_ip4(link_src, &paddr_src->sin_addr, 8);
+        link_add_ip4(link_dst, &paddr_dst->sin_addr, 8);
 
         /* 1 - send only to the packet socket */
         len = sendto(sk_src, buf, sizeof(buf), 0,
@@ -249,7 +241,7 @@ static void test_shutdown(int ns_src, int ifindex_src,
         assert(len == (ssize_t)sizeof(buf));
 
         /* create a UDP socket */
-        test_socket_new(ns_dst, &sk_dst2, AF_INET, ifindex_dst);
+        link_socket(link_dst, &sk_dst2, AF_INET, SOCK_DGRAM | SOCK_CLOEXEC);
 
         r = bind(sk_dst2, (struct sockaddr*)paddr_dst, sizeof(*paddr_dst));
         assert(r >= 0);
@@ -290,14 +282,14 @@ static void test_shutdown(int ns_src, int ifindex_src,
         assert(len < 0);
         assert(errno == EAGAIN);
 
-        test_del_ip(ns_dst, ifindex_dst, &paddr_dst->sin_addr, 8);
-        test_del_ip(ns_src, ifindex_src, &paddr_src->sin_addr, 8);
-        close(sk_dst2);
-        close(sk_dst1);
-        close(sk_src);
+        link_del_ip4(link_dst, &paddr_dst->sin_addr, 8);
+        link_del_ip4(link_src, &paddr_src->sin_addr, 8);
 }
 
-int main(int argc, char **argv) {
+static void test_packet(void) {
+        _cleanup_(netns_closep) int ns_src = -1, ns_dst = -1;
+        _cleanup_(link_deinit) Link link_src = LINK_NULL(link_src);
+        _cleanup_(link_deinit) Link link_dst = LINK_NULL(link_dst);
         struct sockaddr_in paddr_src = {
                 .sin_family = AF_INET,
                 .sin_addr = (struct in_addr){ htonl(10<<24 | 1) },
@@ -308,28 +300,31 @@ int main(int argc, char **argv) {
                 .sin_addr = (struct in_addr){ htonl(10<<24 | 2) },
                 .sin_port = htons(11),
         };
-        struct ether_addr haddr_dst;
-        int ifindex_src, ifindex_dst, ns_src, ns_dst;
 
-        test_checksum();
-        test_checksum_udp();
-
-        test_setup();
+        /* setup */
 
         netns_new(&ns_src);
         netns_new(&ns_dst);
+        link_new_veth(&link_src, &link_dst, ns_src, ns_dst);
 
-        test_veth_new(ns_src, &ifindex_src, NULL, ns_dst, &ifindex_dst, &haddr_dst);
+        /* communication tests */
 
-        test_packet_packet(ns_src, ifindex_src, ns_dst, ifindex_dst, &paddr_src, &paddr_dst, &haddr_dst);
-        test_packet_udp(ns_src, ifindex_src, ns_dst, ifindex_dst, &paddr_src, &paddr_dst, &haddr_dst);
-        test_udp_packet(ns_src, ifindex_src, ns_dst, ifindex_dst, &paddr_src, &paddr_dst);
-        test_udp_udp(ns_src, ifindex_src, ns_dst, ifindex_dst, &paddr_src, &paddr_dst);
+        test_packet_packet(&link_src, &link_dst, &paddr_src, &paddr_dst);
+        test_packet_udp(&link_src, &link_dst, &paddr_src, &paddr_dst);
+        test_udp_packet(&link_src, &link_dst, &paddr_src, &paddr_dst);
+        test_udp_udp(&link_src, &link_dst, &paddr_src, &paddr_dst);
 
-        test_shutdown(ns_src, ifindex_src, ns_dst, ifindex_dst, &paddr_src, &paddr_dst);
+        /* management tests */
 
-        close(ns_dst);
-        close(ns_src);
+        test_shutdown(&link_src, &link_dst, &paddr_src, &paddr_dst);
+}
+
+int main(int argc, char **argv) {
+        test_setup();
+
+        test_checksum_generic();
+        test_checksum_udp();
+        test_packet();
 
         return 0;
 }

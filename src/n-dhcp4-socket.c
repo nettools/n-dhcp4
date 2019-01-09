@@ -340,7 +340,7 @@ static int n_dhcp4_socket_packet_send(int sockfd,
                                       unsigned char halen,
                                       const struct sockaddr_in *dest_paddr,
                                       NDhcp4Outgoing *message) {
-        struct sockaddr_ll2 haddr = {
+        struct packet_sockaddr_ll2 haddr = {
                 .sll_family = AF_PACKET,
                 .sll_protocol = htons(ETH_P_IP),
                 .sll_ifindex = ifindex,
