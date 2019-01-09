@@ -331,6 +331,19 @@ ssize_t packet_recvfrom_udp(int sockfd,
                 }
         }
 
+        if (ntohs(ip_hdr.hdr.tot_len) > pktlen) {
+                /*
+                 * The IP-packet is bigger than the chunk returned by the
+                 * kernel. So either the packet is corrupt, or our caller
+                 * provided too small a buffer. In both cases, we simply drop
+                 * the packet.
+                 */
+                return 0;
+        }
+
+        /* Truncate trailing garbage. */
+        pktlen = ntohs(ip_hdr.hdr.tot_len);
+
         if ((size_t)pktlen < hdrlen + sizeof(udp_hdr)) {
                 /*
                  * The packet is too small to even contain an entire UDP
