@@ -609,6 +609,7 @@ int n_dhcp4_c_connection_select_new(NDhcp4CConnection *connection,
         if (r)
                 return r;
 
+        n_dhcp4_c_connection_outgoing_set_xid(message, xid);
         n_dhcp4_c_connection_outgoing_set_secs(message, secs);
 
         r = n_dhcp4_outgoing_append(message, N_DHCP4_OPTION_REQUESTED_IP_ADDRESS, &client, sizeof(client));
