@@ -598,7 +598,7 @@ static int n_dhcp4_socket_udp_recv(int sockfd,
                         return N_DHCP4_E_AGAIN;
                 else
                         return -errno;
-        } else if (len == 0 || len > n_buf) {
+        } else if (len == 0 || (size_t)len > n_buf) {
                 *messagep = NULL;
                 return 0;
         }
