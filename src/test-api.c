@@ -25,6 +25,14 @@ static void test_api_constants(void) {
         assert(1 + N_DHCP4_CLIENT_EVENT_EXPIRED);
         assert(1 + N_DHCP4_CLIENT_EVENT_CANCELLED);
         assert(1 + _N_DHCP4_CLIENT_EVENT_N);
+
+        assert(1 + N_DHCP4_SERVER_EVENT_DOWN);
+        assert(1 + N_DHCP4_SERVER_EVENT_DISCOVER);
+        assert(1 + N_DHCP4_SERVER_EVENT_REQUEST);
+        assert(1 + N_DHCP4_SERVER_EVENT_RENEW);
+        assert(1 + N_DHCP4_SERVER_EVENT_DECLINE);
+        assert(1 + N_DHCP4_SERVER_EVENT_RELEASE);
+        assert(1 + _N_DHCP4_SERVER_EVENT_N);
 }
 
 static void test_api_types(void) {
@@ -34,6 +42,10 @@ static void test_api_types(void) {
         assert(sizeof(NDhcp4ClientEvent*) > 0);
         assert(sizeof(NDhcp4ClientProbe*) > 0);
         assert(sizeof(NDhcp4ClientLease*) > 0);
+        assert(sizeof(NDhcp4Server*) > 0);
+        assert(sizeof(NDhcp4ServerConfig*) > 0);
+        assert(sizeof(NDhcp4ServerEvent*) > 0);
+        assert(sizeof(NDhcp4ServerLease*) > 0);
 }
 
 static void test_api_functions(void) {
@@ -81,6 +93,33 @@ static void test_api_functions(void) {
                 (void *)n_dhcp4_client_lease_select,
                 (void *)n_dhcp4_client_lease_accept,
                 (void *)n_dhcp4_client_lease_decline,
+
+                (void *)n_dhcp4_server_config_new,
+                (void *)n_dhcp4_server_config_free,
+                (void *)n_dhcp4_server_config_freep,
+                (void *)n_dhcp4_server_config_freev,
+                (void *)n_dhcp4_server_config_set_ifindex,
+
+                (void *)n_dhcp4_server_new,
+                (void *)n_dhcp4_server_ref,
+                (void *)n_dhcp4_server_unref,
+                (void *)n_dhcp4_server_unrefp,
+                (void *)n_dhcp4_server_unrefv,
+                (void *)n_dhcp4_server_get_fd,
+                (void *)n_dhcp4_server_dispatch,
+                (void *)n_dhcp4_server_pop_event,
+                (void *)n_dhcp4_server_add_ip,
+                (void *)n_dhcp4_server_remove_ip,
+
+                (void *)n_dhcp4_server_lease_ref,
+                (void *)n_dhcp4_server_lease_unref,
+                (void *)n_dhcp4_server_lease_unrefp,
+                (void *)n_dhcp4_server_lease_unrefv,
+                (void *)n_dhcp4_server_lease_query,
+                (void *)n_dhcp4_server_lease_append,
+                (void *)n_dhcp4_server_lease_offer,
+                (void *)n_dhcp4_server_lease_ack,
+                (void *)n_dhcp4_server_lease_nack,
         };
         size_t i;
 

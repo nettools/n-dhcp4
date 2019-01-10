@@ -33,6 +33,27 @@ global:
         n_dhcp4_client_lease_select;
         n_dhcp4_client_lease_accept;
         n_dhcp4_client_lease_decline;
+
+        n_dhcp4_server_config_new;
+        n_dhcp4_server_config_free;
+        n_dhcp4_server_config_set_ifindex;
+
+        n_dhcp4_server_new;
+        n_dhcp4_server_ref;
+        n_dhcp4_server_unref;
+        n_dhcp4_server_get_fd;
+        n_dhcp4_server_dispatch;
+        n_dhcp4_server_pop_event;
+        n_dhcp4_server_add_ip;
+        n_dhcp4_server_remove_ip;
+
+        n_dhcp4_server_lease_ref;
+        n_dhcp4_server_lease_unref;
+        n_dhcp4_server_lease_query;
+        n_dhcp4_server_lease_append;
+        n_dhcp4_server_lease_offer;
+        n_dhcp4_server_lease_ack;
+        n_dhcp4_server_lease_nack;
 local:
        *;
 };
