@@ -23,6 +23,7 @@ libndhcp4_private = static_library(
                 'util/link.c',
                 'util/netns.c',
                 'util/packet.c',
+                'util/socket.c',
         ],
         c_args: [
                 '-fvisibility=hidden',

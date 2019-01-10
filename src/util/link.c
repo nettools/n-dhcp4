@@ -15,6 +15,7 @@
 #include <unistd.h>
 #include "util/link.h"
 #include "util/netns.h"
+#include "util/socket.h"
 
 /**
  * link_deinit() - deinitialize link
@@ -266,19 +267,15 @@ void link_socket(Link *link, int *socketp, int family, int type) {
 
         netns_get(&oldns);
         {
-                char *p, ifname[IF_NAMESIZE + 1] = {};
                 int r, fd;
 
                 netns_set(link->netns);
 
-                p = if_indextoname(link->ifindex, ifname);
-                assert(p);
-
                 fd = socket(family, type, 0);
                 assert(fd >= 0);
 
-                r = setsockopt(fd, SOL_SOCKET, SO_BINDTODEVICE, ifname, strlen(ifname));
-                assert(r >= 0);
+                r = socket_bind_if(fd, link->ifindex);
+                assert(!r);
 
                 *socketp = fd;
         }

@@ -16,6 +16,7 @@
 #include <sys/socket.h>
 #include "n-dhcp4-private.h"
 #include "util/packet.h"
+#include "util/socket.h"
 
 /**
  * n_dhcp4_c_socket_packet_new() - create a new DHCP4 client packet socket
@@ -186,11 +187,7 @@ int n_dhcp4_c_socket_udp_new(int *sockfdp,
                 .sin_addr = *server_addr,
                 .sin_port = htons(N_DHCP4_NETWORK_SERVER_PORT),
         };
-        char ifname[IF_NAMESIZE];
         int r, tos = IPTOS_CLASS_CS6, on = 1;
-
-        if (!if_indextoname(ifindex, ifname))
-                return -errno;
 
         sockfd = socket(AF_INET, SOCK_DGRAM | SOCK_CLOEXEC | SOCK_NONBLOCK, 0);
         if (sockfd < 0)
@@ -200,9 +197,9 @@ int n_dhcp4_c_socket_udp_new(int *sockfdp,
         if (r < 0)
                 return -errno;
 
-        r = setsockopt(sockfd, SOL_SOCKET, SO_BINDTODEVICE, ifname, strlen(ifname));
-        if (r < 0)
-                return -errno;
+        r = socket_bind_if(sockfd, ifindex);
+        if (r)
+                return r;
 
         r = setsockopt(sockfd, SOL_SOCKET, SO_BROADCAST, &on, sizeof(on));
         if (r < 0)
@@ -296,11 +293,7 @@ int n_dhcp4_s_socket_udp_new(int *sockfdp, int ifindex) {
                 .sin_addr = { INADDR_ANY },
                 .sin_port = htons(N_DHCP4_NETWORK_SERVER_PORT),
         };
-        char ifname[IF_NAMESIZE];
         int r, tos = IPTOS_CLASS_CS6, on = 1;
-
-        if (!if_indextoname(ifindex, ifname))
-                return -errno;
 
         sockfd = socket(AF_INET, SOCK_DGRAM | SOCK_CLOEXEC | SOCK_NONBLOCK, 0);
         if (sockfd < 0)
@@ -310,9 +303,9 @@ int n_dhcp4_s_socket_udp_new(int *sockfdp, int ifindex) {
         if (r < 0)
                 return -errno;
 
-        r = setsockopt(sockfd, SOL_SOCKET, SO_BINDTODEVICE, ifname, strlen(ifname));
-        if (r < 0)
-                return -errno;
+        r = socket_bind_if(sockfd, ifindex);
+        if (r)
+                return r;
 
         r = setsockopt(sockfd, SOL_SOCKET, SO_BROADCAST, &on, sizeof(on));
         if (r < 0)
