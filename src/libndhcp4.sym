@@ -1,10 +1,38 @@
 LIBNDHCP4_1 {
 global:
+        n_dhcp4_client_config_new;
+        n_dhcp4_client_config_free;
+        n_dhcp4_client_config_set_ifindex;
+        n_dhcp4_client_config_set_transport;
+        n_dhcp4_client_config_set_mac;
+        n_dhcp4_client_config_set_broadcast_mac;
+        n_dhcp4_client_config_set_client_id;
+
+        n_dhcp4_client_probe_config_new;
+        n_dhcp4_client_probe_config_free;
+        n_dhcp4_client_probe_config_set_inform_only;
+        n_dhcp4_client_probe_config_set_init_reboot;
+        n_dhcp4_client_probe_config_set_requested_ip;
+
         n_dhcp4_client_new;
         n_dhcp4_client_ref;
         n_dhcp4_client_unref;
         n_dhcp4_client_get_fd;
         n_dhcp4_client_dispatch;
+        n_dhcp4_client_pop_event;
+        n_dhcp4_client_update_mtu;
+        n_dhcp4_client_probe;
+
+        n_dhcp4_client_probe_free;
+        n_dhcp4_client_probe_get_userdata;
+        n_dhcp4_client_probe_set_userdata;
+
+        n_dhcp4_client_lease_ref;
+        n_dhcp4_client_lease_unref;
+        n_dhcp4_client_lease_query;
+        n_dhcp4_client_lease_select;
+        n_dhcp4_client_lease_accept;
+        n_dhcp4_client_lease_decline;
 local:
        *;
 };
