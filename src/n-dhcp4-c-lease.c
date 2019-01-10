@@ -168,3 +168,18 @@ _public_ int n_dhcp4_client_lease_query(NDhcp4ClientLease *lease, uint8_t option
 
         return n_dhcp4_incoming_query(lease->message, option, datap, n_datap);
 }
+
+_public_ int n_dhcp4_client_lease_select(NDhcp4ClientLease *lease) {
+        /* XXX */
+        return -ENOTRECOVERABLE;
+}
+
+_public_ int n_dhcp4_client_lease_accept(NDhcp4ClientLease *lease) {
+        /* XXX */
+        return -ENOTRECOVERABLE;
+}
+
+_public_ int n_dhcp4_client_lease_decline(NDhcp4ClientLease *lease) {
+        /* XXX */
+        return -ENOTRECOVERABLE;
+}
