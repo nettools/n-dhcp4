@@ -54,6 +54,16 @@ enum {
         _N_DHCP4_CLIENT_EVENT_N,
 };
 
+enum {
+        N_DHCP4_SERVER_EVENT_DOWN,
+        N_DHCP4_SERVER_EVENT_DISCOVER,
+        N_DHCP4_SERVER_EVENT_REQUEST,
+        N_DHCP4_SERVER_EVENT_RENEW,
+        N_DHCP4_SERVER_EVENT_DECLINE,
+        N_DHCP4_SERVER_EVENT_RELEASE,
+        _N_DHCP4_SERVER_EVENT_N,
+};
+
 struct NDhcp4ClientEvent {
         unsigned int event;
         union {
@@ -66,6 +76,17 @@ struct NDhcp4ClientEvent {
                 struct {
                         NDhcp4ClientProbe *probe;
                 } retracted, expired, cancelled;
+        };
+};
+
+struct NDhcp4ServerEvent {
+        unsigned int event;
+        union {
+                struct {
+                } down;
+                struct {
+                        NDhcp4ServerLease *lease;
+                } discover, request, decline, release;
         };
 };
 
@@ -199,6 +220,33 @@ static inline void n_dhcp4_client_lease_unrefp(NDhcp4ClientLease **p) {
 
 static inline void n_dhcp4_client_lease_unrefv(NDhcp4ClientLease *p) {
         n_dhcp4_client_lease_unref(p);
+}
+
+static inline void n_dhcp4_server_config_freep(NDhcp4ServerConfig **p) {
+        if (*p)
+                n_dhcp4_server_config_free(*p);
+}
+
+static inline void n_dhcp4_server_config_freev(NDhcp4ServerConfig *p) {
+        n_dhcp4_server_config_free(p);
+}
+
+static inline void n_dhcp4_server_unrefp(NDhcp4Server **p) {
+        if (*p)
+                n_dhcp4_server_unref(*p);
+}
+
+static inline void n_dhcp4_server_unrefv(NDhcp4Server *p) {
+        n_dhcp4_server_unref(p);
+}
+
+static inline void n_dhcp4_server_lease_unrefp(NDhcp4ServerLease **p) {
+        if (*p)
+                n_dhcp4_server_lease_unref(*p);
+}
+
+static inline void n_dhcp4_server_lease_unrefv(NDhcp4ServerLease *p) {
+        n_dhcp4_server_lease_unref(p);
 }
 
 #ifdef __cplusplus

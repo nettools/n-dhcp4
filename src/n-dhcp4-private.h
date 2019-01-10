@@ -17,6 +17,7 @@ typedef struct NDhcp4Incoming NDhcp4Incoming;
 typedef struct NDhcp4Message NDhcp4Message;
 typedef struct NDhcp4Outgoing NDhcp4Outgoing;
 typedef struct NDhcp4SConnection NDhcp4SConnection;
+typedef struct NDhcp4SEventNode NDhcp4SEventNode;
 
 /* macros */
 
@@ -171,6 +172,7 @@ enum {
 };
 
 enum {
+        N_DHCP4_SERVER_EPOLL_TIMER,
         N_DHCP4_SERVER_EPOLL_IO,
 };
 
@@ -338,6 +340,23 @@ struct NDhcp4ClientLease {
                 .probe_link = C_LIST_INIT((_x).probe_link),                     \
         }
 
+struct NDhcp4ServerConfig {
+        int ifindex;
+};
+
+#define N_DHCP4_SERVER_CONFIG_NULL(_x) {                                        \
+        }
+
+struct NDhcp4SEventNode {
+        CList server_link;
+        NDhcp4ServerEvent event;
+        bool is_public : 1;
+};
+
+#define N_DHCP4_S_EVENT_NODE_NULL(_x) {                                         \
+                .server_link = C_LIST_INIT((_x).server_link),                   \
+        }
+
 struct NDhcp4SConnection {
         int *fd_epollp;                 /* epoll fd */
         int ifindex;                    /* interface index */
@@ -352,6 +371,43 @@ struct NDhcp4SConnection {
 #define N_DHCP4_S_CONNECTION_NULL(_x) {                                         \
                 .fd_packet = -1,                                                \
                 .fd_udp = -1,                                                   \
+        }
+
+struct NDhcp4Server {
+        unsigned long n_refs;
+        CList event_list;
+        CList lease_list;
+
+        int fd_epoll;
+        int fd_timer;
+
+        bool preempted : 1;
+
+        NDhcp4SConnection connection;
+};
+
+#define N_DHCP4_SERVER_NULL(_x) {                                               \
+                .n_refs = 1,                                                    \
+                .event_list = C_LIST_INIT((_x).event_list),                     \
+                .lease_list = C_LIST_INIT((_x).lease_list),                     \
+                .fd_epoll = -1,                                                 \
+                .fd_timer = -1,                                                 \
+                .connection = N_DHCP4_S_CONNECTION_NULL((_x).connection),       \
+        }
+
+struct NDhcp4ServerLease {
+        unsigned long n_refs;
+
+        NDhcp4Server *server;
+        CList server_link;
+
+        NDhcp4Incoming *request;
+        NDhcp4Incoming *reply;
+};
+
+#define N_DHCP4_SERVER_LEASE_NULL(_x) {                                         \
+                .n_refs = 1,                                                    \
+                .server_link = C_LIST_INIT((_x).server_link),                   \
         }
 
 /* outgoing messages */

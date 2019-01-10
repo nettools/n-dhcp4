@@ -19,6 +19,8 @@ libndhcp4_private = static_library(
                 'n-dhcp4-incoming.c',
                 'n-dhcp4-outgoing.c',
                 'n-dhcp4-s-connection.c',
+                'n-dhcp4-s-lease.c',
+                'n-dhcp4-server.c',
                 'n-dhcp4-socket.c',
                 'util/link.c',
                 'util/netns.c',
