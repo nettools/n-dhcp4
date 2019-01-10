@@ -470,9 +470,6 @@ int n_dhcp4_c_connection_start_request(NDhcp4CConnection *connection,
                                        NDhcp4Outgoing *request,
                                        uint64_t timestamp);
 
-/* client leases */
-int n_dhcp4_client_lease_new(NDhcp4ClientLease **leasep, NDhcp4Incoming *message);
-
 /* clients */
 
 int n_dhcp4_client_raise(NDhcp4Client *client, NDhcp4CEventNode **nodep, unsigned int event);
@@ -488,6 +485,10 @@ void n_dhcp4_client_probe_get_timeout(NDhcp4ClientProbe *probe, uint64_t *timeou
 int n_dhcp4_client_probe_dispatch_timer(NDhcp4ClientProbe *probe);
 int n_dhcp4_client_probe_dispatch_io(NDhcp4ClientProbe *probe, uint32_t events);
 int n_dhcp4_client_probe_update_mtu(NDhcp4ClientProbe *probe, uint16_t mtu);
+
+/* client leases */
+
+int n_dhcp4_client_lease_new(NDhcp4ClientLease **leasep, NDhcp4Incoming *message);
 
 /* server connections */
 
