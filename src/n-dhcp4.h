@@ -117,7 +117,7 @@ void n_dhcp4_client_probe_get_userdata(NDhcp4ClientProbe *probe, void **userdata
 NDhcp4ClientLease *n_dhcp4_client_lease_ref(NDhcp4ClientLease *lease);
 NDhcp4ClientLease *n_dhcp4_client_lease_unref(NDhcp4ClientLease *lease);
 
-int n_dhpc4_client_lease_query(NDhcp4ClientLease *lease, uint8_t option, uint8_t **datap, size_t *n_datap);
+int n_dhcp4_client_lease_query(NDhcp4ClientLease *lease, uint8_t option, uint8_t **datap, size_t *n_datap);
 int n_dhcp4_client_lease_select(NDhcp4ClientLease *lease);
 int n_dhcp4_client_lease_accept(NDhcp4ClientLease *lease);
 int n_dhcp4_client_lease_decline(NDhcp4ClientLease *lease);
