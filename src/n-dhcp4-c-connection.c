@@ -227,13 +227,12 @@ static int n_dhcp4_c_connection_incoming_get_server_identifier(NDhcp4Incoming *m
 }
 
 static int n_dhcp4_c_connection_verify_incoming(NDhcp4CConnection *connection,
-                                                NDhcp4Incoming *message) {
+                                                NDhcp4Incoming *message,
+                                                uint8_t *typep) {
         NDhcp4Header *header = n_dhcp4_incoming_get_header(message);
         uint8_t *type;
         size_t n_type;
         uint32_t request_xid;
-        uint64_t start_time = 0;
-        uint64_t base_time = 0;
         uint8_t *id = NULL;
         size_t idlen = 0;
         int r;
@@ -263,14 +262,6 @@ static int n_dhcp4_c_connection_verify_incoming(NDhcp4CConnection *connection,
                 if (header->xid != request_xid)
                         return N_DHCP4_E_UNEXPECTED;
 
-                /*
-                 * Remember the start time of the transaction, and the base
-                 * time of any relative timestamps from the pending request.
-                 * Thes same times applies to the response, and sholud be
-                 * copied over.
-                 */
-                start_time = connection->request->userdata.start_time;
-                base_time = connection->request->userdata.base_time;
                 break;
         case N_DHCP4_MESSAGE_FORCERENEW:
                 /*
@@ -305,10 +296,7 @@ static int n_dhcp4_c_connection_verify_incoming(NDhcp4CConnection *connection,
         if (memcmp(connection->id, id, idlen) != 0)
                 return N_DHCP4_E_UNEXPECTED;
 
-        message->userdata.base_time = base_time;
-        message->userdata.start_time = start_time;
-        connection->request = n_dhcp4_outgoing_free(connection->request);
-
+        *typep = *type;
         return 0;
 }
 
@@ -1017,6 +1005,7 @@ int n_dhcp4_c_connection_dispatch_timer(NDhcp4CConnection *connection, uint64_t 
 int n_dhcp4_c_connection_dispatch_io(NDhcp4CConnection *connection,
                                      NDhcp4Incoming **messagep) {
         _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *message = NULL;
+        uint8_t type;
         int r;
 
         switch (connection->state) {
@@ -1049,7 +1038,7 @@ int n_dhcp4_c_connection_dispatch_io(NDhcp4CConnection *connection,
                         return r;
         }
 
-        r = n_dhcp4_c_connection_verify_incoming(connection, message);
+        r = n_dhcp4_c_connection_verify_incoming(connection, message, &type);
         if (r) {
                 if (r == N_DHCP4_E_MALFORMED) {
                         *messagep = NULL;
@@ -1057,6 +1046,32 @@ int n_dhcp4_c_connection_dispatch_io(NDhcp4CConnection *connection,
                 }
 
                 return -ENOTRECOVERABLE;
+        }
+
+        switch (type) {
+        case N_DHCP4_MESSAGE_OFFER:
+        case N_DHCP4_MESSAGE_ACK:
+        case N_DHCP4_MESSAGE_NAK:
+                /*
+                 * Remember the start time of the transaction, and the base
+                 * time of any relative timestamps from the pending request.
+                 * Thes same times applies to the response, and sholud be
+                 * copied over.
+                 */
+                message->userdata.start_time = connection->request->userdata.start_time;
+                message->userdata.base_time = connection->request->userdata.base_time;
+
+                if (type != N_DHCP4_MESSAGE_OFFER) {
+                        /*
+                         * We only allow one reply to ACK or NAK, but for OFFER we must
+                         * accept several, so we do not free the pinned request.
+                         */
+                        connection->request = n_dhcp4_outgoing_free(connection->request);
+                }
+
+                break;
+        default:
+                break;
         }
 
         *messagep = message;
