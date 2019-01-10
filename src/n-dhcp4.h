@@ -23,6 +23,10 @@ typedef struct NDhcp4ClientEvent NDhcp4ClientEvent;
 typedef struct NDhcp4ClientLease NDhcp4ClientLease;
 typedef struct NDhcp4ClientProbe NDhcp4ClientProbe;
 typedef struct NDhcp4ClientProbeConfig NDhcp4ClientProbeConfig;
+typedef struct NDhcp4Server NDhcp4Server;
+typedef struct NDhcp4ServerConfig NDhcp4ServerConfig;
+typedef struct NDhcp4ServerEvent NDhcp4ServerEvent;
+typedef struct NDhcp4ServerLease NDhcp4ServerLease;
 
 enum {
         _N_DHCP4_E_SUCCESS,
@@ -117,6 +121,38 @@ int n_dhpc4_client_lease_query(NDhcp4ClientLease *lease, uint8_t option, uint8_t
 int n_dhcp4_client_lease_select(NDhcp4ClientLease *lease);
 int n_dhcp4_client_lease_accept(NDhcp4ClientLease *lease);
 int n_dhcp4_client_lease_decline(NDhcp4ClientLease *lease);
+
+/* server configs */
+
+int n_dhcp4_server_config_new(NDhcp4ServerConfig **configp);
+NDhcp4ServerConfig *n_dhcp4_server_config_free(NDhcp4ServerConfig *config);
+
+void n_dhcp4_server_config_set_ifindex(NDhcp4ServerConfig *config, int ifindex);
+
+/* servers */
+
+int n_dhcp4_server_new(NDhcp4Server **serverp);
+NDhcp4Server *n_dhcp4_server_ref(NDhcp4Server *server);
+NDhcp4Server *n_dhcp4_server_unref(NDhcp4Server *server);
+
+void n_dhcp4_server_get_fd(NDhcp4Server *server, int *fdp);
+int n_dhcp4_server_dispatch(NDhcp4Server *server);
+int n_dhcp4_server_pop_event(NDhcp4Server *server, NDhcp4ServerEvent **eventp);
+
+int n_dhcp4_server_add_ip(NDhcp4Server *server, struct in_addr ip);
+int n_dhcp4_server_remove_ip(NDhcp4Server *server, struct in_addr ip);
+
+/* server leases */
+
+NDhcp4ServerLease *n_dhcp4_server_lease_ref(NDhcp4ServerLease *lease);
+NDhcp4ServerLease *n_dhcp4_server_lease_unref(NDhcp4ServerLease *lease);
+
+int n_dhcp4_server_lease_query(NDhcp4ServerLease *lease, uint8_t option, uint8_t **datap, size_t *n_datap);
+int n_dhcp4_server_lease_append(NDhcp4ServerLease *lease, uint8_t option, uint8_t *data, size_t n_data);
+
+int n_dhcp4_server_lease_offer(NDhcp4ServerLease *lease);
+int n_dhcp4_server_lease_ack(NDhcp4ServerLease *lease);
+int n_dhcp4_server_lease_nack(NDhcp4ServerLease *lease);
 
 /* inline helpers */
 
