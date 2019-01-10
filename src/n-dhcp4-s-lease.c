@@ -80,3 +80,23 @@ _public_ int n_dhcp4_server_lease_query(NDhcp4ServerLease *lease, uint8_t option
 
         return n_dhcp4_incoming_query(lease->request, option, datap, n_datap);
 }
+
+_public_ int n_dhcp4_server_lease_append(NDhcp4ServerLease *lease, uint8_t option, uint8_t *data, size_t n_data) {
+        /* XXX */
+        return -ENOTRECOVERABLE;
+}
+
+_public_ int n_dhcp4_server_lease_offer(NDhcp4ServerLease *lease) {
+        /* XXX */
+        return -ENOTRECOVERABLE;
+}
+
+_public_ int n_dhcp4_server_lease_ack(NDhcp4ServerLease *lease) {
+        /* XXX */
+        return -ENOTRECOVERABLE;
+}
+
+_public_ int n_dhcp4_server_lease_nack(NDhcp4ServerLease *lease) {
+        /* XXX */
+        return -ENOTRECOVERABLE;
+}
