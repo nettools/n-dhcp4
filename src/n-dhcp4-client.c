@@ -90,6 +90,8 @@ _public_ int n_dhcp4_client_config_set_client_id(NDhcp4ClientConfig *config, con
 
         free(config->client_id);
         config->client_id = t;
+        config->n_client_id = n_id;
+
         memcpy(config->client_id, id, n_id);
         config->client_id[n_id] = 0; /* safety 0 for debugging */
 
