@@ -19,7 +19,17 @@
 #include "util/packet.h"
 
 /**
- * n_dhcp4_client_config_new() - XXX
+ * n_dhcp4_client_config_new() - allocate new client configuration
+ * @configp:                    output argument for new client config
+ *
+ * This creates a new client configuration object. Client configurations are
+ * unlinked objects that merely serve as collection of parameters. They do not
+ * perform validity checks.
+ *
+ * The new client configuration is fully owned by the caller. They are
+ * responsible to free the object if no longer needed.
+ *
+ * Return: 0 on success, negative error code on failure.
  */
 _public_ int n_dhcp4_client_config_new(NDhcp4ClientConfig **configp) {
         _cleanup_(n_dhcp4_client_config_freep) NDhcp4ClientConfig *config = NULL;
@@ -36,7 +46,13 @@ _public_ int n_dhcp4_client_config_new(NDhcp4ClientConfig **configp) {
 }
 
 /**
- * n_dhcp4_client_config_free() - XXX
+ * n_dhcp4_client_config_free() - destroy client configuration
+ * @config:                     client configuration to operate on, or NULL
+ *
+ * This destroys a client configuration and deallocates all its resources. If
+ * NULL is passed, this is a no-op.
+ *
+ * Return: NULL is returned.
  */
 _public_ NDhcp4ClientConfig *n_dhcp4_client_config_free(NDhcp4ClientConfig *config) {
         if (!config)
@@ -49,21 +65,51 @@ _public_ NDhcp4ClientConfig *n_dhcp4_client_config_free(NDhcp4ClientConfig *conf
 }
 
 /**
- * n_dhcp4_client_config_set_ifindex() - XXX
+ * n_dhcp4_client_config_set_ifindex() - set ifindex property
+ * @config:                     client configuration to operate on
+ * @ifindex:                    ifindex to set
+ *
+ * This sets the ifindex property of the client configuration. The ifindex
+ * specifies the network device that a DHCP client will run on.
  */
 _public_ void n_dhcp4_client_config_set_ifindex(NDhcp4ClientConfig *config, int ifindex) {
         config->ifindex = ifindex;
 }
 
 /**
- * n_dhcp4_client_config_set_transport() - XXX
+ * n_dhcp4_client_config_set_transport() - set transport property
+ * @config:                     client configuration to operate on
+ * @transport:                  transport to set
+ *
+ * This sets the transport property of the client configuration. The transport
+ * defines the hardware transport of the network device that a DHCP client
+ * runs on.
+ *
+ * This takes one of the N_DHCP4_TRANSPORT_* identifiers as argument.
  */
 _public_ void n_dhcp4_client_config_set_transport(NDhcp4ClientConfig *config, unsigned int transport) {
         config->transport = transport;
 }
 
 /**
- * n_dhcp4_client_config_set_mac() - XXX
+ * n_dhcp4_client_config_set_mac() - set mac property
+ * @config:                     client configuration to operate on
+ * @mac:                        hardware address to set
+ * @n_mac:                      length of the hardware address
+ *
+ * This sets the mac property of the client configuration. It specifies the
+ * hardware address of the local interface that the DHCP client runs on.
+ *
+ * This function copies the specified hardware address into @config. Any
+ * hardware address is supported. It is up to the consumer of the client
+ * configuration to verify the validity of the hardware address.
+ *
+ * Note: This function may truncate the hardware address internally, but
+ *       retains the original length. The consumer of this configuration can
+ *       thus tell whether the data was truncated and will refuse it.
+ *       The internal buffer is big enough to hold any hardware address of all
+ *       supported transports. Thus, truncation only happens if you use
+ *       unsupported transports, and those will be rejected, anyway.
  */
 _public_ void n_dhcp4_client_config_set_mac(NDhcp4ClientConfig *config, const uint8_t *mac, size_t n_mac) {
         config->n_mac = n_mac;
@@ -71,7 +117,25 @@ _public_ void n_dhcp4_client_config_set_mac(NDhcp4ClientConfig *config, const ui
 }
 
 /**
- * n_dhcp4_client_config_set_broadcast_mac() - XXX
+ * n_dhcp4_client_config_set_broadcast_mac() - set broadcast-mac property
+ * @config:                     client configuration to operate on
+ * @mac:                        hardware address to set
+ * @n_mac:                      length of the hardware address
+ *
+ * This sets the broadcast-mac property of the client configuration. It
+ * specifies the destination hardware address to use for broadcasts on the
+ * local interface that the DHCP client runs on.
+ *
+ * This function copies the specified hardware address into @config. Any
+ * hardware address is supported. It is up to the consumer of the client
+ * configuration to verify the validity of the hardware address.
+ *
+ * Note: This function may truncate the hardware address internally, but
+ *       retains the original length. The consumer of this configuration can
+ *       thus tell whether the data was truncated and will refuse it.
+ *       The internal buffer is big enough to hold any hardware address of all
+ *       supported transports. Thus, truncation only happens if you use
+ *       unsupported transports, and those will be rejected, anyway.
  */
 _public_ void n_dhcp4_client_config_set_broadcast_mac(NDhcp4ClientConfig *config, const uint8_t *mac, size_t n_mac) {
         config->n_broadcast_mac = n_mac;
@@ -79,7 +143,15 @@ _public_ void n_dhcp4_client_config_set_broadcast_mac(NDhcp4ClientConfig *config
 }
 
 /**
- * n_dhcp4_client_config_set_client_id() - XXX
+ * n_dhcp4_client_config_set_client_id() - set client-id property
+ * @config:                     client configuration to operate on
+ * @id:                         client id
+ * @n_id:                       length of the client id in bytes
+ *
+ * This sets the client-id property of @config. It copies the entire client-id
+ * buffer into the configuration.
+ *
+ * Return: 0 on success, negative error code on failure.
  */
 _public_ int n_dhcp4_client_config_set_client_id(NDhcp4ClientConfig *config, const uint8_t *id, size_t n_id) {
         uint8_t *t;
