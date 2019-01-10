@@ -112,7 +112,7 @@ void n_dhcp4_client_probe_config_set_requested_ip(NDhcp4ClientProbeConfig *confi
 
 /* clients */
 
-int n_dhcp4_client_new(NDhcp4Client **clientp);
+int n_dhcp4_client_new(NDhcp4Client **clientp, NDhcp4ClientConfig *config);
 NDhcp4Client *n_dhcp4_client_ref(NDhcp4Client *client);
 NDhcp4Client *n_dhcp4_client_unref(NDhcp4Client *client);
 

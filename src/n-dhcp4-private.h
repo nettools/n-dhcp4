@@ -285,6 +285,7 @@ struct NDhcp4CConnection {
 
 struct NDhcp4Client {
         unsigned long n_refs;
+        NDhcp4ClientConfig *config;
         CList event_list;
         int fd_epoll;
         int fd_timer;

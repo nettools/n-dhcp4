@@ -65,6 +65,42 @@ _public_ NDhcp4ClientConfig *n_dhcp4_client_config_free(NDhcp4ClientConfig *conf
 }
 
 /**
+ * n_dhcp4_client_config_dup() - duplicate client configuration
+ * @config:                     client configuration to operate on
+ * @dupp:                       output argument for duplicate
+ *
+ * This duplicates the client configuration given as @config and returns it in
+ * @dupp to the caller.
+ *
+ * Return: 0 on success, negative error code on failure.
+ */
+int n_dhcp4_client_config_dup(NDhcp4ClientConfig *config, NDhcp4ClientConfig **dupp) {
+        _cleanup_(n_dhcp4_client_config_freep) NDhcp4ClientConfig *dup = NULL;
+        int r;
+
+        r = n_dhcp4_client_config_new(&dup);
+        if (r)
+                return r;
+
+        dup->ifindex = config->ifindex;
+        dup->transport = config->transport;
+        memcpy(dup->mac, config->mac, sizeof(dup->mac));
+        dup->n_mac = config->n_mac;
+        memcpy(dup->broadcast_mac, config->broadcast_mac, sizeof(dup->broadcast_mac));
+        dup->n_broadcast_mac = config->n_broadcast_mac;
+
+        r = n_dhcp4_client_config_set_client_id(dup,
+                                                config->client_id,
+                                                config->n_client_id);
+        if (r)
+                return r;
+
+        *dupp = dup;
+        dup = NULL;
+        return 0;
+}
+
+/**
  * n_dhcp4_client_config_set_ifindex() - set ifindex property
  * @config:                     client configuration to operate on
  * @ifindex:                    ifindex to set
@@ -203,7 +239,7 @@ NDhcp4CEventNode *n_dhcp4_c_event_node_free(NDhcp4CEventNode *node) {
 /**
  * n_dhcp4_client_new() - XXX
  */
-_public_ int n_dhcp4_client_new(NDhcp4Client **clientp) {
+_public_ int n_dhcp4_client_new(NDhcp4Client **clientp, NDhcp4ClientConfig *config) {
         _cleanup_(n_dhcp4_client_unrefp) NDhcp4Client *client = NULL;
         struct epoll_event ev = {
                 .events = EPOLLIN,
@@ -217,6 +253,10 @@ _public_ int n_dhcp4_client_new(NDhcp4Client **clientp) {
                 return -ENOMEM;
 
         *client = (NDhcp4Client)N_DHCP4_CLIENT_NULL(*client);
+
+        r = n_dhcp4_client_config_dup(config, &client->config);
+        if (r)
+                return r;
 
         client->fd_epoll = epoll_create1(EPOLL_CLOEXEC);
         if (client->fd_epoll < 0)
@@ -252,6 +292,7 @@ static void n_dhcp4_client_free(NDhcp4Client *client) {
         if (client->fd_epoll >= 0)
                 close(client->fd_epoll);
 
+        n_dhcp4_client_config_free(client->config);
         free(client);
 }
 
