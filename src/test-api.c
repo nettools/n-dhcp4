@@ -45,6 +45,7 @@ static void test_api_types(void) {
         assert(sizeof(NDhcp4Server*) > 0);
         assert(sizeof(NDhcp4ServerConfig*) > 0);
         assert(sizeof(NDhcp4ServerEvent*) > 0);
+        assert(sizeof(NDhcp4ServerIp*) > 0);
         assert(sizeof(NDhcp4ServerLease*) > 0);
 }
 
@@ -109,7 +110,8 @@ static void test_api_functions(void) {
                 (void *)n_dhcp4_server_dispatch,
                 (void *)n_dhcp4_server_pop_event,
                 (void *)n_dhcp4_server_add_ip,
-                (void *)n_dhcp4_server_remove_ip,
+
+                (void *)n_dhcp4_server_ip_free,
 
                 (void *)n_dhcp4_server_lease_ref,
                 (void *)n_dhcp4_server_lease_unref,

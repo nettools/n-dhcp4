@@ -405,6 +405,14 @@ struct NDhcp4Server {
                 .connection = N_DHCP4_S_CONNECTION_NULL((_x).connection),       \
         }
 
+struct NDhcp4ServerIp {
+                NDhcp4SConnectionIp ip;
+}
+
+#define N_DHCP4_SERVER_IP_NULL(_x) {                                            \
+                .ip = N_DHCP4_S_CONNECTION_IP((_x).ip),                         \
+        }
+
 struct NDhcp4ServerLease {
         unsigned long n_refs;
 

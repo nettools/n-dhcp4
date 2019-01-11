@@ -312,13 +312,37 @@ _public_ int n_dhcp4_server_pop_event(NDhcp4Server *server, NDhcp4ServerEvent **
 /**
  * n_dhcp4_server_add_ip() - XXX
  */
-_public_ int n_dhcp4_server_add_ip(NDhcp4Server *server, struct in_addr ip) {
-        return -ENOTRECOVERABLE;
+_public_ int n_dhcp4_server_add_ip(NDhcp4Server *server, NDhcp4ServerIp **ipp, struct in_addr addr) {
+        _cleanup_(n_dhcp4_server_ip_freep) NDhcp4ServerIp *ip = NULL;
+
+        /* XXX: support more than one address */
+        if (server->connection.ip)
+                return -EBUSY;
+
+        ip = malloc(sizeof(*ip));
+        if (!ip)
+                return -ENOMEM;
+
+        *ip = (NDhcp4ServerIp)N_DHCP4_SERVER_IP_NULL(*ip);
+
+        n_dhcp4_s_connection_ip_init(&ip.ip, addr);
+        n_dhcp4_s_conneciton_ip_link(&ip.ip, &server->connection);
+
+        *ipp = ip;
+        ip = NULL;
+        return 0;
 }
 
 /**
- * n_dhcp4_server_remove_ip() - XXX
+ * n_dhcp4_server_ip_free() - XXX
  */
-_public_ int n_dhcp4_server_remove_ip(NDhcp4Server *server, struct in_addr ip) {
-        return -ENOTRECOVERABLE;
+_public_ NDhcp4ServerIp *n_dhcp4_server_ip_free(NDhcp4ServerIp *ip) {
+        if (!ip)
+                return NULL;
+
+        n_dhcp4_s_connection_ip_unlink(&ip.ip);
+        n_dhcp4_s_connection_ip_deinit(&ip.ip);
+
+        free(ip);
+        return NULL;
 }

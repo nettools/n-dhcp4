@@ -45,7 +45,8 @@ global:
         n_dhcp4_server_dispatch;
         n_dhcp4_server_pop_event;
         n_dhcp4_server_add_ip;
-        n_dhcp4_server_remove_ip;
+
+        n_dhcp4_server_ip_free;
 
         n_dhcp4_server_lease_ref;
         n_dhcp4_server_lease_unref;

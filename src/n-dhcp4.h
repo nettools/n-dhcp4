@@ -26,6 +26,7 @@ typedef struct NDhcp4ClientProbeConfig NDhcp4ClientProbeConfig;
 typedef struct NDhcp4Server NDhcp4Server;
 typedef struct NDhcp4ServerConfig NDhcp4ServerConfig;
 typedef struct NDhcp4ServerEvent NDhcp4ServerEvent;
+typedef struct NDhcp4ServerIp NDhcp4ServerIp;
 typedef struct NDhcp4ServerLease NDhcp4ServerLease;
 
 enum {
@@ -160,8 +161,10 @@ void n_dhcp4_server_get_fd(NDhcp4Server *server, int *fdp);
 int n_dhcp4_server_dispatch(NDhcp4Server *server);
 int n_dhcp4_server_pop_event(NDhcp4Server *server, NDhcp4ServerEvent **eventp);
 
-int n_dhcp4_server_add_ip(NDhcp4Server *server, struct in_addr ip);
-int n_dhcp4_server_remove_ip(NDhcp4Server *server, struct in_addr ip);
+int n_dhcp4_server_add_ip(NDhcp4Server *server, NDhcp4ServerIp **ipp, struct in_addr ip);
+
+/* server ip addresses */
+NDhcp4ServerIp *n_dhcp4_server_ip_free(NDhcp4ServerIp *ip);
 
 /* server leases */
 
@@ -247,6 +250,15 @@ static inline void n_dhcp4_server_lease_unrefp(NDhcp4ServerLease **p) {
 
 static inline void n_dhcp4_server_lease_unrefv(NDhcp4ServerLease *p) {
         n_dhcp4_server_lease_unref(p);
+}
+
+static inline void n_dhcp4_server_ip_freep(NDhcp4ServerIp **p) {
+        if (*p)
+                n_dhcp4_server_ip_free(*p);
+}
+
+static inline void n_dhcp4_server_ip_freev(NDhcp4ServerIp *p) {
+        n_dhcp4_server_ip_free(p);
 }
 
 #ifdef __cplusplus
