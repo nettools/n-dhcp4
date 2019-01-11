@@ -287,6 +287,7 @@ static void test_release(NDhcp4SConnection *connection_server,
 
 int main(int argc, char **argv) {
         NDhcp4SConnection connection_server = N_DHCP4_S_CONNECTION_NULL(connection_server);
+        NDhcp4SConnectionIp connection_server_ip = N_DHCP4_S_CONNECTION_IP_NULL(connection_server_ip);
         NDhcp4CConnection connection_client = N_DHCP4_C_CONNECTION_NULL(connection_client);
         _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *offer = NULL;
         _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *ack = NULL;
@@ -310,9 +311,8 @@ int main(int argc, char **argv) {
         test_add_ip(ns_server, ifindex_server, &addr_server, 8);
 
         n_dhcp4_s_connection_init(&connection_server, &efd_server, ifindex_server);
-
-        r = n_dhcp4_s_connection_add_server_address(&connection_server, &addr_server);
-        assert(!r);
+        n_dhcp4_s_connection_ip_init(&connection_server_ip, addr_server);
+        n_dhcp4_s_connection_ip_link(&connection_server_ip, &connection_server);
 
         r = n_dhcp4_c_connection_init(&connection_client,
                                       &efd_client,
@@ -343,6 +343,8 @@ int main(int argc, char **argv) {
         test_release(&connection_server, &connection_client, &addr_server, &addr_client);
 
         n_dhcp4_c_connection_deinit(&connection_client);
+        n_dhcp4_s_connection_ip_unlink(&connection_server_ip);
+        n_dhcp4_s_connection_ip_deinit(&connection_server_ip);
         n_dhcp4_s_connection_deinit(&connection_server);
 
         test_del_ip(ns_client, ifindex_client, &addr_client, 8);

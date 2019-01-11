@@ -22,6 +22,8 @@ void n_dhcp4_s_connection_init(NDhcp4SConnection *connection, int *fd_epollp, in
 }
 
 void n_dhcp4_s_connection_deinit(NDhcp4SConnection *connection) {
+        assert(!connection->ip);
+
         if (*connection->fd_epollp >= 0) {
                 if (connection->fd_udp >= 0) {
                         epoll_ctl(*connection->fd_epollp, EPOLL_CTL_DEL, connection->fd_udp, NULL);
@@ -34,30 +36,6 @@ void n_dhcp4_s_connection_deinit(NDhcp4SConnection *connection) {
         }
 
         *connection = (NDhcp4SConnection)N_DHCP4_S_CONNECTION_NULL(*connection);
-}
-
-int n_dhcp4_s_connection_add_server_address(NDhcp4SConnection *connection,
-                                            const struct in_addr *server_address) {
-
-        /* XXX: add support for a set of server addresses */
-        if (connection->server_address != INADDR_ANY)
-                return -EBUSY;
-
-        connection->server_address = server_address->s_addr;
-
-        return 0;
-}
-
-int n_dhcp4_s_connection_remove_server_address(NDhcp4SConnection *connection,
-                                               const struct in_addr *server_address) {
-
-        /* XXX: error codes */
-        if (connection->server_address != server_address->s_addr)
-                return -ENOENT;
-
-        connection->server_address = INADDR_ANY;
-
-        return 0;
 }
 
 int n_dhcp4_s_connection_listen(NDhcp4SConnection *connection) {
@@ -351,4 +329,27 @@ int n_dhcp4_s_connection_nak_new(NDhcp4SConnection *connection,
         *replyp = reply;
         reply = NULL;
         return 0;
+}
+
+void n_dhcp4_s_connection_ip_init(NDhcp4SConnectionIp *ip, struct in_addr addr) {
+        *ip = (NDhcp4SConnectionIp)N_DHCP4_S_CONNECTION_IP_NULL(*ip);
+        ip->ip = addr;
+}
+
+void n_dhcp4_s_connection_ip_deinit(NDhcp4SConnectionIp *ip) {
+        assert(!ip->connection);
+        *ip = (NDhcp4SConnectionIp)N_DHCP4_S_CONNECTION_IP_NULL(*ip);
+}
+
+void n_dhcp4_s_connection_ip_link(NDhcp4SConnectionIp *ip, NDhcp4SConnection *connection) {
+        assert(!connection->ip);
+        assert(!ip->connection);
+
+        connection->ip = ip;
+        ip->connection = connection;
+}
+
+void n_dhcp4_s_connection_ip_unlink(NDhcp4SConnectionIp *ip) {
+        ip->connection->ip = NULL;
+        ip->connection = NULL;
 }

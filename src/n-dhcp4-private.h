@@ -17,6 +17,7 @@ typedef struct NDhcp4Incoming NDhcp4Incoming;
 typedef struct NDhcp4Message NDhcp4Message;
 typedef struct NDhcp4Outgoing NDhcp4Outgoing;
 typedef struct NDhcp4SConnection NDhcp4SConnection;
+typedef struct NDhcp4SConnectionIp NDhcp4SConnectionIp;
 typedef struct NDhcp4SEventNode NDhcp4SEventNode;
 
 /* macros */
@@ -366,13 +367,21 @@ struct NDhcp4SConnection {
         uint8_t buf[UINT16_MAX];        /* scratch recevie buffer */
 
         /* XXX: support a set of server addresses */
-        uint32_t server_address;        /* server IP address, or 0 */
+        NDhcp4SConnectionIp *ip;        /* server IP address, or NULL */
 };
 
 #define N_DHCP4_S_CONNECTION_NULL(_x) {                                         \
                 .fd_packet = -1,                                                \
                 .fd_udp = -1,                                                   \
         }
+
+struct NDhcp4SConnectionIp {
+        NDhcp4SConnection *connection;
+        struct in_addr ip;
+};
+
+#define N_DHCP4_S_CONNECTION_IP_NULL(_x) {                                      \
+}
 
 struct NDhcp4Server {
         unsigned long n_refs;
@@ -552,11 +561,6 @@ int n_dhcp4_client_lease_new(NDhcp4ClientLease **leasep, NDhcp4Incoming *message
 void n_dhcp4_s_connection_init(NDhcp4SConnection *connection, int *fd_epollp, int ifindex);
 void n_dhcp4_s_connection_deinit(NDhcp4SConnection *connection);
 
-int n_dhcp4_s_connection_add_server_address(NDhcp4SConnection *connection,
-                                            const struct in_addr *server_address);
-int n_dhcp4_s_connection_remove_server_address(NDhcp4SConnection *connection,
-                                               const struct in_addr *server_address);
-
 int n_dhcp4_s_connection_listen(NDhcp4SConnection *connection);
 
 int n_dhcp4_s_connection_dispatch_io(NDhcp4SConnection *connection, NDhcp4Incoming **messagep);
@@ -581,6 +585,14 @@ int n_dhcp4_s_connection_nak_new(NDhcp4SConnection *connection,
 int n_dhcp4_s_connection_send_reply(NDhcp4SConnection *connection,
                                     const struct in_addr *server_addr,
                                     NDhcp4Outgoing *reply);
+
+/* server connection ips */
+
+void n_dhcp4_s_connection_ip_init(NDhcp4SConnectionIp *ip, struct in_addr addr);
+void n_dhcp4_s_connection_ip_deinit(NDhcp4SConnectionIp *ip);
+
+void n_dhcp4_s_connection_ip_link(NDhcp4SConnectionIp *ip, NDhcp4SConnection *connection);
+void n_dhcp4_s_connection_ip_unlink(NDhcp4SConnectionIp *ip);
 
 /* inline helpers */
 
