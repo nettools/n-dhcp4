@@ -18,7 +18,7 @@
 #include "util/netns.h"
 #include "util/packet.h"
 
-static void test_poll(int efd, unsigned int u32) {
+static void test_poll_client(int efd, unsigned int u32) {
         struct epoll_event event = {};
         int r;
 
@@ -28,13 +28,22 @@ static void test_poll(int efd, unsigned int u32) {
         assert(event.data.u32 == u32);
 }
 
-static void test_s_connection_listen(int netns, NDhcp4SConnection *connection) {
+static void test_poll_server(int fd) {
+        struct pollfd pfd = { .fd = fd, .events = POLLIN };
+        int r;
+
+        r = poll(&pfd, 1, -1);
+        assert(r == 1);
+        assert(pfd.revents == POLLIN);
+}
+
+static void test_s_connection_init(int netns, NDhcp4SConnection *connection, int ifindex) {
         int r, oldns;
 
         netns_get(&oldns);
         netns_set(netns);
 
-        r = n_dhcp4_s_connection_listen(connection);
+        r = n_dhcp4_s_connection_init(connection, ifindex);
         assert(!r);
 
         netns_set(oldns);
@@ -71,9 +80,10 @@ static void test_server_receive(NDhcp4SConnection *connection, uint8_t type, NDh
         _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *message = NULL;
         uint8_t *value;
         size_t size;
-        int r;
+        int r, fd;
 
-        test_poll(*connection->fd_epollp, N_DHCP4_SERVER_EPOLL_IO);
+        n_dhcp4_s_connection_get_fd(connection, &fd);
+        test_poll_server(fd);
 
         r = n_dhcp4_s_connection_dispatch_io(connection, &message);
         assert(!r);
@@ -96,7 +106,7 @@ static void test_client_receive(NDhcp4CConnection *connection, uint8_t type, NDh
         size_t size;
         int r;
 
-        test_poll(*connection->fd_epollp, N_DHCP4_CLIENT_EPOLL_IO);
+        test_poll_client(*connection->fd_epollp, N_DHCP4_CLIENT_EPOLL_IO);
 
         r = n_dhcp4_c_connection_dispatch_io(connection, &message);
         assert(!r);
@@ -293,11 +303,8 @@ int main(int argc, char **argv) {
         _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *ack = NULL;
         struct in_addr addr_server = (struct in_addr){ htonl(10 << 24 | 1) };
         struct in_addr addr_client = (struct in_addr){ htonl(10 << 24 | 2) };
-        int r, efd_server, efd_client, ns_server, ns_client, ifindex_server, ifindex_client;
+        int r, efd_client, ns_server, ns_client, ifindex_server, ifindex_client;
         struct ether_addr mac_client;
-
-        efd_server = epoll_create1(EPOLL_CLOEXEC);
-        assert(efd_server >= 0);
 
         efd_client = epoll_create1(EPOLL_CLOEXEC);
         assert(efd_client >= 0);
@@ -310,7 +317,7 @@ int main(int argc, char **argv) {
         test_veth_new(ns_server, &ifindex_server, NULL, ns_client, &ifindex_client, &mac_client);
         test_add_ip(ns_server, ifindex_server, &addr_server, 8);
 
-        n_dhcp4_s_connection_init(&connection_server, &efd_server, ifindex_server);
+        test_s_connection_init(ns_server, &connection_server, ifindex_server);
         n_dhcp4_s_connection_ip_init(&connection_server_ip, addr_server);
         n_dhcp4_s_connection_ip_link(&connection_server_ip, &connection_server);
 
@@ -326,8 +333,6 @@ int main(int argc, char **argv) {
                                       NULL,
                                       false);
         assert(!r);
-
-        test_s_connection_listen(ns_server, &connection_server);
         test_c_connection_listen(ns_client, &connection_client);
 
         test_discover(&connection_server, &connection_client, &addr_server, &addr_client, &offer);
@@ -352,7 +357,6 @@ int main(int argc, char **argv) {
         close(ns_client);
         close(ns_server);
         close(efd_client);
-        close(efd_server);
 
         return 0;
 }

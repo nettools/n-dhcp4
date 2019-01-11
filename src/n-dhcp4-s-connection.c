@@ -14,50 +14,40 @@
 #include "n-dhcp4-private.h"
 #include "util/packet.h"
 
-void n_dhcp4_s_connection_init(NDhcp4SConnection *connection, int *fd_epollp, int ifindex) {
-        *connection = (NDhcp4SConnection)N_DHCP4_S_CONNECTION_NULL(*connection);
-
-        connection->fd_epollp = fd_epollp;
-        connection->ifindex = ifindex;
-}
-
-void n_dhcp4_s_connection_deinit(NDhcp4SConnection *connection) {
-        assert(!connection->ip);
-
-        if (*connection->fd_epollp >= 0) {
-                if (connection->fd_udp >= 0) {
-                        epoll_ctl(*connection->fd_epollp, EPOLL_CTL_DEL, connection->fd_udp, NULL);
-                        close(connection->fd_udp);
-                }
-
-                if (connection->fd_packet >= 0) {
-                        close(connection->fd_packet);
-                }
-        }
-
-        *connection = (NDhcp4SConnection)N_DHCP4_S_CONNECTION_NULL(*connection);
-}
-
-int n_dhcp4_s_connection_listen(NDhcp4SConnection *connection) {
-        struct epoll_event ev = {
-                .events = EPOLLIN,
-        };
+int n_dhcp4_s_connection_init(NDhcp4SConnection *connection, int ifindex) {
         int r;
+
+        *connection = (NDhcp4SConnection)N_DHCP4_S_CONNECTION_NULL(*connection);
 
         r = n_dhcp4_s_socket_packet_new(&connection->fd_packet);
         if (r)
                 return r;
 
-        r = n_dhcp4_s_socket_udp_new(&connection->fd_udp, connection->ifindex);
+        r = n_dhcp4_s_socket_udp_new(&connection->fd_udp, ifindex);
         if (r)
                 return r;
 
-        ev.data.u32 = N_DHCP4_SERVER_EPOLL_IO;
-        r = epoll_ctl(*connection->fd_epollp, EPOLL_CTL_ADD, connection->fd_udp, &ev);
-        if (r < 0)
-                return -errno;
+        connection->ifindex = ifindex;
 
         return 0;
+}
+
+void n_dhcp4_s_connection_deinit(NDhcp4SConnection *connection) {
+        assert(!connection->ip);
+
+        if (connection->fd_udp >= 0) {
+                close(connection->fd_udp);
+        }
+
+        if (connection->fd_packet >= 0) {
+                close(connection->fd_packet);
+        }
+
+        *connection = (NDhcp4SConnection)N_DHCP4_S_CONNECTION_NULL(*connection);
+}
+
+void n_dhcp4_s_connection_get_fd(NDhcp4SConnection *connection, int *fdp) {
+        *fdp = connection->fd_udp;
 }
 
 int n_dhcp4_s_connection_dispatch_io(NDhcp4SConnection *connection, NDhcp4Incoming **messagep) {

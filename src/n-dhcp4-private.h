@@ -360,7 +360,6 @@ struct NDhcp4SEventNode {
         }
 
 struct NDhcp4SConnection {
-        int *fd_epollp;                 /* epoll fd */
         int ifindex;                    /* interface index */
         int fd_packet;                  /* packet socket */
         int fd_udp;                     /* udp socket */
@@ -388,9 +387,6 @@ struct NDhcp4Server {
         CList event_list;
         CList lease_list;
 
-        int fd_epoll;
-        int fd_timer;
-
         bool preempted : 1;
 
         NDhcp4SConnection connection;
@@ -400,17 +396,15 @@ struct NDhcp4Server {
                 .n_refs = 1,                                                    \
                 .event_list = C_LIST_INIT((_x).event_list),                     \
                 .lease_list = C_LIST_INIT((_x).lease_list),                     \
-                .fd_epoll = -1,                                                 \
-                .fd_timer = -1,                                                 \
                 .connection = N_DHCP4_S_CONNECTION_NULL((_x).connection),       \
         }
 
 struct NDhcp4ServerIp {
                 NDhcp4SConnectionIp ip;
-}
+};
 
 #define N_DHCP4_SERVER_IP_NULL(_x) {                                            \
-                .ip = N_DHCP4_S_CONNECTION_IP((_x).ip),                         \
+                .ip = N_DHCP4_S_CONNECTION_IP_NULL((_x).ip),                    \
         }
 
 struct NDhcp4ServerLease {
@@ -566,11 +560,10 @@ int n_dhcp4_client_lease_new(NDhcp4ClientLease **leasep, NDhcp4Incoming *message
 
 /* server connections */
 
-void n_dhcp4_s_connection_init(NDhcp4SConnection *connection, int *fd_epollp, int ifindex);
+int n_dhcp4_s_connection_init(NDhcp4SConnection *connection, int ifindex);
 void n_dhcp4_s_connection_deinit(NDhcp4SConnection *connection);
 
-int n_dhcp4_s_connection_listen(NDhcp4SConnection *connection);
-
+void n_dhcp4_s_connection_get_fd(NDhcp4SConnection *connection, int *fdp);
 int n_dhcp4_s_connection_dispatch_io(NDhcp4SConnection *connection, NDhcp4Incoming **messagep);
 
 int n_dhcp4_s_connection_offer_new(NDhcp4SConnection *connection,

@@ -86,11 +86,8 @@ NDhcp4SEventNode *n_dhcp4_s_event_node_free(NDhcp4SEventNode *node) {
 /**
  * n_dhcp4_server_new() - XXX
  */
-_public_ int n_dhcp4_server_new(NDhcp4Server **serverp) {
+_public_ int n_dhcp4_server_new(NDhcp4Server **serverp, NDhcp4ServerConfig *config) {
         _cleanup_(n_dhcp4_server_unrefp) NDhcp4Server *server = NULL;
-        struct epoll_event ev = {
-                .events = EPOLLIN,
-        };
         int r;
 
         assert(serverp);
@@ -101,18 +98,9 @@ _public_ int n_dhcp4_server_new(NDhcp4Server **serverp) {
 
         *server = (NDhcp4Server)N_DHCP4_SERVER_NULL(*server);
 
-        server->fd_epoll = epoll_create1(EPOLL_CLOEXEC);
-        if (server->fd_epoll < 0)
-                return -errno;
-
-        server->fd_timer = timerfd_create(CLOCK_BOOTTIME, TFD_CLOEXEC | TFD_NONBLOCK);
-        if (server->fd_timer < 0)
-                return -errno;
-
-        ev.data.u32 = N_DHCP4_SERVER_EPOLL_TIMER;
-        r = epoll_ctl(server->fd_epoll, EPOLL_CTL_ADD, server->fd_timer, &ev);
-        if (r < 0)
-                return -errno;
+        r = n_dhcp4_s_connection_init(&server->connection, config->ifindex);
+        if (r)
+                return r;
 
         *serverp = server;
         server = NULL;
@@ -124,14 +112,6 @@ static void n_dhcp4_server_free(NDhcp4Server *server) {
 
         c_list_for_each_entry_safe(node, t_node, &server->event_list, server_link)
                 n_dhcp4_s_event_node_free(node);
-
-        if (server->fd_timer >= 0) {
-                epoll_ctl(server->fd_epoll, EPOLL_CTL_DEL, server->fd_timer, NULL);
-                close(server->fd_timer);
-        }
-
-        if (server->fd_epoll >= 0)
-                close(server->fd_epoll);
 
         free(server);
 }
@@ -177,115 +157,27 @@ int n_dhcp4_server_raise(NDhcp4Server *server, NDhcp4SEventNode **nodep, unsigne
  * n_dhcp4_server_get_fd() - XXX
  */
 _public_ void n_dhcp4_server_get_fd(NDhcp4Server *server, int *fdp) {
-        *fdp = server->fd_epoll;
-}
-
-static int n_dhcp4_server_dispatch_timer(NDhcp4Server *server, struct epoll_event *event) {
-        uint64_t v;
-        int r;
-
-        if (event->events & (EPOLLHUP | EPOLLERR)) {
-                /*
-                 * There is no way to handle either gracefully. If we ignored
-                 * them, we would busy-loop, so lets rather forward the error
-                 * to the caller.
-                 */
-                return -ENOTRECOVERABLE;
-        }
-
-        if (event->events & EPOLLIN) {
-                r = read(server->fd_timer, &v, sizeof(v));
-                if (r < 0) {
-                        if (errno == EAGAIN) {
-                                /*
-                                 * There are no more pending events, so nothing
-                                 * to be done. Return to the caller.
-                                 */
-                                return 0;
-                        }
-
-                        /*
-                         * Something failed. We use CLOCK_BOOTTIME/MONOTONIC,
-                         * so ECANCELED cannot happen. Hence, there is no error
-                         * that we could gracefully handle. Fail hard and let
-                         * the caller deal with it.
-                         */
-                        return -errno;
-                } else if (r != sizeof(v) || v == 0) {
-                        /*
-                         * Kernel guarantees 8-byte reads, and only to return
-                         * data if at least one timer triggered; fail hard if
-                         * it suddenly starts exposing unexpected behavior.
-                         */
-                        return -ENOTRECOVERABLE;
-                }
-
-                /*
-                 * XXX
-                 */
-        }
-
-        return 0;
-}
-
-static void n_dhcp4_server_arm_timer(NDhcp4Server *server) {
-        uint64_t timeout = 0;
-        int r;
-
-        /* XXX: avoid syscall if it didn't change */
-
-        r = timerfd_settime(server->fd_timer,
-                            TFD_TIMER_ABSTIME,
-                            &(struct itimerspec){
-                                .it_value = {
-                                        .tv_sec = timeout / UINT64_C(1000000000),
-                                        .tv_nsec = timeout % UINT64_C(1000000000),
-                                },
-                            },
-                            NULL);
-        assert(r >= 0);
-}
-
-static int n_dhcp4_server_dispatch_io(NDhcp4Server *server, struct epoll_event *event) {
-        return -ENOTRECOVERABLE;
+        n_dhcp4_s_connection_get_fd(&server->connection, fdp);
 }
 
 /**
  * n_dhcp4_server_dispatch() - XXX
  */
 _public_ int n_dhcp4_server_dispatch(NDhcp4Server *server) {
-        struct epoll_event events[2];
-        int n, i, r = 0;
+        int r;
 
-        n = epoll_wait(server->fd_epoll, events, sizeof(events) / sizeof(*events), 0);
-        if (n < 0) {
-                /* Linux never returns EINTR if `timeout == 0'. */
-                return -errno;
-        }
+        for (unsigned int i = 0; i < 128; ++i) {
+                _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *message = NULL;
 
-        server->preempted = false;
-
-        for (i = 0; i < n; ++i) {
-                switch (events[i].data.u32) {
-                case N_DHCP4_SERVER_EPOLL_TIMER:
-                        r = n_dhcp4_server_dispatch_timer(server, events + i);
-                        break;
-                case N_DHCP4_SERVER_EPOLL_IO:
-                        r = n_dhcp4_server_dispatch_io(server, events + i);
-                        break;
-                default:
-                        assert(0);
-                        r = 0;
-                        break;
-                }
-
-                if (r)
+                r = n_dhcp4_s_connection_dispatch_io(&server->connection, &message);
+                if (r) {
+                        if (r == N_DHCP4_E_AGAIN)
+                                return 0;
                         return r;
+                }
         }
 
-        n_dhcp4_server_arm_timer(server);
-
-        return server->preempted ? N_DHCP4_E_PREEMPTED : 0;
+        return N_DHCP4_E_PREEMPTED;
 }
 
 /**
@@ -325,8 +217,8 @@ _public_ int n_dhcp4_server_add_ip(NDhcp4Server *server, NDhcp4ServerIp **ipp, s
 
         *ip = (NDhcp4ServerIp)N_DHCP4_SERVER_IP_NULL(*ip);
 
-        n_dhcp4_s_connection_ip_init(&ip.ip, addr);
-        n_dhcp4_s_conneciton_ip_link(&ip.ip, &server->connection);
+        n_dhcp4_s_connection_ip_init(&ip->ip, addr);
+        n_dhcp4_s_connection_ip_link(&ip->ip, &server->connection);
 
         *ipp = ip;
         ip = NULL;
@@ -340,8 +232,8 @@ _public_ NDhcp4ServerIp *n_dhcp4_server_ip_free(NDhcp4ServerIp *ip) {
         if (!ip)
                 return NULL;
 
-        n_dhcp4_s_connection_ip_unlink(&ip.ip);
-        n_dhcp4_s_connection_ip_deinit(&ip.ip);
+        n_dhcp4_s_connection_ip_unlink(&ip->ip);
+        n_dhcp4_s_connection_ip_deinit(&ip->ip);
 
         free(ip);
         return NULL;

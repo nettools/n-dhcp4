@@ -153,7 +153,7 @@ void n_dhcp4_server_config_set_ifindex(NDhcp4ServerConfig *config, int ifindex);
 
 /* servers */
 
-int n_dhcp4_server_new(NDhcp4Server **serverp);
+int n_dhcp4_server_new(NDhcp4Server **serverp, NDhcp4ServerConfig *config);
 NDhcp4Server *n_dhcp4_server_ref(NDhcp4Server *server);
 NDhcp4Server *n_dhcp4_server_unref(NDhcp4Server *server);
 
