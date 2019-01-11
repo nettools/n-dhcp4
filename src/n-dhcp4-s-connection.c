@@ -50,8 +50,62 @@ void n_dhcp4_s_connection_get_fd(NDhcp4SConnection *connection, int *fdp) {
         *fdp = connection->fd_udp;
 }
 
+static int n_dhcp4_s_connection_verify_incoming(NDhcp4SConnection *connection,
+                                                NDhcp4Incoming *message) {
+
+        uint8_t *type;
+        size_t n_type;
+        int r;
+
+        r = n_dhcp4_incoming_query(message, N_DHCP4_OPTION_MESSAGE_TYPE, &type, &n_type);
+        if (r) {
+                if (r == N_DHCP4_E_UNSET)
+                        return N_DHCP4_E_MALFORMED;
+                else
+                        return r;
+        } else if (n_type != sizeof(*type)) {
+                return N_DHCP4_E_MALFORMED;
+        }
+
+        switch (*type) {
+        case N_DHCP4_MESSAGE_DISCOVER:
+        case N_DHCP4_MESSAGE_REQUEST:
+        case N_DHCP4_MESSAGE_DECLINE:
+        case N_DHCP4_MESSAGE_RELEASE:
+                break;
+        default:
+                return N_DHCP4_E_UNEXPECTED;
+        }
+
+        /*
+         * XXX: deduce the higher-level message type, and perform additional
+         *      verification.
+         */
+
+        return 0;
+}
+
 int n_dhcp4_s_connection_dispatch_io(NDhcp4SConnection *connection, NDhcp4Incoming **messagep) {
-        return n_dhcp4_s_socket_udp_recv(connection->fd_udp, connection->buf, sizeof(connection->buf), messagep);
+        _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *message = NULL;
+        int r;
+
+        r = n_dhcp4_s_socket_udp_recv(connection->fd_udp, connection->buf, sizeof(connection->buf), &message);
+        if (r)
+                return r;
+
+        r = n_dhcp4_s_connection_verify_incoming(connection, message);
+        if (r) {
+                if (r == N_DHCP4_E_MALFORMED || r == N_DHCP4_E_UNEXPECTED) {
+                        *messagep = NULL;
+                        return 0;
+                }
+
+                return -ENOTRECOVERABLE;
+        }
+
+        *messagep = message;
+        message = NULL;
+        return 0;
 }
 
 /*
