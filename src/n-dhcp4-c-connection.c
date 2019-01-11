@@ -1040,7 +1040,7 @@ int n_dhcp4_c_connection_dispatch_io(NDhcp4CConnection *connection,
 
         r = n_dhcp4_c_connection_verify_incoming(connection, message, &type);
         if (r) {
-                if (r == N_DHCP4_E_MALFORMED) {
+                if (r == N_DHCP4_E_MALFORMED || r == N_DHCP4_E_UNEXPECTED) {
                         *messagep = NULL;
                         return 0;
                 }
