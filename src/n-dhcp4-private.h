@@ -542,6 +542,7 @@ int n_dhcp4_c_connection_start_request(NDhcp4CConnection *connection,
 /* clients */
 
 int n_dhcp4_client_raise(NDhcp4Client *client, NDhcp4CEventNode **nodep, unsigned int event);
+void n_dhcp4_client_arm_timer(NDhcp4Client *client);
 
 /* client probes */
 

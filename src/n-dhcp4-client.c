@@ -393,21 +393,13 @@ int n_dhcp4_client_raise(NDhcp4Client *client, NDhcp4CEventNode **nodep, unsigne
 }
 
 /**
- * n_dhcp4_client_get_fd() - retrieve event FD
+ * n_dhcp4_client_arm_timer() - update timer
  * @client:                     client to operate on
- * @fdp:                        output argument to store FD
  *
- * This retrieves the FD used by the client object given as @client. The FD is
- * always valid, and returned in @fdp.
- *
- * The caller is expected to poll this FD for readable events and call
- * n_dhcp4_client_dispatch() whenever the FD is readable.
+ * This updates the timer on @client to fire on the next pending timeout. This
+ * must be called whenever a timeout on @client might have changed.
  */
-_public_ void n_dhcp4_client_get_fd(NDhcp4Client *client, int *fdp) {
-        *fdp = client->fd_epoll;
-}
-
-static void n_dhcp4_client_arm_timer(NDhcp4Client *client) {
+void n_dhcp4_client_arm_timer(NDhcp4Client *client) {
         uint64_t timeout = 0;
         int r;
 
@@ -428,6 +420,21 @@ static void n_dhcp4_client_arm_timer(NDhcp4Client *client) {
 
                 client->scheduled_timeout = timeout;
         }
+}
+
+/**
+ * n_dhcp4_client_get_fd() - retrieve event FD
+ * @client:                     client to operate on
+ * @fdp:                        output argument to store FD
+ *
+ * This retrieves the FD used by the client object given as @client. The FD is
+ * always valid, and returned in @fdp.
+ *
+ * The caller is expected to poll this FD for readable events and call
+ * n_dhcp4_client_dispatch() whenever the FD is readable.
+ */
+_public_ void n_dhcp4_client_get_fd(NDhcp4Client *client, int *fdp) {
+        *fdp = client->fd_epoll;
 }
 
 static int n_dhcp4_client_dispatch_timer(NDhcp4Client *client, struct epoll_event *event) {
