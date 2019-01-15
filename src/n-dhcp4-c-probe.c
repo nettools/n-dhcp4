@@ -6,14 +6,11 @@
 
 #include <assert.h>
 #include <c-list.h>
-#include <endian.h>
 #include <errno.h>
 #include <inttypes.h>
-#include <netinet/ip.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
 #include "n-dhcp4.h"
 #include "n-dhcp4-private.h"
 
@@ -219,16 +216,6 @@ void n_dhcp4_client_probe_get_timeout(NDhcp4ClientProbe *probe, uint64_t *timeou
         *timeoutp = timeout;
 }
 
-static uint64_t n_dhcp4_client_probe_gettime(void) {
-        struct timespec ts;
-        int r;
-
-        r = clock_gettime(CLOCK_BOOTTIME, &ts);
-        assert(r >= 0);
-
-        return ts.tv_sec * 1000ULL * 1000ULL + ts.tv_nsec / 1000ULL;
-}
-
 static int n_dhcp4_client_probe_transition_t1(NDhcp4ClientProbe *probe) {
         switch (probe->state) {
         case N_DHCP4_CLIENT_PROBE_STATE_BOUND:
@@ -359,7 +346,7 @@ int n_dhcp4_client_probe_dispatch_timer(NDhcp4ClientProbe *probe) {
         uint64_t now;
         int r;
 
-        now = n_dhcp4_client_probe_gettime();
+        now = n_dhcp4_gettime(CLOCK_BOOTTIME);
 
         if (probe->current_lease) {
                 switch (probe->state) {

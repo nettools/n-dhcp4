@@ -1,12 +1,15 @@
 #pragma once
 
 #include <arpa/inet.h>
+#include <assert.h>
 #include <c-list.h>
+#include <endian.h>
 #include <inttypes.h>
 #include <limits.h>
 #include <linux/netdevice.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <time.h>
 #include <unistd.h>
 #include "n-dhcp4.h"
 
@@ -612,4 +615,14 @@ static inline void n_dhcp4_incoming_freep(NDhcp4Incoming **incoming) {
 static inline void n_dhcp4_closep(int *fdp) {
         if (*fdp >= 0)
                 close(*fdp);
+}
+
+static inline uint64_t n_dhcp4_gettime(clockid_t clock) {
+        struct timespec ts;
+        int r;
+
+        r = clock_gettime(clock, &ts);
+        assert(r >= 0);
+
+        return ts.tv_sec * 1000ULL * 1000ULL * 1000ULL + ts.tv_nsec;
 }
