@@ -342,26 +342,23 @@ static int n_dhcp4_client_probe_transition_nak(NDhcp4ClientProbe *probe) {
 /**
  * n_dhcp4_client_probe_dispatch_timer() - XXX
  */
-int n_dhcp4_client_probe_dispatch_timer(NDhcp4ClientProbe *probe) {
-        uint64_t now;
+int n_dhcp4_client_probe_dispatch_timer(NDhcp4ClientProbe *probe, uint64_t ns_now) {
         int r;
-
-        now = n_dhcp4_gettime(CLOCK_BOOTTIME);
 
         if (probe->current_lease) {
                 switch (probe->state) {
                 case N_DHCP4_CLIENT_PROBE_STATE_BOUND:
                 case N_DHCP4_CLIENT_PROBE_STATE_RENEWING:
                 case N_DHCP4_CLIENT_PROBE_STATE_REBINDING:
-                        if (now >= probe->current_lease->lifetime) {
+                        if (ns_now >= probe->current_lease->lifetime) {
                                 r = n_dhcp4_client_probe_transition_lifetime(probe);
                                 if (r)
                                         return r;
-                        } else if (now >= probe->current_lease->t2) {
+                        } else if (ns_now >= probe->current_lease->t2) {
                                 r = n_dhcp4_client_probe_transition_t2(probe);
                                 if (r)
                                         return r;
-                        } else if (now >= probe->current_lease->t1) {
+                        } else if (ns_now >= probe->current_lease->t1) {
                                 r = n_dhcp4_client_probe_transition_t1(probe);
                                 if (r)
                                         return r;
@@ -374,7 +371,7 @@ int n_dhcp4_client_probe_dispatch_timer(NDhcp4ClientProbe *probe) {
                 }
         }
 
-        r = n_dhcp4_c_connection_dispatch_timer(&probe->connection, now);
+        r = n_dhcp4_c_connection_dispatch_timer(&probe->connection, ns_now);
         if (r)
                 return r;
 

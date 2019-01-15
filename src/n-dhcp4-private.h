@@ -555,7 +555,7 @@ int n_dhcp4_client_probe_raise(NDhcp4ClientProbe *probe, NDhcp4CEventNode **node
 int n_dhcp4_client_probe_install(NDhcp4ClientProbe *probe);
 void n_dhcp4_client_probe_uninstall(NDhcp4ClientProbe *probe);
 void n_dhcp4_client_probe_get_timeout(NDhcp4ClientProbe *probe, uint64_t *timeoutp);
-int n_dhcp4_client_probe_dispatch_timer(NDhcp4ClientProbe *probe);
+int n_dhcp4_client_probe_dispatch_timer(NDhcp4ClientProbe *probe, uint64_t ns_now);
 int n_dhcp4_client_probe_dispatch_io(NDhcp4ClientProbe *probe, uint32_t events);
 int n_dhcp4_client_probe_update_mtu(NDhcp4ClientProbe *probe, uint16_t mtu);
 

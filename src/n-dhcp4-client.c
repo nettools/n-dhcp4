@@ -438,7 +438,7 @@ _public_ void n_dhcp4_client_get_fd(NDhcp4Client *client, int *fdp) {
 }
 
 static int n_dhcp4_client_dispatch_timer(NDhcp4Client *client, struct epoll_event *event) {
-        uint64_t v;
+        uint64_t v, ns_now;
         int r;
 
         if (event->events & (EPOLLHUP | EPOLLERR)) {
@@ -484,7 +484,14 @@ static int n_dhcp4_client_dispatch_timer(NDhcp4Client *client, struct epoll_even
                  * client dispatcher.
                  */
                 if (client->current_probe) {
-                        r = n_dhcp4_client_probe_dispatch_timer(client->current_probe);
+                        /*
+                         * Read the current time *after* dispatching the timer,
+                         * to make sure we do not miss wakeups.
+                         */
+                        ns_now = n_dhcp4_gettime(CLOCK_BOOTTIME);
+
+                        r = n_dhcp4_client_probe_dispatch_timer(client->current_probe,
+                                                                ns_now);
                         if (r)
                                 return r;
                 }
