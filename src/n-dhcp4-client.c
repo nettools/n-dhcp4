@@ -19,7 +19,6 @@
 #include <unistd.h>
 #include "n-dhcp4.h"
 #include "n-dhcp4-private.h"
-#include "util/packet.h"
 
 /**
  * n_dhcp4_client_config_new() - allocate new client configuration
