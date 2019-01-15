@@ -1,7 +1,10 @@
 /*
  * Client Side of the Dynamic Host Configuration Protocol for IPv4
  *
- * XXX
+ * This implements the public API around the NDhcp4Client object. The client
+ * object is simply a context to track running probes. It manages pending
+ * events of all probes, as well as forwards the dispatching requests whenever
+ * the dispatcher is run.
  */
 
 #include <assert.h>
@@ -207,7 +210,19 @@ _public_ int n_dhcp4_client_config_set_client_id(NDhcp4ClientConfig *config, con
 }
 
 /**
- * n_dhcp4_c_event_node_new() - XXX
+ * n_dhcp4_c_event_node_new() - allocate new event
+ * @nodep:                      output argument for new event
+ *
+ * This allocates a new event node and returns it to the caller. The caller
+ * fully owns the event-node and is reposonsible to either link it somewhere,
+ * or release it.
+ *
+ * Event nodes can be linked on a client object, as well as optionally on a
+ * probe object. As long as an event-node is linked, it will be retrievable by
+ * the API user through n_dhcp4_client_pop_event(). Furthermore, destruction of
+ * the client, or probe respectively, will clean-up all pending events.
+ *
+ * Return: 0 on success, negative error code on failure.
  */
 int n_dhcp4_c_event_node_new(NDhcp4CEventNode **nodep) {
         NDhcp4CEventNode *node;
@@ -223,7 +238,15 @@ int n_dhcp4_c_event_node_new(NDhcp4CEventNode **nodep) {
 }
 
 /**
- * n_dhcp4_c_event_node_free() - XXX
+ * n_dhcp4_c_event_node_free() - deallocate event
+ * @node:                       node to operate on, or NULL
+ *
+ * This deallocates the node given as @node. If the node is linked on a client
+ * or probe, it is unlinked automatically.
+ *
+ * If @probe is NULL, this is a no-op.
+ *
+ * Return: NULL is returned.
  */
 NDhcp4CEventNode *n_dhcp4_c_event_node_free(NDhcp4CEventNode *node) {
         if (!node)
@@ -237,7 +260,18 @@ NDhcp4CEventNode *n_dhcp4_c_event_node_free(NDhcp4CEventNode *node) {
 }
 
 /**
- * n_dhcp4_client_new() - XXX
+ * n_dhcp4_client_new() - allocate new client
+ * @clientp:                    output argument for new client
+ * @config:                     configuration to use
+ *
+ * This allocates a new DHCP4 client object and returns it in @clientp to the
+ * caller. The caller then owns a single ref-count to the object and is
+ * responsible to drop it, when no longer needed.
+ *
+ * The configuration given as @config is used to initialize the client. The
+ * caller is free to destroy the configuration once this function returns.
+ *
+ * Return: 0 on success, negative error code on failure.
  */
 _public_ int n_dhcp4_client_new(NDhcp4Client **clientp, NDhcp4ClientConfig *config) {
         _cleanup_(n_dhcp4_client_unrefp) NDhcp4Client *client = NULL;
@@ -297,7 +331,13 @@ static void n_dhcp4_client_free(NDhcp4Client *client) {
 }
 
 /**
- * n_dhcp4_client_ref() - XXX
+ * n_dhcp4_client_ref() - acquire client reference
+ * @client:                     client to operate on, or NULL
+ *
+ * This acquires a reference to the client given as @client. If @client is
+ * NULL, this function is a no-op.
+ *
+ * Return: @client is returned.
  */
 _public_ NDhcp4Client *n_dhcp4_client_ref(NDhcp4Client *client) {
         if (client)
@@ -306,7 +346,16 @@ _public_ NDhcp4Client *n_dhcp4_client_ref(NDhcp4Client *client) {
 }
 
 /**
- * n_dhcp4_client_unref() - XXX
+ * n_dhcp4_client_unref() - release client reference
+ * @client:                     client to operate on, or NULL
+ *
+ * This releases a reference to the client given as @client. If @client is
+ * NULL, this is a no-op.
+ *
+ * Once the last reference is dropped, the client object will get destroyed and
+ * deallocated.
+ *
+ * Return: NULL is returned.
  */
 _public_ NDhcp4Client *n_dhcp4_client_unref(NDhcp4Client *client) {
         if (client && !--client->n_refs)
@@ -315,7 +364,18 @@ _public_ NDhcp4Client *n_dhcp4_client_unref(NDhcp4Client *client) {
 }
 
 /**
- * n_dhcp4_client_raise() - XXX
+ * n_dhcp4_client_raise() - raise event
+ * @client:                     client to operate on
+ * @nodep:                      output argument for new event, or NULL
+ * @event:                      event type to use
+ *
+ * This creates a new event-node on @client, setting the event-type to @event.
+ * The newly created event-node is returned to the caller in @nodep (unless
+ * @nodep is NULL).
+ *
+ * The event-node is automatically linked on @client.
+ *
+ * Return: 0 on success, negative error code on failure.
  */
 int n_dhcp4_client_raise(NDhcp4Client *client, NDhcp4CEventNode **nodep, unsigned int event) {
         NDhcp4CEventNode *node;
@@ -334,7 +394,15 @@ int n_dhcp4_client_raise(NDhcp4Client *client, NDhcp4CEventNode **nodep, unsigne
 }
 
 /**
- * n_dhcp4_client_get_fd() - XXX
+ * n_dhcp4_client_get_fd() - retrieve event FD
+ * @client:                     client to operate on
+ * @fdp:                        output argument to store FD
+ *
+ * This retrieves the FD used by the client object given as @client. The FD is
+ * always valid, and returned in @fdp.
+ *
+ * The caller is expected to poll this FD for readable events and call
+ * n_dhcp4_client_dispatch() whenever the FD is readable.
  */
 _public_ void n_dhcp4_client_get_fd(NDhcp4Client *client, int *fdp) {
         *fdp = client->fd_epoll;
@@ -430,7 +498,23 @@ static int n_dhcp4_client_dispatch_io(NDhcp4Client *client, struct epoll_event *
 }
 
 /**
- * n_dhcp4_client_dispatch() - XXX
+ * n_dhcp4_client_dispatch() - dispatch client
+ * @client:                     client to operate on
+ *
+ * This dispatches pending operations on @client. It will read incoming
+ * messages, write pending data, and handle any timeouts.
+ *
+ * This function never blocks.
+ *
+ * If there are more events to dispatch, than would be reasonable to do in a
+ * single dispatch, this will return N_DHCP4_E_PREEMPTED. In this case the
+ * caller is expected to call into this function again when it is ready to
+ * dispatch more events.
+ * If your event loop is level-triggered (it very likely is), you can
+ * optionally ignore this return code and treat it as success.
+ *
+ * Return: 0 on success, negative error code on failure, N_DHCP4_E_PREEMPTED if
+ *         there is more data to dispatch.
  */
 _public_ int n_dhcp4_client_dispatch(NDhcp4Client *client) {
         struct epoll_event events[2];
@@ -468,7 +552,22 @@ _public_ int n_dhcp4_client_dispatch(NDhcp4Client *client) {
 }
 
 /**
- * n_dhcp4_client_pop_event() - XXX
+ * n_dhcp4_client_pop_event() - fetch pending event
+ * @client:                     client to operate on
+ * @eventp:                     output argument to store next event
+ *
+ * This fetches the next pending event from the event-queue and returns it to a
+ * caller. A pointer to the event is stored in @eventp. If there is no more
+ * event queued, NULL is returned.
+ *
+ * If a valid event is returned, it is accessible until the next call to this
+ * function, or the destruction of the context object (this might be either the
+ * client object or the probe object, pointed to by the event), whichever
+ * happens first.
+ * That is, the caller should not pin the returned event object, but copy
+ * required information into their own state tracking contexts.
+ *
+ * Return: 0 on success, negative error code on failure.
  */
 _public_ int n_dhcp4_client_pop_event(NDhcp4Client *client, NDhcp4ClientEvent **eventp) {
         NDhcp4CEventNode *node, *t_node;
@@ -489,7 +588,46 @@ _public_ int n_dhcp4_client_pop_event(NDhcp4Client *client, NDhcp4ClientEvent **
 }
 
 /**
- * n_dhcp4_client_update_mtu() - XXX
+ * n_dhcp4_client_update_mtu() - update link mtu
+ * @client:                     client to operate on
+ * @mtu:                        new mtu
+ *
+ * This updates the link MTU used by the client object. By default, the minimum
+ * requirement given by the IP specification is assumed, which means 576
+ * bytes. The caller is advised to update this to the actual MTU used by the
+ * link layer.
+ *
+ * This value reflects the MTU of the link layer. That is, it is the maximum
+ * packet size that you can send on that link, excluding the link-header but
+ * including the IP-header. On ethernet-v2 this would be 1500.
+ *
+ * If unsure, it is safe to leave this unset. However, in this case a DHCP
+ * server will be required to omit information if it does not fit into the
+ * default MTU.
+ *
+ * Unless you keep the default MTU, you should update the MTU whenever the link
+ * MTU changes. That is, when it is increased *and* when it is decreased.
+ * However, you must be aware that decreasing the MTU on a link might cause
+ * temporary data loss.
+ *
+ * Background: Knowing the link MTU guarantees that we can possibly transmit
+ *             packets bigger than the IP minimum (i.e., 576 bytes). However,
+ *             it does not guarantee that a possible target supports parsing
+ *             packets bigger than the IP minimum. Hence, the MTU is used by a
+ *             client to send a hint to a server that it can receive replies
+ *             bigger than the minimum. As such, a server can reply with more
+ *             information than otherwise possible.
+ *             Since this DHCP client does not support fragmented packets, we
+ *             simply set the allowed packet-size to the local link MTU.
+ *             Note that DHCP relays might cause DHCP packets to be routed.
+ *             However, such relays are required to always reassemble any
+ *             fragments they receive into full DHCP packets, before they
+ *             forward them either way. This guarantees that incoming packets
+ *             are never fragmented, unless they exceed the local link MTU
+ *             (this would otherwise not neccessarily be true, if some other
+ *             part of the routed network had a lower MTU).
+ *
+ * Return: 0 on success, negative error code on failure.
  */
 _public_ int n_dhcp4_client_update_mtu(NDhcp4Client *client, uint16_t mtu) {
         int r;
@@ -508,7 +646,29 @@ _public_ int n_dhcp4_client_update_mtu(NDhcp4Client *client, uint16_t mtu) {
 }
 
 /**
- * n_dhcp4_client_probe() - XXX
+ * n_dhcp4_client_probe() - create a new probe
+ * @client:                     client to operate on
+ * @probep:                     output argument to store new probe
+ * @config:                     probe configuration to use
+ *
+ * This creates a new probe on @client. Probes represent DHCP requests and
+ * track the state over the entire lifetime of a lease. Once a probe is created
+ * it will start looking for DHCP servers, request a lease from them, and renew
+ * the lease continously whenever it expires. Furthermore, if a lease cannot be
+ * renewed, a new lease will be requested.
+ *
+ * The API allows for many probes to be run at the same time. However, the DHCP
+ * specification forbids many of those cases (e.g., you must not reuse a client
+ * id, otherwise it will be impossible to track who to forward received packets
+ * to). Hence, so far only a single probe can run at a time. If you create a
+ * new probe, all older probes that conflict with that probe will be canceled
+ * (their state machine is halted and a N_DHCP4_CLIENT_EVENT_CANCELLED event is
+ * raised.
+ * This might change in the future, though. There might be cases where multiple
+ * probes can be run in parallel (e.g., with different client-ids, or an INFORM
+ * in parallel to a REQUEST, ...).
+ *
+ * Return: 0 on success, negative error code on failure.
  */
 _public_ int n_dhcp4_client_probe(NDhcp4Client *client,
                                   NDhcp4ClientProbe **probep,
