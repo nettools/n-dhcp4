@@ -76,10 +76,9 @@ static void test_c_connection_connect(int netns,
         netns_set(oldns);
 }
 
-static void test_server_receive(NDhcp4SConnection *connection, uint8_t type, NDhcp4Incoming **messagep) {
+static void test_server_receive(NDhcp4SConnection *connection, uint8_t expected_type, NDhcp4Incoming **messagep) {
         _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *message = NULL;
-        uint8_t *value;
-        size_t size;
+        uint8_t received_type;
         int r, fd;
 
         n_dhcp4_s_connection_get_fd(connection, &fd);
@@ -89,10 +88,9 @@ static void test_server_receive(NDhcp4SConnection *connection, uint8_t type, NDh
         assert(!r);
         assert(message);
 
-        r = n_dhcp4_incoming_query(message, N_DHCP4_OPTION_MESSAGE_TYPE, &value, &size);
+        r = n_dhcp4_incoming_query_message_type(message, &received_type);
         assert(!r);
-        assert(size == 1);
-        assert(*value == type);
+        assert(received_type == expected_type);
 
         if (messagep) {
                 *messagep = message;
@@ -100,10 +98,9 @@ static void test_server_receive(NDhcp4SConnection *connection, uint8_t type, NDh
         }
 }
 
-static void test_client_receive(NDhcp4CConnection *connection, uint8_t type, NDhcp4Incoming **messagep) {
+static void test_client_receive(NDhcp4CConnection *connection, uint8_t expected_type, NDhcp4Incoming **messagep) {
         _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *message = NULL;
-        uint8_t *value;
-        size_t size;
+        uint8_t received_type;
         int r;
 
         test_poll_client(*connection->fd_epollp, N_DHCP4_CLIENT_EPOLL_IO);
@@ -112,10 +109,9 @@ static void test_client_receive(NDhcp4CConnection *connection, uint8_t type, NDh
         assert(!r);
         assert(message);
 
-        r = n_dhcp4_incoming_query(message, N_DHCP4_OPTION_MESSAGE_TYPE, &value, &size);
+        r = n_dhcp4_incoming_query_message_type(message, &received_type);
         assert(!r);
-        assert(size == 1);
-        assert(*value == type);
+        assert(received_type == expected_type);
 
         if (messagep) {
                 *messagep = message;

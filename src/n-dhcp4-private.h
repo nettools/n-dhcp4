@@ -435,6 +435,17 @@ NDhcp4Header *n_dhcp4_outgoing_get_header(NDhcp4Outgoing *outgoing);
 size_t n_dhcp4_outgoing_get_raw(NDhcp4Outgoing *outgoing, const void **rawp);
 int n_dhcp4_outgoing_append(NDhcp4Outgoing *outgoing, uint8_t option, const void *data, uint8_t n_data);
 
+int n_dhcp4_outgoing_append_t1(NDhcp4Outgoing *message, uint32_t t1);
+int n_dhcp4_outgoing_append_t2(NDhcp4Outgoing *message, uint32_t t2);
+int n_dhcp4_outgoing_append_lifetime(NDhcp4Outgoing *message, uint32_t lifetime);
+int n_dhcp4_outgoing_append_server_identifier(NDhcp4Outgoing *message, struct in_addr addr);
+
+void n_dhcp4_outgoing_set_secs(NDhcp4Outgoing *message, uint32_t secs);
+void n_dhcp4_outgoing_set_xid(NDhcp4Outgoing *message, uint32_t xid);
+void n_dhcp4_outgoing_set_yiaddr(NDhcp4Outgoing *message, struct in_addr yiaddr);
+
+void n_dhcp4_outgoing_get_xid(NDhcp4Outgoing *message, uint32_t *xidp);
+
 /* incoming messages */
 
 int n_dhcp4_incoming_new(NDhcp4Incoming **incomingp, const void *raw, size_t n_raw);
@@ -443,6 +454,17 @@ NDhcp4Incoming *n_dhcp4_incoming_free(NDhcp4Incoming *incoming);
 NDhcp4Header *n_dhcp4_incoming_get_header(NDhcp4Incoming *incoming);
 size_t n_dhcp4_incoming_get_raw(NDhcp4Incoming *incoming, const void **rawp);
 int n_dhcp4_incoming_query(NDhcp4Incoming *incoming, uint8_t option, uint8_t **datap, size_t *n_datap);
+
+int n_dhcp4_incoming_query_message_type(NDhcp4Incoming *message, uint8_t *typep);
+int n_dhcp4_incoming_query_lifetime(NDhcp4Incoming *message, uint32_t *lifetimep);
+int n_dhcp4_incoming_query_t2(NDhcp4Incoming *message, uint32_t *t2p);
+int n_dhcp4_incoming_query_t1(NDhcp4Incoming *message, uint32_t *t1p);
+int n_dhcp4_incoming_query_server_identifier(NDhcp4Incoming *message, struct in_addr *idp);
+int n_dhcp4_incoming_query_max_message_size(NDhcp4Incoming *message, uint16_t *max_message_sizep);
+int n_dhcp4_incoming_query_requested_ip(NDhcp4Incoming *message, struct in_addr *requested_ipp);
+
+void n_dhcp4_incoming_get_xid(NDhcp4Incoming *message, uint32_t *xidp);
+void n_dhcp4_incoming_get_yiaddr(NDhcp4Incoming *message, struct in_addr *yiaddr);
 
 /* sockets */
 

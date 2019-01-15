@@ -316,3 +316,115 @@ int n_dhcp4_incoming_query(NDhcp4Incoming *incoming, uint8_t option, uint8_t **d
                 *n_datap = incoming->options[option].size;
         return 0;
 }
+
+static int n_dhcp4_incoming_query_u8(NDhcp4Incoming *message, uint8_t option, uint8_t *u8p) {
+        uint8_t *data;
+        size_t n_data;
+        int r;
+
+        r = n_dhcp4_incoming_query(message, option, &data, &n_data);
+        if (r)
+                return r;
+        else if (n_data != sizeof(*data))
+                return N_DHCP4_E_MALFORMED;
+
+        *u8p = *data;
+        return 0;
+}
+
+static int n_dhcp4_incoming_query_u16(NDhcp4Incoming *message, uint8_t option, uint16_t *u16p) {
+        uint8_t *data;
+        size_t n_data;
+        uint16_t be16;
+        int r;
+
+        r = n_dhcp4_incoming_query(message, option, &data, &n_data);
+        if (r)
+                return r;
+        else if (n_data != sizeof(be16))
+                return N_DHCP4_E_MALFORMED;
+
+        memcpy(&be16, data, sizeof(be16));
+
+        *u16p = ntohs(be16);
+        return 0;
+}
+
+static int n_dhcp4_incoming_query_u32(NDhcp4Incoming *message, uint8_t option, uint32_t *u32p) {
+        uint8_t *data;
+        size_t n_data;
+        uint32_t be32;
+        int r;
+
+        r = n_dhcp4_incoming_query(message, option, &data, &n_data);
+        if (r)
+                return r;
+        else if (n_data != sizeof(be32))
+                return N_DHCP4_E_MALFORMED;
+
+        memcpy(&be32, data, sizeof(be32));
+
+        if (be32 == (uint32_t)-1)
+                *u32p = 0;
+        else
+                *u32p = ntohl(be32);
+        return 0;
+}
+
+static int n_dhcp4_incoming_query_in_addr(NDhcp4Incoming *message, uint8_t option, struct in_addr *addrp) {
+        uint8_t *data;
+        size_t n_data;
+        uint32_t be32;
+        int r;
+
+        r = n_dhcp4_incoming_query(message, option, &data, &n_data);
+        if (r)
+                return r;
+        else if (n_data != sizeof(be32))
+                return N_DHCP4_E_MALFORMED;
+
+        memcpy(&be32, data, sizeof(be32));
+
+        addrp->s_addr = be32;
+        return 0;
+}
+
+int n_dhcp4_incoming_query_message_type(NDhcp4Incoming *message, uint8_t *typep) {
+        return n_dhcp4_incoming_query_u8(message, N_DHCP4_OPTION_MESSAGE_TYPE, typep);
+}
+
+int n_dhcp4_incoming_query_lifetime(NDhcp4Incoming *message, uint32_t *lifetimep) {
+        return n_dhcp4_incoming_query_u32(message, N_DHCP4_OPTION_IP_ADDRESS_LEASE_TIME, lifetimep);
+}
+
+int n_dhcp4_incoming_query_t2(NDhcp4Incoming *message, uint32_t *t2p) {
+        return n_dhcp4_incoming_query_u32(message, N_DHCP4_OPTION_REBINDING_T2_TIME, t2p);
+}
+
+int n_dhcp4_incoming_query_t1(NDhcp4Incoming *message, uint32_t *t1p) {
+        return n_dhcp4_incoming_query_u32(message, N_DHCP4_OPTION_RENEWAL_T1_TIME, t1p);
+}
+
+int n_dhcp4_incoming_query_server_identifier(NDhcp4Incoming *message, struct in_addr *idp) {
+        return n_dhcp4_incoming_query_in_addr(message, N_DHCP4_OPTION_SERVER_IDENTIFIER, idp);
+}
+
+int n_dhcp4_incoming_query_max_message_size(NDhcp4Incoming *message, uint16_t *max_message_sizep) {
+        return n_dhcp4_incoming_query_u16(message, N_DHCP4_OPTION_MAXIMUM_MESSAGE_SIZE, max_message_sizep);
+}
+
+int n_dhcp4_incoming_query_requested_ip(NDhcp4Incoming *message, struct in_addr *requested_ipp) {
+        return n_dhcp4_incoming_query_in_addr(message, N_DHCP4_OPTION_REQUESTED_IP_ADDRESS, requested_ipp);
+}
+
+void n_dhcp4_incoming_get_xid(NDhcp4Incoming *message, uint32_t *xidp) {
+        NDhcp4Header *header = n_dhcp4_incoming_get_header(message);
+
+        *xidp = header->xid;
+}
+
+void n_dhcp4_incoming_get_yiaddr(NDhcp4Incoming *message, struct in_addr *yiaddr) {
+        NDhcp4Header *header = n_dhcp4_incoming_get_header(message);
+
+        yiaddr->s_addr = header->yiaddr;
+}

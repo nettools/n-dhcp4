@@ -290,3 +290,70 @@ int n_dhcp4_outgoing_append(NDhcp4Outgoing *outgoing,
 
         return N_DHCP4_E_NO_SPACE;
 }
+
+static int n_dhcp4_outgoing_append_u32(NDhcp4Outgoing *message, uint8_t option, uint32_t u32) {
+        uint32_t be32 = htonl(u32);
+        int r;
+
+        r = n_dhcp4_outgoing_append(message, option, &be32, sizeof(be32));
+        if (r)
+                return r;
+
+        return 0;
+}
+
+static int n_dhcp4_outgoing_append_in_addr(NDhcp4Outgoing *message, uint8_t option, struct in_addr addr) {
+        int r;
+
+        r = n_dhcp4_outgoing_append(message, option, &addr.s_addr, sizeof(addr.s_addr));
+        if (r)
+                return r;
+
+        return 0;
+}
+
+int n_dhcp4_outgoing_append_t1(NDhcp4Outgoing *message, uint32_t t1) {
+        return n_dhcp4_outgoing_append_u32(message, N_DHCP4_OPTION_RENEWAL_T1_TIME, t1);
+}
+
+int n_dhcp4_outgoing_append_t2(NDhcp4Outgoing *message, uint32_t t2) {
+        return n_dhcp4_outgoing_append_u32(message, N_DHCP4_OPTION_REBINDING_T2_TIME, t2);
+}
+
+int n_dhcp4_outgoing_append_lifetime(NDhcp4Outgoing *message, uint32_t lifetime) {
+        return n_dhcp4_outgoing_append_u32(message, N_DHCP4_OPTION_IP_ADDRESS_LEASE_TIME, lifetime);
+}
+
+int n_dhcp4_outgoing_append_server_identifier(NDhcp4Outgoing *message, struct in_addr addr) {
+        return n_dhcp4_outgoing_append_in_addr(message, N_DHCP4_OPTION_SERVER_IDENTIFIER, addr);
+}
+
+void n_dhcp4_outgoing_set_secs(NDhcp4Outgoing *message, uint32_t secs) {
+        NDhcp4Header *header = n_dhcp4_outgoing_get_header(message);
+
+        /*
+         * Some DHCP servers will reject DISCOVER or REQUEST messages if 'secs'
+         * is not set (i.e., set to 0), even though the spec allows it.
+         */
+        assert(secs);
+
+        header->secs = htonl(secs);
+}
+
+void n_dhcp4_outgoing_set_xid(NDhcp4Outgoing *message, uint32_t xid) {
+        NDhcp4Header *header = n_dhcp4_outgoing_get_header(message);
+
+        header->xid = xid;
+}
+
+void n_dhcp4_outgoing_get_xid(NDhcp4Outgoing *message, uint32_t *xidp) {
+        NDhcp4Header *header = n_dhcp4_outgoing_get_header(message);
+
+        *xidp = header->xid;
+}
+
+void n_dhcp4_outgoing_set_yiaddr(NDhcp4Outgoing *message, struct in_addr yiaddr) {
+        NDhcp4Header *header = n_dhcp4_outgoing_get_header(message);
+
+        header->yiaddr = yiaddr.s_addr;
+}

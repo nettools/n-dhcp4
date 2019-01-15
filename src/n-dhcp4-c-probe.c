@@ -455,8 +455,7 @@ int n_dhcp4_client_probe_dispatch_io(NDhcp4ClientProbe *probe, uint32_t events) 
 
         for (unsigned int i = 0; i < 32; ++i) {
                 _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *message = NULL;
-                uint8_t *type;
-                size_t n_type;
+                uint8_t type;
 
                 r = n_dhcp4_c_connection_dispatch_io(&probe->connection, &message);
                 if (r)
@@ -465,11 +464,11 @@ int n_dhcp4_client_probe_dispatch_io(NDhcp4ClientProbe *probe, uint32_t events) 
                 if (!message)
                         continue;
 
-                r = n_dhcp4_incoming_query(message, N_DHCP4_OPTION_MESSAGE_TYPE, &type, &n_type);
-                if (r == N_DHCP4_E_UNSET || n_type != sizeof(type))
+                r = n_dhcp4_incoming_query_message_type(message, &type);
+                if (r == N_DHCP4_E_UNSET || r == N_DHCP4_E_MALFORMED)
                         continue;
 
-                switch (*type) {
+                switch (type) {
                 case N_DHCP4_MESSAGE_OFFER:
                         r = n_dhcp4_client_probe_transition_offer(probe);
                         if (r)

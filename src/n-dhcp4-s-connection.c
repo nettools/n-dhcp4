@@ -53,21 +53,18 @@ void n_dhcp4_s_connection_get_fd(NDhcp4SConnection *connection, int *fdp) {
 static int n_dhcp4_s_connection_verify_incoming(NDhcp4SConnection *connection,
                                                 NDhcp4Incoming *message) {
 
-        uint8_t *type;
-        size_t n_type;
+        uint8_t type;
         int r;
 
-        r = n_dhcp4_incoming_query(message, N_DHCP4_OPTION_MESSAGE_TYPE, &type, &n_type);
+        r = n_dhcp4_incoming_query_message_type(message, &type);
         if (r) {
                 if (r == N_DHCP4_E_UNSET)
                         return N_DHCP4_E_MALFORMED;
                 else
                         return r;
-        } else if (n_type != sizeof(*type)) {
-                return N_DHCP4_E_MALFORMED;
         }
 
-        switch (*type) {
+        switch (type) {
         case N_DHCP4_MESSAGE_DISCOVER:
         case N_DHCP4_MESSAGE_REQUEST:
         case N_DHCP4_MESSAGE_DECLINE:
@@ -184,52 +181,24 @@ static void n_dhcp4_s_connection_init_reply_header(NDhcp4SConnection *connection
 static int n_dhcp4_s_connection_outgoing_set_yiaddr(NDhcp4Outgoing *message,
                                                      uint32_t yiaddr,
                                                      uint32_t lifetime) {
-        NDhcp4Header *header = n_dhcp4_outgoing_get_header(message);
         uint32_t t1 = lifetime / 2;
         uint32_t t2 = ((uint64_t)lifetime * 7) / 8;
+        struct in_addr addr = { .s_addr = yiaddr };
         int r;
 
-        r = n_dhcp4_outgoing_append(message,
-                                    N_DHCP4_OPTION_IP_ADDRESS_LEASE_TIME,
-                                    &lifetime, sizeof(lifetime));
+        r = n_dhcp4_outgoing_append_lifetime(message, lifetime);
         if (r)
                 return r;
 
-        r = n_dhcp4_outgoing_append(message,
-                                    N_DHCP4_OPTION_RENEWAL_T1_TIME,
-                                    &t1, sizeof(t1));
+        r = n_dhcp4_outgoing_append_t1(message, t1);
         if (r)
                 return r;
 
-        r = n_dhcp4_outgoing_append(message,
-                                    N_DHCP4_OPTION_REBINDING_T2_TIME,
-                                    &t2, sizeof(t2));
+        r = n_dhcp4_outgoing_append_t2(message, t2);
         if (r)
                 return r;
 
-        header->yiaddr = yiaddr;
-
-        return 0;
-}
-
-static int n_dhcp4_s_connection_incoming_get_max_message_size(NDhcp4Incoming *request,
-                                                              uint16_t *max_message_size) {
-        uint8_t *data;
-        size_t n_data;
-        int r;
-
-        r = n_dhcp4_incoming_query(request,
-                                   N_DHCP4_OPTION_MAXIMUM_MESSAGE_SIZE,
-                                   &data,
-                                   &n_data);
-        if (r < 0) {
-                return r;
-        } else if (r == N_DHCP4_E_UNSET || n_data != sizeof(*max_message_size)) {
-                *max_message_size = 0;
-                return 0;
-        }
-
-        memcpy(max_message_size, data, sizeof(*max_message_size));
+        n_dhcp4_outgoing_set_yiaddr(message, addr);
 
         return 0;
 }
@@ -245,7 +214,7 @@ static int n_dhcp4_s_connection_new_reply(NDhcp4SConnection *connection,
         size_t n_client_identifier;
         int r;
 
-        r = n_dhcp4_s_connection_incoming_get_max_message_size(request, &max_message_size);
+        r = n_dhcp4_incoming_query_max_message_size(request, &max_message_size);
         if (r)
                 return r;
 
@@ -263,10 +232,7 @@ static int n_dhcp4_s_connection_new_reply(NDhcp4SConnection *connection,
         if (r)
                 return r;
 
-        r = n_dhcp4_outgoing_append(message,
-                                    N_DHCP4_OPTION_SERVER_IDENTIFIER,
-                                    &server_address->s_addr,
-                                    sizeof(server_address->s_addr));
+        r = n_dhcp4_outgoing_append_server_identifier(message, *server_address);
         if (r)
                 return r;
 
