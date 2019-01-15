@@ -445,12 +445,16 @@ static int n_dhcp4_c_connection_new_message(NDhcp4CConnection *connection,
         /*
          * We explicitly pass 0 as maximum message size, which makes
          * NDhcp4Outgoing use the mandated default value from the spec (see its
-         * implementation). We could theoretically increase this, in case we
-         * know more properties about the server, but this is first of all not
-         * necessary (so far clients have no reason to send big packets, there
-         * is simply no data to send), but also might break theoretical
-         * use-cases like anycast-DHCP-servers, or whatever crazy setups
-         * network-vendors come up with.
+         * implementation). While the transport and like layers might support
+         * bigger MTUs (and we very likely know about them through
+         * n_dhcp4_client_update_mtu()), we cannot assume the target DHCP
+         * server supports parsing packets bigger than the minimum (and it is
+         * allowed to refuse bigger IP packets, even if the network supports
+         * transmission of them).
+         *
+         * We could theoretically increase this for packets other than the
+         * initial discovery. However, clients are unlikely to ever send large
+         * packets, so we just keep the same default for all outgoing packets.
          */
         r = n_dhcp4_outgoing_new(&message, 0, N_DHCP4_OVERLOAD_FILE | N_DHCP4_OVERLOAD_SNAME);
         if (r)
