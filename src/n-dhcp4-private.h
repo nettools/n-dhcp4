@@ -293,6 +293,7 @@ struct NDhcp4Client {
 
         uint16_t mtu;
         NDhcp4ClientProbe *current_probe;
+        uint64_t scheduled_timeout;
 
         bool preempted : 1;
 };

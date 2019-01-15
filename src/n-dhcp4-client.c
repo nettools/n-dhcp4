@@ -415,18 +415,20 @@ static void n_dhcp4_client_arm_timer(NDhcp4Client *client) {
         if (client->current_probe)
                 n_dhcp4_client_probe_get_timeout(client->current_probe, &timeout);
 
-        /* XXX: avoid syscall if it didn't change */
+        if (timeout != client->scheduled_timeout) {
+                r = timerfd_settime(client->fd_timer,
+                                    TFD_TIMER_ABSTIME,
+                                    &(struct itimerspec){
+                                        .it_value = {
+                                                .tv_sec = timeout / UINT64_C(1000000000),
+                                                .tv_nsec = timeout % UINT64_C(1000000000),
+                                        },
+                                    },
+                                    NULL);
+                assert(r >= 0);
 
-        r = timerfd_settime(client->fd_timer,
-                            TFD_TIMER_ABSTIME,
-                            &(struct itimerspec){
-                                .it_value = {
-                                        .tv_sec = timeout / UINT64_C(1000000000),
-                                        .tv_nsec = timeout % UINT64_C(1000000000),
-                                },
-                            },
-                            NULL);
-        assert(r >= 0);
+                client->scheduled_timeout = timeout;
+        }
 }
 
 static int n_dhcp4_client_dispatch_timer(NDhcp4Client *client, struct epoll_event *event) {
