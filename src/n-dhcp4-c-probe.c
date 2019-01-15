@@ -1,7 +1,9 @@
 /*
  * DHCPv4 Client Probes
  *
- * XXX
+ * The probe object is used to represent the lifetime of a DHCP client session.
+ * A running probe discovers DHCP servers, requests a lease, and maintains that
+ * lease.
  */
 
 #include <assert.h>
@@ -15,7 +17,19 @@
 #include "n-dhcp4-private.h"
 
 /**
- * n_dhcp4_client_probe_config_new() - XXX
+ * n_dhcp4_client_probe_config_new() - create new probe configuration
+ * @configp:                    output argument to store new configuration
+ *
+ * This creates a new probe configuration object. The object is a collection of
+ * parameters for probes. No data verification is done by the configuration
+ * object. Instead, when passing the configuration to the constructor of a
+ * probe, this constructor will perform parameter validation.
+ *
+ * A probe configuration is an unlinked object only used to pass information to
+ * a probe constructor. The caller fully owns the returned configuration object
+ * and is responsible to free it when no longer needed.
+ *
+ * Return: 0 on success, negative error code on failure.
  */
 _public_ int n_dhcp4_client_probe_config_new(NDhcp4ClientProbeConfig **configp) {
         _cleanup_(n_dhcp4_client_probe_config_freep) NDhcp4ClientProbeConfig *config = NULL;
@@ -32,7 +46,15 @@ _public_ int n_dhcp4_client_probe_config_new(NDhcp4ClientProbeConfig **configp) 
 }
 
 /**
- * n_dhcp4_client_probe_config_free() - XXX
+ * n_dhcp4_client_probe_config_free() - destroy probe configuration
+ * @config:                     configuration to operate on, or NULL
+ *
+ * This destroys a probe configuration object and deallocates all its
+ * resources.
+ *
+ * If @config is NULL, this is a no-op.
+ *
+ * Return: NULL is returned.
  */
 _public_ NDhcp4ClientProbeConfig *n_dhcp4_client_probe_config_free(NDhcp4ClientProbeConfig *config) {
         if (!config)
@@ -44,21 +66,68 @@ _public_ NDhcp4ClientProbeConfig *n_dhcp4_client_probe_config_free(NDhcp4ClientP
 }
 
 /**
- * n_dhcp4_client_probe_config_set_inform_only() - XXX
+ * n_dhcp4_client_probe_config_set_inform_only() - set inform-only property
+ * @config:                     configuration to operate on
+ * @inform_only:                value to set
+ *
+ * This sets the inform-only property of the given configuration object. This
+ * property controls whether the client probe should request a full lease, or
+ * whether it should just ask for auxiliary information without requesting an
+ * address.
+ *
+ * The default is to request a full lease and address. If inform-only is set to
+ * true, only auxiliary information will be requested.
  */
 _public_ void n_dhcp4_client_probe_config_set_inform_only(NDhcp4ClientProbeConfig *config, bool inform_only) {
         config->inform_only = inform_only;
 }
 
 /**
- * n_dhcp4_client_probe_config_set_init_reboot() - XXX
+ * n_dhcp4_client_probe_config_set_init_reboot() - set init-reboot property
+ * @config:                     configuration to operate on
+ * @init_reboot:                value to set
+ *
+ * This sets the init-reboot property of the given configuration object.
+ *
+ * The default is false. If set to true, a probe will make use of the
+ * INIT-REBOOT path, as described by the DHCP specification. In most cases, you
+ * do not want this.
+ *
+ * Background: The INIT-REBOOT path allows a DHCP client to skip
+ *             server-discovery when rebooting/resuming their machine. The DHCP
+ *             client simply re-requests the lease it had acquired before. This
+ *             saves one roundtrip in the success-case, since the DISCOVER step
+ *             is skipped. However, there are little to no timeouts involved,
+ *             so the roundtrip should be barely noticeable. In contrast, if
+ *             the INIT-REBOOT fails (because the lease is no longer valid, or
+ *             not valid on this network), the client has to wait for a
+ *             possible answer to the request before actually starting the DHCP
+ *             process all over. This significantly increases the time needed
+ *             to switch networks.
+ *             The INIT-REBOOT state might have been a real improvements with
+ *             the old resend-timeouts mandated by the DHCP specification.
+ *             However, on modern networks with improved timeout values we
+ *             recommend against using it.
  */
 _public_ void n_dhcp4_client_probe_config_set_init_reboot(NDhcp4ClientProbeConfig *config, bool init_reboot) {
         config->init_reboot = init_reboot;
 }
 
 /**
- * n_dhcp4_client_probe_config_set_requested_ip() - XXX
+ * n_dhcp4_client_probe_config_set_requested_ip() - set requested-ip property
+ * @config:                     configuration to operate on
+ * @ip:                         value to set
+ *
+ * This sets the requested-ip property of the given configuration object.
+ *
+ * The default is all 0. If set to something else, the DHCP discovery will
+ * include this IP in its requests to tell DHCP servers which address to pick.
+ * Servers are not required to honor this, nor does this have any effect on
+ * servers not serving this address.
+ *
+ * This field should always be set if the caller knows of an address that was
+ * previously acquired on this network. It serves as hint to servers and will
+ * allow them to provide the same address again.
  */
 _public_ void n_dhcp4_client_probe_config_set_requested_ip(NDhcp4ClientProbeConfig *config, struct in_addr ip) {
         config->requested_ip = ip;
