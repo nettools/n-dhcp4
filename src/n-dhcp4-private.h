@@ -612,6 +612,11 @@ static inline void n_dhcp4_incoming_freep(NDhcp4Incoming **incoming) {
                 n_dhcp4_incoming_free(*incoming);
 }
 
+static inline void n_dhcp4_freep(void *p) {
+        if (*(void **)p)
+                free(*(void **)p);
+}
+
 static inline void n_dhcp4_closep(int *fdp) {
         if (*fdp >= 0)
                 close(*fdp);
