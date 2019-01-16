@@ -80,6 +80,9 @@ test('Connection Handling', test_connection)
 test_message = executable('test-message', ['test-message.c'], dependencies: libndhcp4_dep)
 test('Message Handling', test_message)
 
+test_run_client = executable('test-run-client', ['test-run-client.c'], dependencies: libndhcp4_dep)
+test('Client Runner', test_run_client, args: ['--test'])
+
 test_socket = executable('test-socket', ['test.c', 'test-socket.c'], dependencies: libndhcp4_dep)
 test('Socket Handling', test_socket)
 
