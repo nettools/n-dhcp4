@@ -132,7 +132,7 @@ static int manager_run(Manager *manager) {
                         { .fd = -1, .events = POLLIN },
                 };
                 size_t i;
-                int r, n;
+                int n;
 
                 n_dhcp4_client_get_fd(manager->client, &pfds[0].fd);
 
