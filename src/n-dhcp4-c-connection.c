@@ -15,18 +15,6 @@
 #include "n-dhcp4-private.h"
 #include "util/packet.h"
 
-enum {
-        _N_DHCP4_C_MESSAGE_INVALID = 0,
-        N_DHCP4_C_MESSAGE_DISCOVER,
-        N_DHCP4_C_MESSAGE_INFORM,
-        N_DHCP4_C_MESSAGE_SELECT,
-        N_DHCP4_C_MESSAGE_RENEW,
-        N_DHCP4_C_MESSAGE_REBIND,
-        N_DHCP4_C_MESSAGE_REBOOT,
-        N_DHCP4_C_MESSAGE_RELEASE,
-        N_DHCP4_C_MESSAGE_DECLINE,
-};
-
 int n_dhcp4_c_connection_init(NDhcp4CConnection *connection,
                               int *fd_epollp,
                               uint64_t seed,

@@ -180,6 +180,19 @@ enum {
         N_DHCP4_SERVER_EPOLL_IO,
 };
 
+enum {
+        _N_DHCP4_C_MESSAGE_INVALID = 0,
+        N_DHCP4_C_MESSAGE_DISCOVER,
+        N_DHCP4_C_MESSAGE_INFORM,
+        N_DHCP4_C_MESSAGE_SELECT,
+        N_DHCP4_C_MESSAGE_IGNORE,
+        N_DHCP4_C_MESSAGE_RENEW,
+        N_DHCP4_C_MESSAGE_REBIND,
+        N_DHCP4_C_MESSAGE_REBOOT,
+        N_DHCP4_C_MESSAGE_RELEASE,
+        N_DHCP4_C_MESSAGE_DECLINE,
+};
+
 struct NDhcp4Outgoing {
         NDhcp4Message *message;
         size_t n_message;
@@ -207,6 +220,7 @@ struct NDhcp4Incoming {
         } options[_N_DHCP4_OPTION_N];
 
         struct {
+                uint8_t type;
                 uint64_t start_time;
                 uint64_t base_time;
         } userdata;

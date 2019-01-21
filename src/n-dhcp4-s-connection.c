@@ -50,9 +50,15 @@ void n_dhcp4_s_connection_get_fd(NDhcp4SConnection *connection, int *fdp) {
         *fdp = connection->fd_udp;
 }
 
-static int n_dhcp4_s_connection_verify_incoming(NDhcp4SConnection *connection,
-                                                NDhcp4Incoming *message) {
+static bool n_dhcp4_s_connection_owns_ip(NDhcp4SConnection *connection, struct in_addr addr) {
+        if (!connection->ip)
+                return false;
+        return (connection->ip->ip.s_addr == addr.s_addr);
+}
 
+static int n_dhcp4_s_connection_verify_incoming(NDhcp4SConnection *connection,
+                                                NDhcp4Incoming *message,
+                                                bool broadcast) {
         uint8_t type;
         int r;
 
@@ -66,18 +72,50 @@ static int n_dhcp4_s_connection_verify_incoming(NDhcp4SConnection *connection,
 
         switch (type) {
         case N_DHCP4_MESSAGE_DISCOVER:
-        case N_DHCP4_MESSAGE_REQUEST:
+                message->userdata.type = N_DHCP4_C_MESSAGE_DISCOVER;
+                break;
+        case N_DHCP4_MESSAGE_REQUEST: {
+                struct in_addr server_identifier = {};
+                struct in_addr requested_ip = {};
+
+                r = n_dhcp4_incoming_query_server_identifier(message, &server_identifier);
+                if (r) {
+                        if (r == N_DHCP4_E_UNSET) {
+                                r = n_dhcp4_incoming_query_requested_ip(message, &requested_ip);
+                                if (r) {
+                                        if (r == N_DHCP4_E_UNSET) {
+                                                if (broadcast) {
+                                                        message->userdata.type = N_DHCP4_C_MESSAGE_REBIND;
+                                                } else {
+                                                        message->userdata.type = N_DHCP4_C_MESSAGE_RENEW;
+                                                }
+                                        } else {
+                                                return r;
+                                        }
+                                } else {
+                                        message->userdata.type = N_DHCP4_C_MESSAGE_REBOOT;
+                                }
+                        } else {
+                                return r;
+                        }
+                } else {
+                        if (n_dhcp4_s_connection_owns_ip(connection, server_identifier)) {
+                                message->userdata.type = N_DHCP4_C_MESSAGE_SELECT;
+                        } else {
+                                message->userdata.type = N_DHCP4_C_MESSAGE_IGNORE;
+                        }
+                }
+        }
+                break;
         case N_DHCP4_MESSAGE_DECLINE:
+                message->userdata.type = N_DHCP4_C_MESSAGE_DECLINE;
+                break;
         case N_DHCP4_MESSAGE_RELEASE:
+                message->userdata.type = N_DHCP4_C_MESSAGE_RELEASE;
                 break;
         default:
                 return N_DHCP4_E_UNEXPECTED;
         }
-
-        /*
-         * XXX: deduce the higher-level message type, and perform additional
-         *      verification.
-         */
 
         return 0;
 }
@@ -95,7 +133,9 @@ int n_dhcp4_s_connection_dispatch_io(NDhcp4SConnection *connection, NDhcp4Incomi
         if (r)
                 return r;
 
-        r = n_dhcp4_s_connection_verify_incoming(connection, message);
+        r = n_dhcp4_s_connection_verify_incoming(connection,
+                                                 message,
+                                                 dest.sin_addr.s_addr == INADDR_BROADCAST);
         if (r) {
                 if (r == N_DHCP4_E_MALFORMED || r == N_DHCP4_E_UNEXPECTED) {
                         *messagep = NULL;
