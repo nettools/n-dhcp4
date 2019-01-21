@@ -80,6 +80,7 @@ static void test_client_server_packet(Link *link_server, Link *link_client) {
         _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *incoming = NULL;
         _cleanup_(n_dhcp4_closep) int sk_server = -1, sk_client = -1;
         uint8_t buf[UINT16_MAX];
+        struct sockaddr_in dest = {};
         int r;
 
         test_server_udp_socket_new(link_server, &sk_server);
@@ -98,9 +99,10 @@ static void test_client_server_packet(Link *link_server, Link *link_client) {
 
         test_poll(sk_server);
 
-        r = n_dhcp4_s_socket_udp_recv(sk_server, buf, sizeof(buf), &incoming);
+        r = n_dhcp4_s_socket_udp_recv(sk_server, buf, sizeof(buf), &incoming, &dest);
         assert(!r);
         assert(incoming);
+        assert(dest.sin_addr.s_addr == INADDR_BROADCAST);
 }
 
 static void test_client_server_udp(Link *link_server, Link *link_client) {
@@ -110,6 +112,7 @@ static void test_client_server_udp(Link *link_server, Link *link_client) {
         struct in_addr addr_server = (struct in_addr){ htonl(10 << 24 | 1) };
         struct in_addr addr_client = (struct in_addr){ htonl(10 << 24 | 2) };
         uint8_t buf[UINT16_MAX];
+        struct sockaddr_in dest = {};
         int r;
 
         /* setup */
@@ -131,9 +134,10 @@ static void test_client_server_udp(Link *link_server, Link *link_client) {
 
         test_poll(sk_server);
 
-        r = n_dhcp4_s_socket_udp_recv(sk_server, buf, sizeof(buf), &incoming);
+        r = n_dhcp4_s_socket_udp_recv(sk_server, buf, sizeof(buf), &incoming, &dest);
         assert(!r);
         assert(incoming);
+        assert(dest.sin_addr.s_addr == addr_server.s_addr);
 
         /* teardown */
 

@@ -509,7 +509,8 @@ int n_dhcp4_c_socket_udp_recv(int sockfd,
 int n_dhcp4_s_socket_udp_recv(int sockfd,
                               uint8_t *buf,
                               size_t n_buf,
-                              NDhcp4Incoming **messagep);
+                              NDhcp4Incoming **messagep,
+                              struct sockaddr_in *dest);
 
 /* client events */
 

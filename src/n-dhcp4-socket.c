@@ -315,6 +315,10 @@ int n_dhcp4_s_socket_udp_new(int *sockfdp, int ifindex) {
         if (r < 0)
                 return -errno;
 
+        r = setsockopt(sockfd, IPPROTO_IP, IP_PKTINFO, &on, sizeof(on));
+        if (r < 0)
+                return -errno;
+
         r = bind(sockfd, (struct sockaddr*)&addr, sizeof(addr));
         if (r < 0)
                 return -errno;
@@ -576,12 +580,25 @@ int n_dhcp4_c_socket_packet_recv(int sockfd,
 static int n_dhcp4_socket_udp_recv(int sockfd,
                                    uint8_t *buf,
                                    size_t n_buf,
-                                   NDhcp4Incoming **messagep) {
+                                   NDhcp4Incoming **messagep,
+                                   struct sockaddr_in *dest) {
         _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *message = NULL;
+        struct iovec iov = {
+                .iov_base = buf,
+                .iov_len = n_buf,
+        };
+        uint8_t cmsgbuf[CMSG_LEN(sizeof(struct in_pktinfo))];
+        struct msghdr msg = {
+                .msg_iov = &iov,
+                .msg_iovlen = 1,
+                .msg_control = cmsgbuf,
+                .msg_controllen = sizeof(cmsgbuf),
+        };
+        struct cmsghdr *cmsg;
         ssize_t len;
         int r;
 
-        len = recv(sockfd, buf, n_buf, MSG_TRUNC);
+        len = recvmsg(sockfd, &msg, MSG_TRUNC);
         if (len < 0) {
                 if (errno == ENETDOWN)
                         return N_DHCP4_E_DOWN;
@@ -604,6 +621,18 @@ static int n_dhcp4_socket_udp_recv(int sockfd,
                 return r;
         }
 
+        if (dest) {
+                cmsg = CMSG_FIRSTHDR(&msg);
+                if (cmsg) {
+                        if (cmsg->cmsg_level == IPPROTO_IP &&
+                            cmsg->cmsg_type == IP_PKTINFO &&
+                            cmsg->cmsg_len == CMSG_LEN(sizeof(struct in_pktinfo))) {
+                                struct in_pktinfo *pktinfo = (void*)CMSG_DATA(cmsg);
+                                dest->sin_addr.s_addr = pktinfo->ipi_addr.s_addr;
+                        }
+                }
+        }
+
         *messagep = message;
         message = NULL;
         return 0;
@@ -613,12 +642,13 @@ int n_dhcp4_c_socket_udp_recv(int sockfd,
                               uint8_t *buf,
                               size_t n_buf,
                               NDhcp4Incoming **messagep) {
-        return n_dhcp4_socket_udp_recv(sockfd, buf, n_buf, messagep);
+        return n_dhcp4_socket_udp_recv(sockfd, buf, n_buf, messagep, NULL);
 }
 
 int n_dhcp4_s_socket_udp_recv(int sockfd,
                               uint8_t *buf,
                               size_t n_buf,
-                              NDhcp4Incoming **messagep) {
-        return n_dhcp4_socket_udp_recv(sockfd, buf, n_buf, messagep);
+                              NDhcp4Incoming **messagep,
+                              struct sockaddr_in *dest) {
+        return n_dhcp4_socket_udp_recv(sockfd, buf, n_buf, messagep, dest);
 }

@@ -84,9 +84,14 @@ static int n_dhcp4_s_connection_verify_incoming(NDhcp4SConnection *connection,
 
 int n_dhcp4_s_connection_dispatch_io(NDhcp4SConnection *connection, NDhcp4Incoming **messagep) {
         _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *message = NULL;
+        struct sockaddr_in dest = {};
         int r;
 
-        r = n_dhcp4_s_socket_udp_recv(connection->fd_udp, connection->buf, sizeof(connection->buf), &message);
+        r = n_dhcp4_s_socket_udp_recv(connection->fd_udp,
+                                          connection->buf,
+                                          sizeof(connection->buf),
+                                          &message,
+                                          &dest);
         if (r)
                 return r;
 
