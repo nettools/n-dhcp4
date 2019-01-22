@@ -292,6 +292,7 @@ static void test_release(NDhcp4SConnection *connection_server,
 }
 
 int main(int argc, char **argv) {
+        _cleanup_(n_dhcp4_closep) int efd_client = -1;
         NDhcp4SConnection connection_server = N_DHCP4_S_CONNECTION_NULL(connection_server);
         NDhcp4SConnectionIp connection_server_ip = N_DHCP4_S_CONNECTION_IP_NULL(connection_server_ip);
         NDhcp4CConnection connection_client = N_DHCP4_C_CONNECTION_NULL(connection_client);
@@ -299,7 +300,7 @@ int main(int argc, char **argv) {
         _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *ack = NULL;
         struct in_addr addr_server = (struct in_addr){ htonl(10 << 24 | 1) };
         struct in_addr addr_client = (struct in_addr){ htonl(10 << 24 | 2) };
-        int r, efd_client, ns_server, ns_client, ifindex_server, ifindex_client;
+        int r, ns_server, ns_client, ifindex_server, ifindex_client;
         struct ether_addr mac_client;
 
         efd_client = epoll_create1(EPOLL_CLOEXEC);
@@ -352,7 +353,6 @@ int main(int argc, char **argv) {
         test_del_ip(ns_server, ifindex_server, &addr_server, 8);
         close(ns_client);
         close(ns_server);
-        close(efd_client);
 
         return 0;
 }
