@@ -293,6 +293,7 @@ static void test_release(NDhcp4SConnection *connection_server,
 
 int main(int argc, char **argv) {
         _cleanup_(n_dhcp4_closep) int efd_client = -1;
+        _cleanup_(n_dhcp4_client_config_freep) NDhcp4ClientConfig *config = NULL;
         NDhcp4SConnection connection_server = N_DHCP4_S_CONNECTION_NULL(connection_server);
         NDhcp4SConnectionIp connection_server_ip = N_DHCP4_S_CONNECTION_IP_NULL(connection_server_ip);
         NDhcp4CConnection connection_client = N_DHCP4_C_CONNECTION_NULL(connection_client);
@@ -317,6 +318,21 @@ int main(int argc, char **argv) {
         test_s_connection_init(ns_server, &connection_server, ifindex_server);
         n_dhcp4_s_connection_ip_init(&connection_server_ip, addr_server);
         n_dhcp4_s_connection_ip_link(&connection_server_ip, &connection_server);
+
+        r = n_dhcp4_client_config_new(&config);
+        assert(!r);
+
+        n_dhcp4_client_config_set_ifindex(config, ifindex_client);
+        n_dhcp4_client_config_set_transport(config, N_DHCP4_TRANSPORT_ETHERNET);
+        n_dhcp4_client_config_set_mac(config, mac_client.ether_addr_octet, ETH_ALEN);
+        n_dhcp4_client_config_set_broadcast_mac(config,
+                                                (const uint8_t[]){
+                                                        0xff, 0xff, 0xff,
+                                                        0xff, 0xff, 0xff,
+                                                },
+                                                ETH_ALEN);
+        r = n_dhcp4_client_config_set_client_id(config, (void *)"client-id", strlen("client-id"));
+        assert(!r);
 
         r = n_dhcp4_c_connection_init(&connection_client,
                                       &efd_client,
