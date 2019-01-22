@@ -73,8 +73,12 @@ static int manager_new(Manager **managerp) {
         n_dhcp4_client_config_set_broadcast_mac(config,
                                                 main_arg_broadcast_mac,
                                                 main_arg_n_broadcast_mac);
+        n_dhcp4_client_config_set_client_id(config,
+                                            (void *)"client-id",
+                                            strlen("client-id"));
         n_dhcp4_client_config_set_ifindex(config, main_arg_ifindex);
         n_dhcp4_client_config_set_mac(config, main_arg_mac, main_arg_n_mac);
+        n_dhcp4_client_config_set_transport(config, N_DHCP4_TRANSPORT_ETHERNET);
 
         r = n_dhcp4_client_new(&manager->client, config);
         if (r)
