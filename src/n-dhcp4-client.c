@@ -10,6 +10,8 @@
 #include <assert.h>
 #include <c-list.h>
 #include <errno.h>
+#include <linux/if_ether.h>
+#include <linux/if_infiniband.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/epoll.h>
@@ -280,6 +282,32 @@ _public_ int n_dhcp4_client_new(NDhcp4Client **clientp, NDhcp4ClientConfig *conf
         int r;
 
         assert(clientp);
+
+        /* verify configuration */
+        {
+                if (config->ifindex < 1)
+                        return N_DHCP4_E_INVALID_IFINDEX;
+
+                switch (config->transport) {
+                case N_DHCP4_TRANSPORT_ETHERNET:
+                        if (config->n_mac != ETH_ALEN ||
+                            config->n_broadcast_mac != ETH_ALEN)
+                                return N_DHCP4_E_INVALID_ADDRESS;
+
+                        break;
+                case N_DHCP4_TRANSPORT_INFINIBAND:
+                        if (config->n_mac != INFINIBAND_ALEN ||
+                            config->n_broadcast_mac != INFINIBAND_ALEN)
+                                return N_DHCP4_E_INVALID_ADDRESS;
+
+                        break;
+                default:
+                        return N_DHCP4_E_INVALID_TRANSPORT;
+                }
+
+                if (config->n_client_id < 1)
+                        return N_DHCP4_E_INVALID_CLIENT_ID;
+        }
 
         client = malloc(sizeof(*client));
         if (!client)

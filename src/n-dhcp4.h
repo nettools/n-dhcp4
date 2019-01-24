@@ -35,6 +35,11 @@ enum {
         N_DHCP4_E_PREEMPTED,
         N_DHCP4_E_INTERNAL,
 
+        N_DHCP4_E_INVALID_IFINDEX,
+        N_DHCP4_E_INVALID_TRANSPORT,
+        N_DHCP4_E_INVALID_ADDRESS,
+        N_DHCP4_E_INVALID_CLIENT_ID,
+
         _N_DHCP4_E_N,
 };
 
