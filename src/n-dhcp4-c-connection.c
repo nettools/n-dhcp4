@@ -96,12 +96,6 @@ void n_dhcp4_c_connection_deinit(NDhcp4CConnection *connection) {
 
 int n_dhcp4_c_connection_listen(NDhcp4CConnection *connection) {
         _cleanup_(n_dhcp4_closep) int fd_packet = -1;
-        struct epoll_event ev = {
-                .events = EPOLLIN,
-                .data = {
-                        .u32 = N_DHCP4_CLIENT_EPOLL_IO,
-                },
-        };
         int r;
 
         assert(connection->state == N_DHCP4_C_CONNECTION_STATE_INIT);
@@ -110,7 +104,13 @@ int n_dhcp4_c_connection_listen(NDhcp4CConnection *connection) {
         if (r)
                 return r;
 
-        r = epoll_ctl(connection->fd_epoll, EPOLL_CTL_ADD, fd_packet, &ev);
+        r = epoll_ctl(connection->fd_epoll,
+                      EPOLL_CTL_ADD,
+                      fd_packet,
+                      &(struct epoll_event){
+                              .events = EPOLLIN,
+                              .data = { .u32 = N_DHCP4_CLIENT_EPOLL_IO },
+                      });
         if (r < 0)
                 return -errno;
 
@@ -123,12 +123,6 @@ int n_dhcp4_c_connection_listen(NDhcp4CConnection *connection) {
 int n_dhcp4_c_connection_connect(NDhcp4CConnection *connection,
                                  const struct in_addr *client,
                                  const struct in_addr *server) {
-        struct epoll_event ev = {
-                .events = EPOLLIN,
-                .data = {
-                        .u32 = N_DHCP4_CLIENT_EPOLL_IO,
-                },
-        };
         int r, fd_udp;
 
         assert(connection->state == N_DHCP4_C_CONNECTION_STATE_PACKET);
@@ -140,7 +134,13 @@ int n_dhcp4_c_connection_connect(NDhcp4CConnection *connection,
         if (r)
                 return r;
 
-        r = epoll_ctl(connection->fd_epoll, EPOLL_CTL_ADD, fd_udp, &ev);
+        r = epoll_ctl(connection->fd_epoll,
+                      EPOLL_CTL_ADD,
+                      fd_udp,
+                      &(struct epoll_event){
+                              .events = EPOLLIN,
+                              .data = { .u32 = N_DHCP4_CLIENT_EPOLL_IO },
+                      });
         if (r < 0) {
                 r = -errno;
                 goto exit_fd;
