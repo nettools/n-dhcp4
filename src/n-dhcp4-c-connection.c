@@ -19,17 +19,18 @@
  * n_dhcp4_c_connection_init() - initialize client connection
  * @connection:                 connection to operate on
  * @client_config:              client configuration to use
+ * @probe_config:               client probe configuration to use
  * @fd_epoll:                   epoll context to attach to, or -1
  * @seed:                       random seed to use
  * @request_broadcast:          whether to request DHCP broadcast
  *
  * This initializes a new client connection using the configuration given in
- * @client_config.
+ * @client_config and @probe_config.
  *
  * The client-configuration given as @client_config must survive the lifetime
  * of @connection. It is pinned in the connection and used all over the place.
  * The caller must guarantee that the configuration is not deallocated in the
- * meantime.
+ * meantime. Same is true for @probe_config.
  *
  * The new connection automatically attaches to the epoll context given as
  * @fd_epoll. The epoll FD is retained in the connection and the caller must
@@ -52,6 +53,7 @@
  */
 int n_dhcp4_c_connection_init(NDhcp4CConnection *connection,
                               NDhcp4ClientConfig *client_config,
+                              NDhcp4ClientProbeConfig *probe_config,
                               int fd_epoll,
                               uint64_t seed,
                               bool request_broadcast) {
@@ -59,6 +61,7 @@ int n_dhcp4_c_connection_init(NDhcp4CConnection *connection,
 
         *connection = (NDhcp4CConnection)N_DHCP4_C_CONNECTION_NULL(*connection);
         connection->client_config = client_config;
+        connection->probe_config = probe_config;
         connection->fd_epoll = fd_epoll;
         connection->request_broadcast = request_broadcast;
 

@@ -271,6 +271,7 @@ struct NDhcp4CEventNode {
 
 struct NDhcp4CConnection {
         NDhcp4ClientConfig *client_config;
+        NDhcp4ClientProbeConfig *probe_config;
         int fd_epoll;
 
         unsigned int state;             /* current connection state */
@@ -546,6 +547,7 @@ NDhcp4CEventNode *n_dhcp4_c_event_node_free(NDhcp4CEventNode *node);
 
 int n_dhcp4_c_connection_init(NDhcp4CConnection *connection,
                               NDhcp4ClientConfig *client_config,
+                              NDhcp4ClientProbeConfig *probe_config,
                               int fd_epoll,
                               uint64_t seed,
                               bool request_broadcast);
