@@ -66,6 +66,34 @@ _public_ NDhcp4ClientProbeConfig *n_dhcp4_client_probe_config_free(NDhcp4ClientP
 }
 
 /**
+ * n_dhcp4_client_probe_config_dup() - duplicate probe configuration
+ * @config:                     configuration to operate on
+ * @dupp:                       output argument for duplicate
+ *
+ * This duplicates the probe configuration given as @config and returns it in
+ * @dupp to the caller.
+ *
+ * Return: 0 on success, negative error code on failure.
+ */
+int n_dhcp4_client_probe_config_dup(NDhcp4ClientProbeConfig *config,
+                                    NDhcp4ClientProbeConfig **dupp) {
+        _cleanup_(n_dhcp4_client_probe_config_freep) NDhcp4ClientProbeConfig *dup = NULL;
+        int r;
+
+        r = n_dhcp4_client_probe_config_new(&dup);
+        if (r)
+                return r;
+
+        dup->inform_only = config->inform_only;
+        dup->init_reboot = config->init_reboot;
+        dup->requested_ip = config->requested_ip;
+
+        *dupp = dup;
+        dup = NULL;
+        return 0;
+}
+
+/**
  * n_dhcp4_client_probe_config_set_inform_only() - set inform-only property
  * @config:                     configuration to operate on
  * @inform_only:                value to set
@@ -136,8 +164,11 @@ _public_ void n_dhcp4_client_probe_config_set_requested_ip(NDhcp4ClientProbeConf
 /**
  * n_dhcp4_client_probe_new() - XXX
  */
-int n_dhcp4_client_probe_new(NDhcp4ClientProbe **probep, NDhcp4Client *client) {
+int n_dhcp4_client_probe_new(NDhcp4ClientProbe **probep,
+                             NDhcp4ClientProbeConfig *config,
+                             NDhcp4Client *client) {
         _cleanup_(n_dhcp4_client_probe_freep) NDhcp4ClientProbe *probe = NULL;
+        int r;
 
         probe = calloc(1, sizeof(*probe));
         if (!probe)
@@ -145,6 +176,10 @@ int n_dhcp4_client_probe_new(NDhcp4ClientProbe **probep, NDhcp4Client *client) {
 
         *probe = (NDhcp4ClientProbe)N_DHCP4_CLIENT_PROBE_NULL(*probe);
         probe->client = n_dhcp4_client_ref(client);
+
+        r = n_dhcp4_client_probe_config_dup(config, &probe->config);
+        if (r)
+                return r;
 
         *probep = probe;
         probe = NULL;
@@ -166,6 +201,7 @@ _public_ NDhcp4ClientProbe *n_dhcp4_client_probe_free(NDhcp4ClientProbe *probe) 
         n_dhcp4_client_probe_uninstall(probe);
         n_dhcp4_c_connection_deinit(&probe->connection);
         n_dhcp4_client_unref(probe->client);
+        n_dhcp4_client_probe_config_free(probe->config);
         free(probe);
 
         return NULL;

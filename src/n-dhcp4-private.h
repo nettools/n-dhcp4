@@ -323,6 +323,7 @@ struct NDhcp4Client {
         }
 
 struct NDhcp4ClientProbe {
+        NDhcp4ClientProbeConfig *config;
         NDhcp4Client *client;
         CList event_list;
         CList lease_list;
@@ -526,6 +527,11 @@ int n_dhcp4_s_socket_udp_recv(int sockfd,
                               NDhcp4Incoming **messagep,
                               struct sockaddr_in *dest);
 
+/* client probe configs */
+
+int n_dhcp4_client_probe_config_dup(NDhcp4ClientProbeConfig *config,
+                                    NDhcp4ClientProbeConfig **dupp);
+
 /* client events */
 
 int n_dhcp4_c_event_node_new(NDhcp4CEventNode **nodep);
@@ -586,7 +592,9 @@ void n_dhcp4_client_arm_timer(NDhcp4Client *client);
 
 /* client probes */
 
-int n_dhcp4_client_probe_new(NDhcp4ClientProbe **probep, NDhcp4Client *client);
+int n_dhcp4_client_probe_new(NDhcp4ClientProbe **probep,
+                             NDhcp4ClientProbeConfig *config,
+                             NDhcp4Client *client);
 
 int n_dhcp4_client_probe_raise(NDhcp4ClientProbe *probe, NDhcp4CEventNode **nodep, unsigned int event);
 int n_dhcp4_client_probe_install(NDhcp4ClientProbe *probe);

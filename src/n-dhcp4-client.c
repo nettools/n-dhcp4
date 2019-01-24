@@ -691,7 +691,7 @@ _public_ int n_dhcp4_client_probe(NDhcp4Client *client,
         _cleanup_(n_dhcp4_client_probe_freep) NDhcp4ClientProbe *probe = NULL;
         int r;
 
-        r = n_dhcp4_client_probe_new(&probe, client);
+        r = n_dhcp4_client_probe_new(&probe, config, client);
         if (r)
                 return r;
 
