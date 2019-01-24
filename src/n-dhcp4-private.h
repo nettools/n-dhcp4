@@ -527,6 +527,11 @@ int n_dhcp4_s_socket_udp_recv(int sockfd,
                               NDhcp4Incoming **messagep,
                               struct sockaddr_in *dest);
 
+/* client configs */
+
+int n_dhcp4_client_config_dup(NDhcp4ClientConfig *config,
+                              NDhcp4ClientConfig **dupp);
+
 /* client probe configs */
 
 int n_dhcp4_client_probe_config_dup(NDhcp4ClientProbeConfig *config,
