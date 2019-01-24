@@ -344,7 +344,6 @@ int main(int argc, char **argv) {
                                       client_config,
                                       probe_config,
                                       efd_client,
-                                      0,
                                       false);
         assert(!r);
         test_c_connection_listen(ns_client, &connection_client);

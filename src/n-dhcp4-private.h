@@ -549,7 +549,6 @@ int n_dhcp4_c_connection_init(NDhcp4CConnection *connection,
                               NDhcp4ClientConfig *client_config,
                               NDhcp4ClientProbeConfig *probe_config,
                               int fd_epoll,
-                              uint64_t seed,
                               bool request_broadcast);
 void n_dhcp4_c_connection_deinit(NDhcp4CConnection *connection);
 
