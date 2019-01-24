@@ -672,6 +672,12 @@ static inline void n_dhcp4_closep(int *fdp) {
                 close(*fdp);
 }
 
+static inline int n_dhcp4_close(int fd) {
+        if (fd >= 0)
+                close(fd);
+        return -1;
+}
+
 static inline uint64_t n_dhcp4_gettime(clockid_t clock) {
         struct timespec ts;
         int r;
