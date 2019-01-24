@@ -345,6 +345,8 @@ static int n_dhcp4_socket_packet_send(int sockfd,
         size_t n_buf;
         ssize_t len;
 
+        assert(halen <= sizeof(haddr.sll_addr));
+
         memcpy(haddr.sll_addr, dest_haddr, halen);
 
         n_buf = n_dhcp4_outgoing_get_raw(message, &buf);

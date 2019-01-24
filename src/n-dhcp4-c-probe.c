@@ -202,6 +202,9 @@ _public_ NDhcp4ClientProbe *n_dhcp4_client_probe_free(NDhcp4ClientProbe *probe) 
         n_dhcp4_c_connection_deinit(&probe->connection);
         n_dhcp4_client_unref(probe->client);
         n_dhcp4_client_probe_config_free(probe->config);
+
+        assert(c_list_is_empty(&probe->lease_list));
+        assert(c_list_is_empty(&probe->event_list));
         free(probe);
 
         return NULL;
