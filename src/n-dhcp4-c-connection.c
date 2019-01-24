@@ -80,6 +80,18 @@ int n_dhcp4_c_connection_init(NDhcp4CConnection *connection,
         return 0;
 }
 
+/**
+ * n_dhcp4_c_connection_deinit() - deinitialize client connection
+ * @connection:                 connection to operate on
+ *
+ * This deinitializes a connection that was previously initialized via
+ * n_dhcp4_c_connection_init(). It will tear down all allocated state and
+ * release it.
+ *
+ * Once this function returns, @connection is re-initialized to
+ * N_DHCP4_C_CONNECTION_NULL. If this function is called on a deinitialized
+ * connection, it is a no-op.
+ */
 void n_dhcp4_c_connection_deinit(NDhcp4CConnection *connection) {
         if (connection->fd_udp >= 0) {
                 epoll_ctl(connection->fd_epoll, EPOLL_CTL_DEL, connection->fd_udp, NULL);
@@ -92,6 +104,69 @@ void n_dhcp4_c_connection_deinit(NDhcp4CConnection *connection) {
         }
 
         *connection = (NDhcp4CConnection)N_DHCP4_C_CONNECTION_NULL(*connection);
+}
+
+static uint32_t n_dhcp4_c_connection_get_random(NDhcp4CConnection *connection) {
+        long int result;
+        int r;
+
+        /*
+         * This simply fetches the next 32bit random number from the entropy
+         * pool in @connection. Note that this is in no way suitable for
+         * security purposes.
+         */
+
+        r = mrand48_r(&connection->entropy, &result);
+        assert(!r);
+
+        return result;
+};
+
+static void n_dhcp4_c_connection_outgoing_set_secs(NDhcp4Outgoing *message) {
+        uint32_t secs;
+
+        /*
+         * This function sets the `secs` field for outgoing messages. It
+         * expects the base-time and start-time to be already set by the
+         * caller.
+         * For a given outgoing message, its `secs` field describes the time
+         * (in seconds) between the start of the transaction this message is
+         * part of and the start of the operational process (also called the
+         * base time here).
+         *
+         * The operational process in the DHCP sense describes the entire
+         * process of requesting a lease and acquiring it. That is, it starts
+         * with the caller's intent to request a lease, and it ends when we
+         * got granted a lease. The act of refreshing a lease is, in itself, a
+         * new operational process. The base-time describes the start-time
+         * recorded when such a process as initiated.
+         *
+         * A transaction in the DHCP sense describes a request+reply
+         * combination, in most cases. That is, the time a request is sent is
+         * the start-time of a transaction. In the ideal case, the start-time
+         * of the first transaction in an operational process matches the
+         * base-time. However, transactions are often delayed with a randomized
+         * offset to reduce traffic during network bursts.
+         * In some cases, however, transactions are composed out of multiple
+         * requests+reply combinations. This includes, for instance, the SELECT
+         * message following an OFFER. The specification clearly says that
+         * those must be considered a single transaction and thus share the
+         * transaction start-time.
+         *
+         * The `secs` field, thus, describes how long a client has been busy
+         * requesting a lease. DHCP servers and proxies do use it to prioritize
+         * clients.
+         *
+         * Note: Some DHCP relays reject a `secs` value of 0 (which might look
+         *       like it is uninitialized). Hence, we always clamp the value to
+         *       the range `[1, INF[`.
+         */
+
+        secs = message->userdata.base_time - message->userdata.start_time;
+        secs /= 1000ULL * 1000ULL * 1000ULL; /* nsecs to secs */
+        secs = secs ?: 1; /* clamp to `[1, INF[` */
+
+        n_dhcp4_outgoing_set_secs(message, secs);
 }
 
 int n_dhcp4_c_connection_listen(NDhcp4CConnection *connection) {
@@ -162,37 +237,6 @@ exit_epoll:
 exit_fd:
         close(fd_udp);
         return r;
-}
-
-static uint32_t n_dhcp4_c_connection_get_random(NDhcp4CConnection *connection) {
-        long int result;
-        int r;
-
-        r = mrand48_r(&connection->entropy, &result);
-        assert(!r);
-
-        return result;
-};
-
-static void n_dhcp4_c_connection_outgoing_set_secs(NDhcp4Outgoing *message) {
-        uint32_t secs;
-
-        /*
-         * secs is the time (in seconds) between the start of the current
-         * transaction and the base time.
-         *
-         * XXX: give a better intuition for what base time represents.
-         */
-        secs = (message->userdata.base_time - message->userdata.start_time) / 1000000000ULL;
-
-        /*
-         * Some DHCP servers will reject DISCOVER or REQUEST messages if 'secs'
-         * is not set (i.e., set to 0), even though the spec allows it. Simply
-         * increment all secs value by one.
-         */
-        ++secs;
-
-        n_dhcp4_outgoing_set_secs(message, secs);
 }
 
 static int n_dhcp4_c_connection_verify_incoming(NDhcp4CConnection *connection,
