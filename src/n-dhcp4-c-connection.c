@@ -322,7 +322,8 @@ static int n_dhcp4_c_connection_verify_incoming(NDhcp4CConnection *connection,
         return 0;
 }
 
-void n_dhcp4_c_connection_get_timeout(NDhcp4CConnection *connection, uint64_t *timeoutp) {
+void n_dhcp4_c_connection_get_timeout(NDhcp4CConnection *connection,
+                                      uint64_t *timeoutp) {
         uint64_t timeout;
         size_t n_send;
 
@@ -447,7 +448,8 @@ static void n_dhcp4_c_connection_init_header(NDhcp4CConnection *connection,
 }
 
 static int n_dhcp4_c_connection_new_message(NDhcp4CConnection *connection,
-                                            NDhcp4Outgoing **messagep, uint8_t type) {
+                                            NDhcp4Outgoing **messagep,
+                                            uint8_t type) {
         _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *message = NULL;
         NDhcp4Header *header;
         uint8_t message_type;
@@ -932,8 +934,8 @@ int n_dhcp4_c_connection_release_new(NDhcp4CConnection *connection,
 }
 
 static int n_dhcp4_c_connection_send_request(NDhcp4CConnection *connection,
-                                      NDhcp4Outgoing *request,
-                                      uint64_t timestamp) {
+                                             NDhcp4Outgoing *request,
+                                             uint64_t timestamp) {
         int r;
 
         /*
@@ -1018,7 +1020,8 @@ int n_dhcp4_c_connection_start_request(NDhcp4CConnection *connection,
         return 0;
 }
 
-int n_dhcp4_c_connection_dispatch_timer(NDhcp4CConnection *connection, uint64_t timestamp) {
+int n_dhcp4_c_connection_dispatch_timer(NDhcp4CConnection *connection,
+                                        uint64_t timestamp) {
         uint64_t timeout;
         int r;
 
