@@ -7,6 +7,7 @@ libndhcp4_symfile = join_paths(meson.current_source_dir(), 'libndhcp4.sym')
 libndhcp4_deps = [
         dep_clist,
         dep_crbtree,
+        dep_csiphash,
 ]
 
 libndhcp4_private = static_library(
