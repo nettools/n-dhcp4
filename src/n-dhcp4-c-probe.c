@@ -168,7 +168,16 @@ int n_dhcp4_client_probe_new(NDhcp4ClientProbe **probep,
                              NDhcp4ClientProbeConfig *config,
                              NDhcp4Client *client) {
         _cleanup_(n_dhcp4_client_probe_freep) NDhcp4ClientProbe *probe = NULL;
+        bool active;
         int r;
+
+        /*
+         * If there is already a probe attached, we create the new probe in
+         * detached state. It will not be linked into the epoll context and not
+         * be useful in any way. We immediately raise the CANCELLED event to
+         * notify the caller about it.
+         */
+        active = !client->current_probe;
 
         probe = calloc(1, sizeof(*probe));
         if (!probe)
@@ -180,6 +189,25 @@ int n_dhcp4_client_probe_new(NDhcp4ClientProbe **probep,
         r = n_dhcp4_client_probe_config_dup(config, &probe->config);
         if (r)
                 return r;
+
+        /* XXX: pass on seed and request_broadcast properly */
+        r = n_dhcp4_c_connection_init(&probe->connection,
+                                      client->config,
+                                      active ? client->fd_epoll : -1,
+                                      0,
+                                      false);
+        if (r)
+                return r;
+
+        if (active) {
+                probe->client->current_probe = probe;
+        } else {
+                r = n_dhcp4_client_probe_raise(probe,
+                                               NULL,
+                                               N_DHCP4_CLIENT_EVENT_CANCELLED);
+                if (r)
+                        return r;
+        }
 
         *probep = probe;
         probe = NULL;
@@ -198,7 +226,9 @@ _public_ NDhcp4ClientProbe *n_dhcp4_client_probe_free(NDhcp4ClientProbe *probe) 
         c_list_for_each_entry_safe(node, t_node, &probe->event_list, probe_link)
                 n_dhcp4_c_event_node_free(node);
 
-        n_dhcp4_client_probe_uninstall(probe);
+        if (probe == probe->client->current_probe)
+                probe->client->current_probe = NULL;
+
         n_dhcp4_c_connection_deinit(&probe->connection);
         n_dhcp4_client_unref(probe->client);
         n_dhcp4_client_probe_config_free(probe->config);
@@ -263,31 +293,6 @@ int n_dhcp4_client_probe_raise(NDhcp4ClientProbe *probe, NDhcp4CEventNode **node
         if (nodep)
                 *nodep = node;
         return 0;
-}
-
-/**
- * n_dhcp4_client_probe_install() - XXX
- */
-int n_dhcp4_client_probe_install(NDhcp4ClientProbe *probe) {
-        if (probe->client->current_probe)
-                return -ENOTRECOVERABLE;
-
-        /* XXX: install epoll-events to probe->client->fd_epoll */
-
-        probe->client->current_probe = probe;
-        return 0;
-}
-
-/**
- * n_dhcp4_client_probe_uninstall() - XXX
- */
-void n_dhcp4_client_probe_uninstall(NDhcp4ClientProbe *probe) {
-        if (probe != probe->client->current_probe)
-                return;
-
-        n_dhcp4_c_connection_deinit(&probe->connection);
-
-        probe->client->current_probe = NULL;
 }
 
 void n_dhcp4_client_probe_get_timeout(NDhcp4ClientProbe *probe, uint64_t *timeoutp) {

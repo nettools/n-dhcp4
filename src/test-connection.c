@@ -103,7 +103,7 @@ static void test_client_receive(NDhcp4CConnection *connection, uint8_t expected_
         uint8_t received_type;
         int r;
 
-        test_poll_client(*connection->fd_epollp, N_DHCP4_CLIENT_EPOLL_IO);
+        test_poll_client(connection->fd_epoll, N_DHCP4_CLIENT_EPOLL_IO);
 
         r = n_dhcp4_c_connection_dispatch_io(connection, &message);
         assert(!r);
@@ -335,15 +335,9 @@ int main(int argc, char **argv) {
         assert(!r);
 
         r = n_dhcp4_c_connection_init(&connection_client,
-                                      &efd_client,
+                                      config,
+                                      efd_client,
                                       0,
-                                      ifindex_client,
-                                      ARPHRD_ETHER,
-                                      ETH_ALEN,
-                                      mac_client.ether_addr_octet,
-                                      (const uint8_t[]){0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
-                                      0,
-                                      NULL,
                                       false);
         assert(!r);
         test_c_connection_listen(ns_client, &connection_client);
@@ -353,7 +347,7 @@ int main(int argc, char **argv) {
         test_reboot(&connection_server, &connection_client, &addr_server, &addr_client, &ack);
         test_decline(&connection_server, &connection_client, ack);
 
-        test_add_ip(ns_client, connection_client.ifindex, &addr_client, 8);
+        test_add_ip(ns_client, ifindex_client, &addr_client, 8);
         test_c_connection_connect(ns_client, &connection_client, &addr_client, &addr_server);
 
         test_renew(&connection_server, &connection_client, &addr_server, &addr_client);

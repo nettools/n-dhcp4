@@ -15,98 +15,105 @@
 #include "n-dhcp4-private.h"
 #include "util/packet.h"
 
+/**
+ * n_dhcp4_c_connection_init() - initialize client connection
+ * @connection:                 connection to operate on
+ * @client_config:              client configuration to use
+ * @fd_epoll:                   epoll context to attach to, or -1
+ * @seed:                       random seed to use
+ * @request_broadcast:          whether to request DHCP broadcast
+ *
+ * This initializes a new client connection using the configuration given in
+ * @client_config.
+ *
+ * The client-configuration given as @client_config must survive the lifetime
+ * of @connection. It is pinned in the connection and used all over the place.
+ * The caller must guarantee that the configuration is not deallocated in the
+ * meantime.
+ *
+ * The new connection automatically attaches to the epoll context given as
+ * @fd_epoll. The epoll FD is retained in the connection and the caller must
+ * guarantee that it lives as long as the connection.
+ * The caller is explicitly allowed to pass -1 as @fd_epoll, in which case the
+ * connection will initialize correctly, but will not be in a usable state.
+ * That is, any call to n_dhcp4_c_connection_listen() will fail, since it will
+ * be unable to attach to the epoll context. Such a connection can be used to
+ * get a detached object that behaves sound, but provides no runtime.
+ *
+ * In several cases the DHCP specification recommends using random delays to
+ * avoid overloading the network during bursts. The caller is thus recommended
+ * to provide a random seed through @seed. If no entropy is available, it is
+ * safe to pass 0. There are no security implications, the randomness is purely
+ * used to improve network utilization.
+ * If you have a time source, the current time in nanoseconds is a suitable
+ * random seed here.
+ *
+ * Return: 0 on success, negative error code on failure.
+ */
 int n_dhcp4_c_connection_init(NDhcp4CConnection *connection,
-                              int *fd_epollp,
+                              NDhcp4ClientConfig *client_config,
+                              int fd_epoll,
                               uint64_t seed,
-                              int ifindex,
-                              uint8_t htype,
-                              uint8_t hlen,
-                              const uint8_t *chaddr,
-                              const uint8_t *bhaddr,
-                              size_t idlen,
-                              const uint8_t *id,
                               bool request_broadcast) {
-        unsigned short int seed16v[3];
         int r;
 
-        assert(hlen > 0);
-        assert(hlen <= sizeof(connection->chaddr));
-        assert(chaddr);
-        assert(bhaddr);
-
         *connection = (NDhcp4CConnection)N_DHCP4_C_CONNECTION_NULL(*connection);
-        connection->fd_epollp = fd_epollp;
-        connection->ifindex = ifindex;
+        connection->client_config = client_config;
+        connection->fd_epoll = fd_epoll;
         connection->request_broadcast = request_broadcast;
-        connection->htype = htype;
-        connection->hlen = hlen;
-        memcpy(connection->chaddr, chaddr, hlen);
-        memcpy(connection->bhaddr, bhaddr, hlen);
 
-        seed16v[0] = seed;
-        seed16v[1] = seed >> 16;
-        seed16v[2] = (seed >> 32) ^ (seed >> 48);
+        /* initialize rand48 seed */
+        {
+                unsigned short int seed16v[3];
 
-        r = seed48_r(seed16v, &connection->entropy);
-        assert(!r);
+                seed16v[0] = seed;
+                seed16v[1] = seed >> 16;
+                seed16v[2] = (seed >> 32) ^ (seed >> 48);
 
-        if (idlen) {
-                connection->id = malloc(idlen);
-                if (!connection->id)
-                        return -ENOMEM;
-
-                memcpy(connection->id, id, idlen);
+                r = seed48_r(seed16v, &connection->entropy);
+                assert(!r);
         }
-
-        /*
-         * Force specific options depending on the configured transport. In
-         * particular, Infiniband mandates broadcasts. It also has hw-addresses
-         * bigger than the chaddr field, so it requires its suppression.
-         */
-        if (htype == ARPHRD_INFINIBAND)
-                connection->request_broadcast = true;
-        else
-                connection->send_chaddr = true;
 
         return 0;
 }
 
 void n_dhcp4_c_connection_deinit(NDhcp4CConnection *connection) {
-        if (connection->fd_epollp) {
-                if (connection->fd_udp >= 0) {
-                        epoll_ctl(*connection->fd_epollp, EPOLL_CTL_DEL, connection->fd_udp, NULL);
-                        close(connection->fd_udp);
-                }
-
-                if (connection->fd_packet >= 0) {
-                        epoll_ctl(*connection->fd_epollp, EPOLL_CTL_DEL, connection->fd_packet, NULL);
-                        close(connection->fd_packet);
-                }
+        if (connection->fd_udp >= 0) {
+                epoll_ctl(connection->fd_epoll, EPOLL_CTL_DEL, connection->fd_udp, NULL);
+                close(connection->fd_udp);
         }
 
-        free(connection->id);
+        if (connection->fd_packet >= 0) {
+                epoll_ctl(connection->fd_epoll, EPOLL_CTL_DEL, connection->fd_packet, NULL);
+                close(connection->fd_packet);
+        }
+
         *connection = (NDhcp4CConnection)N_DHCP4_C_CONNECTION_NULL(*connection);
 }
 
 int n_dhcp4_c_connection_listen(NDhcp4CConnection *connection) {
+        _cleanup_(n_dhcp4_closep) int fd_packet = -1;
         struct epoll_event ev = {
                 .events = EPOLLIN,
+                .data = {
+                        .u32 = N_DHCP4_CLIENT_EPOLL_IO,
+                },
         };
         int r;
 
         assert(connection->state == N_DHCP4_C_CONNECTION_STATE_INIT);
 
-        r = n_dhcp4_c_socket_packet_new(&connection->fd_packet, connection->ifindex);
+        r = n_dhcp4_c_socket_packet_new(&fd_packet, connection->client_config->ifindex);
         if (r)
                 return r;
 
-        ev.data.u32 = N_DHCP4_CLIENT_EPOLL_IO;
-        r = epoll_ctl(*connection->fd_epollp, EPOLL_CTL_ADD, connection->fd_packet, &ev);
+        r = epoll_ctl(connection->fd_epoll, EPOLL_CTL_ADD, fd_packet, &ev);
         if (r < 0)
                 return -errno;
 
         connection->state = N_DHCP4_C_CONNECTION_STATE_PACKET;
-
+        connection->fd_packet = fd_packet;
+        fd_packet = -1;
         return 0;
 }
 
@@ -115,29 +122,43 @@ int n_dhcp4_c_connection_connect(NDhcp4CConnection *connection,
                                  const struct in_addr *server) {
         struct epoll_event ev = {
                 .events = EPOLLIN,
+                .data = {
+                        .u32 = N_DHCP4_CLIENT_EPOLL_IO,
+                },
         };
-        int r;
+        int r, fd_udp;
 
         assert(connection->state == N_DHCP4_C_CONNECTION_STATE_PACKET);
 
-        r = n_dhcp4_c_socket_udp_new(&connection->fd_udp, connection->ifindex, client, server);
+        r = n_dhcp4_c_socket_udp_new(&fd_udp,
+                                     connection->client_config->ifindex,
+                                     client,
+                                     server);
         if (r)
                 return r;
 
-        ev.data.u32 = N_DHCP4_CLIENT_EPOLL_IO;
-        r = epoll_ctl(*connection->fd_epollp, EPOLL_CTL_ADD, connection->fd_udp, &ev);
-        if (r < 0)
-                return -errno;
+        r = epoll_ctl(connection->fd_epoll, EPOLL_CTL_ADD, fd_udp, &ev);
+        if (r < 0) {
+                r = -errno;
+                goto exit_fd;
+        }
 
         r = packet_shutdown(connection->fd_packet);
         if (r < 0)
-                return r;
+                goto exit_epoll;
 
+        connection->state = N_DHCP4_C_CONNECTION_STATE_DRAINING;
+        connection->fd_udp = fd_udp;
         connection->client_ip = client->s_addr;
         connection->server_ip = server->s_addr;
-        connection->state = N_DHCP4_C_CONNECTION_STATE_DRAINING;
-
+        fd_udp = -1;
         return 0;
+
+exit_epoll:
+        epoll_ctl(connection->fd_epoll, EPOLL_CTL_DEL, fd_udp, NULL);
+exit_fd:
+        close(fd_udp);
+        return r;
 }
 
 static uint32_t n_dhcp4_c_connection_get_random(NDhcp4CConnection *connection) {
@@ -177,8 +198,8 @@ static int n_dhcp4_c_connection_verify_incoming(NDhcp4CConnection *connection,
         NDhcp4Header *header = n_dhcp4_incoming_get_header(message);
         uint8_t type;
         uint32_t request_xid;
-        uint8_t *id = NULL;
-        size_t idlen = 0;
+        uint8_t *id;
+        size_t n_id;
         int r;
 
         r = n_dhcp4_incoming_query_message_type(message, &type);
@@ -216,26 +237,38 @@ static int n_dhcp4_c_connection_verify_incoming(NDhcp4CConnection *connection,
         }
 
         /*
-         * Both the hardware address and the client identifier in the incoming
-         * mesage must match our own.
+         * In case our transport makes use of the 'chaddr' field, make sure it
+         * matches exactly our address.
          */
-        if (memcmp(connection->chaddr, header->chaddr, connection->hlen) != 0)
-                return N_DHCP4_E_UNEXPECTED;
+        switch (connection->client_config->transport) {
+        case N_DHCP4_TRANSPORT_ETHERNET:
+                assert(connection->client_config->n_mac == ETH_ALEN);
 
-        r = n_dhcp4_incoming_query(message, N_DHCP4_OPTION_CLIENT_IDENTIFIER, &id, &idlen);
-        if (r) {
-                if (r == N_DHCP4_E_UNSET) {
-                        if (connection->idlen)
-                                return N_DHCP4_E_UNEXPECTED;
-                } else {
-                        return r;
-                }
+                if (header->hlen != ETH_ALEN)
+                        return N_DHCP4_E_UNEXPECTED;
+                if (memcmp(header->chaddr, connection->client_config->mac, ETH_ALEN) != 0)
+                        return N_DHCP4_E_UNEXPECTED;
+
+                break;
+        case N_DHCP4_TRANSPORT_INFINIBAND:
+                if (header->hlen != 0)
+                        return N_DHCP4_E_UNEXPECTED;
+
+                break;
         }
 
-        if (idlen != connection->idlen)
+        /*
+         * We require servers to copy our client-id into the replies. Hence, we
+         * ignore any packets that have mismatching client-ids.
+         */
+        id = NULL;
+        n_id = 0;
+        r = n_dhcp4_incoming_query(message, N_DHCP4_OPTION_CLIENT_IDENTIFIER, &id, &n_id);
+        if (r && r != N_DHCP4_E_UNSET)
+                return r;
+        if (n_id != connection->client_config->n_client_id)
                 return N_DHCP4_E_UNEXPECTED;
-
-        if (memcmp(connection->id, id, idlen) != 0)
+        if (memcmp(id, connection->client_config->client_id, n_id) != 0)
                 return N_DHCP4_E_UNEXPECTED;
 
         *typep = type;
@@ -301,9 +334,9 @@ static int n_dhcp4_c_connection_packet_broadcast(NDhcp4CConnection *connection,
         assert(connection->state == N_DHCP4_C_CONNECTION_STATE_PACKET);
 
         r = n_dhcp4_c_socket_packet_send(connection->fd_packet,
-                                         connection->ifindex,
-                                         connection->bhaddr,
-                                         connection->hlen,
+                                         connection->client_config->ifindex,
+                                         connection->client_config->broadcast_mac,
+                                         connection->client_config->n_broadcast_mac,
                                          message);
         if (r)
                 return r;
@@ -340,17 +373,29 @@ static int n_dhcp4_c_connection_udp_send(NDhcp4CConnection *connection,
 static void n_dhcp4_c_connection_init_header(NDhcp4CConnection *connection,
                                              NDhcp4Header *header) {
         header->op = N_DHCP4_OP_BOOTREQUEST;
-        header->htype = connection->htype;
         header->ciaddr = connection->client_ip;
 
         if (connection->request_broadcast)
                 header->flags |= N_DHCP4_MESSAGE_FLAG_BROADCAST;
 
-        if (connection->send_chaddr) {
-                assert(connection->hlen <= sizeof(header->chaddr));
+        switch (connection->client_config->transport) {
+        case N_DHCP4_TRANSPORT_ETHERNET:
+                assert(connection->client_config->n_mac == ETH_ALEN);
 
-                header->hlen = connection->hlen;
-                memcpy(header->chaddr, connection->chaddr, connection->hlen);
+                header->htype = ARPHRD_ETHER;
+                header->hlen = ETH_ALEN;
+                memcpy(header->chaddr, connection->client_config->mac, ETH_ALEN);
+                break;
+        case N_DHCP4_TRANSPORT_INFINIBAND:
+                header->htype = ARPHRD_INFINIBAND;
+                header->hlen = 0;
+
+                /* infiniband mandates to request broadcasts */
+                header->flags |= N_DHCP4_MESSAGE_FLAG_BROADCAST;
+                break;
+        default:
+                abort();
+                break;
         }
 }
 
@@ -416,11 +461,12 @@ static int n_dhcp4_c_connection_new_message(NDhcp4CConnection *connection,
         if (r)
                 return r;
 
-        if (connection->idlen) {
-                r = n_dhcp4_outgoing_append(message, N_DHCP4_OPTION_CLIENT_IDENTIFIER, connection->id, connection->idlen);
-                if (r)
-                        return r;
-        }
+        r = n_dhcp4_outgoing_append(message,
+                                    N_DHCP4_OPTION_CLIENT_IDENTIFIER,
+                                    connection->client_config->client_id,
+                                    connection->client_config->n_client_id);
+        if (r)
+                return r;
 
         switch (message_type) {
         case N_DHCP4_MESSAGE_DISCOVER:
@@ -969,8 +1015,9 @@ int n_dhcp4_c_connection_dispatch_io(NDhcp4CConnection *connection,
                  * and drained, clean up the packet socket and fall through to
                  * dispatching the UDP socket.
                  */
-                epoll_ctl(*connection->fd_epollp, EPOLL_CTL_DEL, connection->fd_packet, NULL);
-                close(connection->fd_packet);
+                r = epoll_ctl(connection->fd_epoll, EPOLL_CTL_DEL, connection->fd_packet, NULL);
+                assert(!r);
+                connection->fd_packet = n_dhcp4_close(connection->fd_packet);
                 connection->state = N_DHCP4_C_CONNECTION_STATE_UDP;
 
                 /* fall-through */

@@ -723,20 +723,6 @@ _public_ int n_dhcp4_client_probe(NDhcp4Client *client,
         if (r)
                 return r;
 
-        if (client->current_probe) {
-                r = n_dhcp4_client_probe_raise(client->current_probe,
-                                               NULL,
-                                               N_DHCP4_CLIENT_EVENT_CANCELLED);
-                if (r)
-                        return r;
-
-                n_dhcp4_client_probe_uninstall(client->current_probe);
-        }
-
-        r = n_dhcp4_client_probe_install(probe);
-        if (r)
-                return r;
-
         *probep = probe;
         probe = NULL;
         return 0;

@@ -270,20 +270,15 @@ struct NDhcp4CEventNode {
         }
 
 struct NDhcp4CConnection {
+        NDhcp4ClientConfig *client_config;
+        int fd_epoll;
+
         unsigned int state;             /* current connection state */
-        int *fd_epollp;                 /* pointer to epoll fd */
-        int ifindex;                    /* interface index */
         int fd_packet;                  /* packet socket */
         int fd_udp;                     /* udp socket */
         uint8_t buf[UINT16_MAX];        /* scratch receive buffer */
 
         bool request_broadcast : 1;     /* request broadcast from server */
-        bool send_chaddr : 1;           /* send chaddr to server */
-
-        uint8_t htype;                  /* APR hardware type */
-        uint8_t hlen;                   /* hardware address length */
-        uint8_t chaddr[MAX_ADDR_LEN];   /* client hardware address */
-        uint8_t bhaddr[MAX_ADDR_LEN];   /* broadcast hardware address */
 
         struct drand48_data entropy;    /* entropy pool */
         NDhcp4Outgoing *request;        /* current request */
@@ -291,9 +286,6 @@ struct NDhcp4CConnection {
         uint32_t client_ip;             /* client IP address, or 0 */
         uint32_t server_ip;             /* server IP address, or 0 */
         uint16_t mtu;                   /* client mtu, or 0 */
-
-        size_t idlen;                   /* client identifier length */
-        uint8_t *id;                    /* client identifier */
 };
 
 #define N_DHCP4_C_CONNECTION_NULL(_x) {                                         \
@@ -545,15 +537,9 @@ NDhcp4CEventNode *n_dhcp4_c_event_node_free(NDhcp4CEventNode *node);
 /* client connections */
 
 int n_dhcp4_c_connection_init(NDhcp4CConnection *connection,
-                              int *fd_epollp,
+                              NDhcp4ClientConfig *client_config,
+                              int fd_epoll,
                               uint64_t seed,
-                              int ifindex,
-                              uint8_t htype,
-                              uint8_t hlen,
-                              const uint8_t *chaddr,
-                              const uint8_t *bhaddr,
-                              size_t idlen,
-                              const uint8_t *id,
                               bool request_broadcast);
 void n_dhcp4_c_connection_deinit(NDhcp4CConnection *connection);
 
@@ -602,8 +588,6 @@ int n_dhcp4_client_probe_new(NDhcp4ClientProbe **probep,
                              NDhcp4Client *client);
 
 int n_dhcp4_client_probe_raise(NDhcp4ClientProbe *probe, NDhcp4CEventNode **nodep, unsigned int event);
-int n_dhcp4_client_probe_install(NDhcp4ClientProbe *probe);
-void n_dhcp4_client_probe_uninstall(NDhcp4ClientProbe *probe);
 void n_dhcp4_client_probe_get_timeout(NDhcp4ClientProbe *probe, uint64_t *timeoutp);
 int n_dhcp4_client_probe_dispatch_timer(NDhcp4ClientProbe *probe, uint64_t ns_now);
 int n_dhcp4_client_probe_dispatch_io(NDhcp4ClientProbe *probe, uint32_t events);
