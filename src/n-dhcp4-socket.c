@@ -583,7 +583,7 @@ static int n_dhcp4_socket_udp_recv(int sockfd,
                                    uint8_t *buf,
                                    size_t n_buf,
                                    NDhcp4Incoming **messagep,
-                                   struct sockaddr_in *dest) {
+                                   struct in_pktinfo *pktinfo) {
         _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *message = NULL;
         struct iovec iov = {
                 .iov_base = buf,
@@ -622,23 +622,16 @@ static int n_dhcp4_socket_udp_recv(int sockfd,
                 return r;
         }
 
-        if (dest) {
+        if (pktinfo) {
                 struct cmsghdr *cmsg;
-                struct in_pktinfo *pktinfo;
 
                 cmsg = CMSG_FIRSTHDR(&msg);
                 assert(cmsg);
                 assert(cmsg->cmsg_level == IPPROTO_IP);
                 assert(cmsg->cmsg_type == IP_PKTINFO);
                 assert(cmsg->cmsg_len == CMSG_LEN(sizeof(struct in_pktinfo)));
-                pktinfo = (void*)CMSG_DATA(cmsg);
 
-                /*
-                 * The @dest parameter is only used for the server socket.
-                 */
-                dest->sin_family = AF_INET;
-                dest->sin_port = htons(N_DHCP4_NETWORK_SERVER_PORT);
-                dest->sin_addr.s_addr = pktinfo->ipi_addr.s_addr;
+                memcpy(pktinfo, (void*)CMSG_DATA(cmsg), sizeof(struct in_pktinfo));
         }
 
         *messagep = message;
@@ -658,5 +651,18 @@ int n_dhcp4_s_socket_udp_recv(int sockfd,
                               size_t n_buf,
                               NDhcp4Incoming **messagep,
                               struct sockaddr_in *dest) {
-        return n_dhcp4_socket_udp_recv(sockfd, buf, n_buf, messagep, dest);
+        struct in_pktinfo pktinfo = {};
+        int r;
+
+        r = n_dhcp4_socket_udp_recv(sockfd, buf, n_buf, messagep, &pktinfo);
+        if (r)
+                return r;
+
+        if (dest) {
+                dest->sin_family = AF_INET;
+                dest->sin_port = htons(N_DHCP4_NETWORK_SERVER_PORT);
+                dest->sin_addr.s_addr = pktinfo.ipi_addr.s_addr;
+        }
+
+        return 0;
 }
