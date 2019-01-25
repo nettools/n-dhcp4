@@ -596,7 +596,6 @@ static int n_dhcp4_socket_udp_recv(int sockfd,
                 .msg_control = cmsgbuf,
                 .msg_controllen = sizeof(cmsgbuf),
         };
-        struct cmsghdr *cmsg;
         ssize_t len;
         int r;
 
@@ -624,15 +623,22 @@ static int n_dhcp4_socket_udp_recv(int sockfd,
         }
 
         if (dest) {
+                struct cmsghdr *cmsg;
+                struct in_pktinfo *pktinfo;
+
                 cmsg = CMSG_FIRSTHDR(&msg);
-                if (cmsg) {
-                        if (cmsg->cmsg_level == IPPROTO_IP &&
-                            cmsg->cmsg_type == IP_PKTINFO &&
-                            cmsg->cmsg_len == CMSG_LEN(sizeof(struct in_pktinfo))) {
-                                struct in_pktinfo *pktinfo = (void*)CMSG_DATA(cmsg);
-                                dest->sin_addr.s_addr = pktinfo->ipi_addr.s_addr;
-                        }
-                }
+                assert(cmsg);
+                assert(cmsg->cmsg_level == IPPROTO_IP);
+                assert(cmsg->cmsg_type == IP_PKTINFO);
+                assert(cmsg->cmsg_len == CMSG_LEN(sizeof(struct in_pktinfo)));
+                pktinfo = (void*)CMSG_DATA(cmsg);
+
+                /*
+                 * The @dest parameter is only used for the server socket.
+                 */
+                dest->sin_family = AF_INET;
+                dest->sin_port = htons(N_DHCP4_NETWORK_SERVER_PORT);
+                dest->sin_addr.s_addr = pktinfo->ipi_addr.s_addr;
         }
 
         *messagep = message;

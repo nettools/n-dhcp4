@@ -102,6 +102,8 @@ static void test_client_server_packet(Link *link_server, Link *link_client) {
         r = n_dhcp4_s_socket_udp_recv(sk_server, buf, sizeof(buf), &incoming, &dest);
         assert(!r);
         assert(incoming);
+        assert(dest.sin_family == AF_INET);
+        assert(dest.sin_port == htons(N_DHCP4_NETWORK_SERVER_PORT));
         assert(dest.sin_addr.s_addr == INADDR_BROADCAST);
 }
 
@@ -137,6 +139,8 @@ static void test_client_server_udp(Link *link_server, Link *link_client) {
         r = n_dhcp4_s_socket_udp_recv(sk_server, buf, sizeof(buf), &incoming, &dest);
         assert(!r);
         assert(incoming);
+        assert(dest.sin_family == AF_INET);
+        assert(dest.sin_port == htons(N_DHCP4_NETWORK_SERVER_PORT));
         assert(dest.sin_addr.s_addr == addr_server.s_addr);
 
         /* teardown */
