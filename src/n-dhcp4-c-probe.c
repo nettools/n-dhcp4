@@ -327,9 +327,20 @@ void n_dhcp4_client_probe_get_timeout(NDhcp4ClientProbe *probe, uint64_t *timeou
         *timeoutp = timeout;
 }
 
-static int n_dhcp4_client_probe_transition_t1(NDhcp4ClientProbe *probe) {
+static int n_dhcp4_client_probe_transition_t1(NDhcp4ClientProbe *probe, uint64_t ns_now) {
+        _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *request = NULL;
+        int r;
+
         switch (probe->state) {
         case N_DHCP4_CLIENT_PROBE_STATE_BOUND:
+                r = n_dhcp4_c_connection_renew_new(&probe->connection, &request);
+                if (r)
+                        return r;
+
+                r = n_dhcp4_c_connection_start_request(&probe->connection, request, ns_now);
+                if (r)
+                        return r;
+
                 probe->state = N_DHCP4_CLIENT_PROBE_STATE_RENEWING;
                 break;
 
@@ -348,10 +359,21 @@ static int n_dhcp4_client_probe_transition_t1(NDhcp4ClientProbe *probe) {
         return 0;
 }
 
-static int n_dhcp4_client_probe_transition_t2(NDhcp4ClientProbe *probe) {
+static int n_dhcp4_client_probe_transition_t2(NDhcp4ClientProbe *probe, uint64_t ns_now) {
+        _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *request = NULL;
+        int r;
+
         switch (probe->state) {
         case N_DHCP4_CLIENT_PROBE_STATE_BOUND:
         case N_DHCP4_CLIENT_PROBE_STATE_RENEWING:
+                r = n_dhcp4_c_connection_rebind_new(&probe->connection, &request);
+                if (r)
+                        return r;
+
+                r = n_dhcp4_c_connection_start_request(&probe->connection, request, ns_now);
+                if (r)
+                        return r;
+
                 probe->state = N_DHCP4_CLIENT_PROBE_STATE_REBINDING;
                 break;
 
@@ -466,11 +488,11 @@ int n_dhcp4_client_probe_dispatch_timer(NDhcp4ClientProbe *probe, uint64_t ns_no
                                 if (r)
                                         return r;
                         } else if (ns_now >= probe->current_lease->t2) {
-                                r = n_dhcp4_client_probe_transition_t2(probe);
+                                r = n_dhcp4_client_probe_transition_t2(probe, ns_now);
                                 if (r)
                                         return r;
                         } else if (ns_now >= probe->current_lease->t1) {
-                                r = n_dhcp4_client_probe_transition_t1(probe);
+                                r = n_dhcp4_client_probe_transition_t1(probe, ns_now);
                                 if (r)
                                         return r;
                         }
