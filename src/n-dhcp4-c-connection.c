@@ -23,7 +23,6 @@
  * @client_config:              client configuration to use
  * @probe_config:               client probe configuration to use
  * @fd_epoll:                   epoll context to attach to, or -1
- * @request_broadcast:          whether to request DHCP broadcast
  *
  * This initializes a new client connection using the configuration given in
  * @client_config and @probe_config.
@@ -47,15 +46,13 @@
 int n_dhcp4_c_connection_init(NDhcp4CConnection *connection,
                               NDhcp4ClientConfig *client_config,
                               NDhcp4ClientProbeConfig *probe_config,
-                              int fd_epoll,
-                              bool request_broadcast) {
+                              int fd_epoll) {
         int r;
 
         *connection = (NDhcp4CConnection)N_DHCP4_C_CONNECTION_NULL(*connection);
         connection->client_config = client_config;
         connection->probe_config = probe_config;
         connection->fd_epoll = fd_epoll;
-        connection->request_broadcast = request_broadcast;
 
         /*
          * Initialize seed48_r(3)
@@ -457,7 +454,7 @@ static void n_dhcp4_c_connection_init_header(NDhcp4CConnection *connection,
         header->op = N_DHCP4_OP_BOOTREQUEST;
         header->ciaddr = connection->client_ip;
 
-        if (connection->request_broadcast)
+        if (connection->client_config->request_broadcast)
                 header->flags |= N_DHCP4_MESSAGE_FLAG_BROADCAST;
 
         switch (connection->client_config->transport) {

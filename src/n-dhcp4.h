@@ -103,6 +103,7 @@ NDhcp4ClientConfig *n_dhcp4_client_config_free(NDhcp4ClientConfig *config);
 
 void n_dhcp4_client_config_set_ifindex(NDhcp4ClientConfig *config, int ifindex);
 void n_dhcp4_client_config_set_transport(NDhcp4ClientConfig *config, unsigned int transport);
+void n_dhcp4_client_config_set_request_broadcast(NDhcp4ClientConfig *config, bool request_broadcast);
 void n_dhcp4_client_config_set_mac(NDhcp4ClientConfig *config, const uint8_t *mac, size_t n_mac);
 void n_dhcp4_client_config_set_broadcast_mac(NDhcp4ClientConfig *config, const uint8_t *mac, size_t n_mac);
 int n_dhcp4_client_config_set_client_id(NDhcp4ClientConfig *config, const uint8_t *id, size_t n_id);

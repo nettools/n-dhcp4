@@ -325,6 +325,7 @@ int main(int argc, char **argv) {
 
         n_dhcp4_client_config_set_ifindex(client_config, ifindex_client);
         n_dhcp4_client_config_set_transport(client_config, N_DHCP4_TRANSPORT_ETHERNET);
+        n_dhcp4_client_config_set_request_broadcast(client_config, false);
         n_dhcp4_client_config_set_mac(client_config, mac_client.ether_addr_octet, ETH_ALEN);
         n_dhcp4_client_config_set_broadcast_mac(client_config,
                                                 (const uint8_t[]){
@@ -343,8 +344,7 @@ int main(int argc, char **argv) {
         r = n_dhcp4_c_connection_init(&connection_client,
                                       client_config,
                                       probe_config,
-                                      efd_client,
-                                      false);
+                                      efd_client);
         assert(!r);
         test_c_connection_listen(ns_client, &connection_client);
 

@@ -88,6 +88,7 @@ int n_dhcp4_client_config_dup(NDhcp4ClientConfig *config, NDhcp4ClientConfig **d
 
         dup->ifindex = config->ifindex;
         dup->transport = config->transport;
+        dup->request_broadcast = config->request_broadcast;
         memcpy(dup->mac, config->mac, sizeof(dup->mac));
         dup->n_mac = config->n_mac;
         memcpy(dup->broadcast_mac, config->broadcast_mac, sizeof(dup->broadcast_mac));
@@ -129,6 +130,34 @@ _public_ void n_dhcp4_client_config_set_ifindex(NDhcp4ClientConfig *config, int 
  */
 _public_ void n_dhcp4_client_config_set_transport(NDhcp4ClientConfig *config, unsigned int transport) {
         config->transport = transport;
+}
+
+/**
+ * n_dhcp4_client_config_set_request_broadcast() - set request-broadcast property
+ * @config:                           configuration to operate on
+ * @request_broadcast:                value to set
+ *
+ * This sets the request_broadcast property of the given configuration object.
+ *
+ * The default is false. If set to true, a the server will be told to not unicast
+ * replies to the client's IP address before it has been configured, but broadcast
+ * to INADDR_ANY instead. In most cases, you do not want this.
+ *
+ * Background: OFFER and ACK messages from DHCP servers to clients are unicast
+ *             to the IP address handed out, even before the IP address has
+ *             been configured on the taregt interface. This usually works
+ *             because the correct destination hardware address is explicitly
+ *             set on the outgoing packets, rather than being resolved (which
+ *             would not work). However, some hardware does not accept incoming
+ *             IP packets destined for addresses they do not own, even if the
+ *             hardware address is correct. In this case, the server must
+ *             broadcast the replies in order for the client to receive them.
+ *             In general, unneccesary broadcasting is something one wants to
+ *             avoid, and some networks will not deliver broadcasts to the
+ *             client at all, in which case this flag must not be set.
+ */
+_public_ void n_dhcp4_client_config_set_request_broadcast(NDhcp4ClientConfig *config, bool request_broadcast) {
+        config->request_broadcast = request_broadcast;
 }
 
 /**

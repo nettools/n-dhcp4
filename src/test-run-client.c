@@ -38,6 +38,7 @@ static size_t           main_arg_n_broadcast_mac = 0;
 static int              main_arg_ifindex = 0;
 static uint8_t*         main_arg_mac = NULL;
 static size_t           main_arg_n_mac = 0;
+static bool             main_arg_request_broadcast = false;
 static bool             main_arg_test = false;
 
 static Manager *manager_free(Manager *manager) {
@@ -78,6 +79,7 @@ static int manager_new(Manager **managerp) {
                                             strlen("client-id"));
         n_dhcp4_client_config_set_ifindex(config, main_arg_ifindex);
         n_dhcp4_client_config_set_mac(config, main_arg_mac, main_arg_n_mac);
+        n_dhcp4_client_config_set_request_broadcast(config, main_arg_request_broadcast);
         n_dhcp4_client_config_set_transport(config, N_DHCP4_TRANSPORT_ETHERNET);
 
         r = n_dhcp4_client_new(&manager->client, config);
@@ -266,6 +268,7 @@ static int parse_argv(int argc, char **argv) {
                 ARG_BROADCAST_MAC,
                 ARG_IFINDEX,
                 ARG_MAC,
+                ARG_REQUEST_BROADCAST,
                 ARG_TEST,
         };
         static const struct option options[] = {
@@ -273,6 +276,7 @@ static int parse_argv(int argc, char **argv) {
                 { "broadcast-mac",      required_argument,      NULL,   ARG_BROADCAST_MAC       },
                 { "ifindex",            required_argument,      NULL,   ARG_IFINDEX             },
                 { "mac",                required_argument,      NULL,   ARG_MAC                 },
+                { "request-broadcast",  no_argument,            NULL,   ARG_REQUEST_BROADCAST   },
                 { "test",               no_argument,            NULL,   ARG_TEST                },
                 {}
         };
@@ -314,6 +318,10 @@ static int parse_argv(int argc, char **argv) {
                         free(main_arg_mac);
                         main_arg_mac = t;
                         main_arg_n_mac = n;
+                        break;
+
+                case ARG_REQUEST_BROADCAST:
+                        main_arg_request_broadcast = true;
                         break;
 
                 case ARG_TEST:

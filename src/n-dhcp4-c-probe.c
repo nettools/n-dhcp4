@@ -190,12 +190,10 @@ int n_dhcp4_client_probe_new(NDhcp4ClientProbe **probep,
         if (r)
                 return r;
 
-        /* XXX: pass on request_broadcast properly */
         r = n_dhcp4_c_connection_init(&probe->connection,
                                       client->config,
                                       probe->config,
-                                      active ? client->fd_epoll : -1,
-                                      false);
+                                      active ? client->fd_epoll : -1);
         if (r)
                 return r;
 

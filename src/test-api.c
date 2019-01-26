@@ -57,6 +57,7 @@ static void test_api_functions(void) {
                 (void *)n_dhcp4_client_config_freev,
                 (void *)n_dhcp4_client_config_set_ifindex,
                 (void *)n_dhcp4_client_config_set_transport,
+                (void *)n_dhcp4_client_config_set_request_broadcast,
                 (void *)n_dhcp4_client_config_set_mac,
                 (void *)n_dhcp4_client_config_set_broadcast_mac,
                 (void *)n_dhcp4_client_config_set_client_id,

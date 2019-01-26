@@ -237,6 +237,7 @@ struct NDhcp4Incoming {
 struct NDhcp4ClientConfig {
         int ifindex;
         unsigned int transport;
+        bool request_broadcast;
         uint8_t mac[MAX_ADDR_LEN];
         size_t n_mac;
         uint8_t broadcast_mac[MAX_ADDR_LEN];
@@ -549,8 +550,7 @@ NDhcp4CEventNode *n_dhcp4_c_event_node_free(NDhcp4CEventNode *node);
 int n_dhcp4_c_connection_init(NDhcp4CConnection *connection,
                               NDhcp4ClientConfig *client_config,
                               NDhcp4ClientProbeConfig *probe_config,
-                              int fd_epoll,
-                              bool request_broadcast);
+                              int fd_epoll);
 void n_dhcp4_c_connection_deinit(NDhcp4CConnection *connection);
 
 int n_dhcp4_c_connection_listen(NDhcp4CConnection *connection);

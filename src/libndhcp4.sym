@@ -4,6 +4,7 @@ global:
         n_dhcp4_client_config_free;
         n_dhcp4_client_config_set_ifindex;
         n_dhcp4_client_config_set_transport;
+        n_dhcp4_client_config_set_request_broadcast;
         n_dhcp4_client_config_set_mac;
         n_dhcp4_client_config_set_broadcast_mac;
         n_dhcp4_client_config_set_client_id;
