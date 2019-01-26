@@ -280,8 +280,6 @@ struct NDhcp4CConnection {
         int fd_packet;                  /* packet socket */
         int fd_udp;                     /* udp socket */
 
-        bool request_broadcast : 1;     /* request broadcast from server */
-
         struct drand48_data entropy;    /* entropy pool */
         NDhcp4Outgoing *request;        /* current request */
 
