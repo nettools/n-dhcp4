@@ -372,7 +372,7 @@ void n_dhcp4_c_connection_get_timeout(NDhcp4CConnection *connection,
         case N_DHCP4_C_MESSAGE_REBOOT:
         case N_DHCP4_C_MESSAGE_INFORM:
                 /*
-                 * Resend with an exponintial backoff and a one second random
+                 * Resend with an exponential backoff and a one second random
                  * slack, from a minimum of two seconds to a maximum of sixty
                  * four.
                  *
@@ -383,7 +383,7 @@ void n_dhcp4_c_connection_get_timeout(NDhcp4CConnection *connection,
                 if (n_send >= 6)
                         n_send = 6;
 
-                timeout = connection->request->userdata.send_time + ((1ULL << n_send) * 1000000000ULL) + (n_dhcp4_c_connection_get_random(connection) % 1000000000ULL);
+                timeout = connection->request->userdata.send_time + ((1ULL << n_send) * 1000000000ULL) + connection->request->userdata.send_jitter;
 
                 break;
         case N_DHCP4_C_MESSAGE_REBIND:
@@ -394,7 +394,7 @@ void n_dhcp4_c_connection_get_timeout(NDhcp4CConnection *connection,
                  * Note that the RFC says to do this at most once, but we do
                  * it until we are cancelled.
                  */
-                timeout = connection->request->userdata.send_time + (60ULL * 1000000000ULL) + (n_dhcp4_c_connection_get_random(connection) % 1000000000ULL);
+                timeout = connection->request->userdata.send_time + (60ULL * 1000000000ULL) + connection->request->userdata.send_jitter;
 
                 break;
         case N_DHCP4_C_MESSAGE_DECLINE:
@@ -997,6 +997,7 @@ static int n_dhcp4_c_connection_send_request(NDhcp4CConnection *connection,
         }
 
         request->userdata.send_time = timestamp;
+        request->userdata.send_jitter = (n_dhcp4_c_connection_get_random(connection) % 1000000000ULL);
         n_dhcp4_c_connection_outgoing_set_secs(request);
 
         switch (request->userdata.type) {

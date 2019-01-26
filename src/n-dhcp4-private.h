@@ -206,6 +206,7 @@ struct NDhcp4Outgoing {
                 uint64_t start_time;
                 uint64_t base_time;
                 uint64_t send_time;
+                uint64_t send_jitter;
                 size_t n_send;
         } userdata;
 };
