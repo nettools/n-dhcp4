@@ -431,10 +431,6 @@ static int n_dhcp4_client_probe_transition_lifetime(NDhcp4ClientProbe *probe) {
 static int n_dhcp4_client_probe_transition_offer(NDhcp4ClientProbe *probe) {
         switch (probe->state) {
         case N_DHCP4_CLIENT_PROBE_STATE_SELECTING:
-                probe->state = N_DHCP4_CLIENT_PROBE_STATE_REQUESTING;
-
-                break;
-
         case N_DHCP4_CLIENT_PROBE_STATE_INIT:
         case N_DHCP4_CLIENT_PROBE_STATE_INIT_REBOOT:
         case N_DHCP4_CLIENT_PROBE_STATE_REBOOTING:
