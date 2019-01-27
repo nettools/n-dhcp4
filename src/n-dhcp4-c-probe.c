@@ -397,23 +397,23 @@ void n_dhcp4_client_probe_get_timeout(NDhcp4ClientProbe *probe, uint64_t *timeou
 
         switch (probe->state) {
         case N_DHCP4_CLIENT_PROBE_STATE_INIT:
-                if (probe->ns_deferred && probe->ns_deferred < timeout)
+                if (probe->ns_deferred && (!timeout || probe->ns_deferred < timeout))
                         timeout = probe->ns_deferred;
 
                 break;
         case N_DHCP4_CLIENT_PROBE_STATE_BOUND:
-                if (t1 && t1 < timeout)
+                if (t1 && (!timeout || t1 < timeout))
                         timeout = t1;
 
                 /* fall-through */
         case N_DHCP4_CLIENT_PROBE_STATE_RENEWING:
-                if (t2 && t2 < timeout)
+                if (t2 && (!timeout || t2 < timeout))
                         timeout = t2;
 
                 /* fall-through */
         case N_DHCP4_CLIENT_PROBE_STATE_REBINDING:
         case N_DHCP4_CLIENT_PROBE_STATE_GRANTED:
-                if (lifetime && lifetime < timeout)
+                if (lifetime && (!timeout || lifetime < timeout))
                         timeout = lifetime;
                 break;
         default:
