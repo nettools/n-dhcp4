@@ -447,7 +447,8 @@ static int n_dhcp4_c_connection_udp_broadcast(NDhcp4CConnection *connection,
                                               NDhcp4Outgoing *message) {
         int r;
 
-        assert(connection->state > N_DHCP4_C_CONNECTION_STATE_PACKET);
+        assert(connection->state == N_DHCP4_C_CONNECTION_STATE_DRAINING ||
+               connection->state == N_DHCP4_C_CONNECTION_STATE_UDP);
 
         r = n_dhcp4_c_socket_udp_broadcast(connection->fd_udp, message);
         if (r)
@@ -460,7 +461,8 @@ static int n_dhcp4_c_connection_udp_send(NDhcp4CConnection *connection,
                                          NDhcp4Outgoing *message) {
         int r;
 
-        assert(connection->state > N_DHCP4_C_CONNECTION_STATE_PACKET);
+        assert(connection->state == N_DHCP4_C_CONNECTION_STATE_DRAINING ||
+               connection->state == N_DHCP4_C_CONNECTION_STATE_UDP);
 
         r = n_dhcp4_c_socket_udp_send(connection->fd_udp, message);
         if (r)
@@ -1148,6 +1150,11 @@ int n_dhcp4_c_connection_dispatch_io(NDhcp4CConnection *connection,
                                               &message);
                 if (r)
                         return r;
+
+                break;
+        default:
+                abort();
+                return -ENOTRECOVERABLE;
         }
 
         r = n_dhcp4_c_connection_verify_incoming(connection, message, &type);
