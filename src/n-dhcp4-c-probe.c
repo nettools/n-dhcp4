@@ -343,6 +343,7 @@ static int n_dhcp4_client_probe_transition_t1(NDhcp4ClientProbe *probe, uint64_t
                         return r;
 
                 probe->state = N_DHCP4_CLIENT_PROBE_STATE_RENEWING;
+
                 break;
 
         case N_DHCP4_CLIENT_PROBE_STATE_INIT:
@@ -355,7 +356,7 @@ static int n_dhcp4_client_probe_transition_t1(NDhcp4ClientProbe *probe, uint64_t
         case N_DHCP4_CLIENT_PROBE_STATE_REBINDING:
         case N_DHCP4_CLIENT_PROBE_STATE_EXPIRED:
         default:
-                /* ignore */
+                abort();
                 break;
         }
 
@@ -378,6 +379,7 @@ static int n_dhcp4_client_probe_transition_t2(NDhcp4ClientProbe *probe, uint64_t
                         return r;
 
                 probe->state = N_DHCP4_CLIENT_PROBE_STATE_REBINDING;
+
                 break;
 
         case N_DHCP4_CLIENT_PROBE_STATE_INIT:
@@ -389,7 +391,7 @@ static int n_dhcp4_client_probe_transition_t2(NDhcp4ClientProbe *probe, uint64_t
         case N_DHCP4_CLIENT_PROBE_STATE_REBINDING:
         case N_DHCP4_CLIENT_PROBE_STATE_EXPIRED:
         default:
-                /* ignore */
+                abort();
                 break;
         }
 
@@ -419,7 +421,7 @@ static int n_dhcp4_client_probe_transition_lifetime(NDhcp4ClientProbe *probe) {
         case N_DHCP4_CLIENT_PROBE_STATE_REQUESTING:
         case N_DHCP4_CLIENT_PROBE_STATE_EXPIRED:
         default:
-                /* ignore */
+                abort();
                 break;
         }
 
@@ -430,6 +432,7 @@ static int n_dhcp4_client_probe_transition_offer(NDhcp4ClientProbe *probe) {
         switch (probe->state) {
         case N_DHCP4_CLIENT_PROBE_STATE_SELECTING:
                 probe->state = N_DHCP4_CLIENT_PROBE_STATE_REQUESTING;
+
                 break;
 
         case N_DHCP4_CLIENT_PROBE_STATE_INIT:
@@ -476,6 +479,7 @@ static int n_dhcp4_client_probe_transition_nak(NDhcp4ClientProbe *probe) {
         case N_DHCP4_CLIENT_PROBE_STATE_RENEWING:
         case N_DHCP4_CLIENT_PROBE_STATE_REBINDING:
                 probe->state = N_DHCP4_CLIENT_PROBE_STATE_INIT;
+
                 break;
 
         case N_DHCP4_CLIENT_PROBE_STATE_SELECTING:
