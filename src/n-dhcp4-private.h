@@ -354,8 +354,6 @@ struct NDhcp4ClientLease {
 
         NDhcp4Incoming *message;
 
-        unsigned int state;
-
         uint64_t t1;
         uint64_t t2;
         uint64_t lifetime;

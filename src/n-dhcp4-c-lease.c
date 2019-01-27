@@ -46,18 +46,18 @@ static int n_dhcp4_client_lease_get_timeouts(NDhcp4ClientLease *lease, uint64_t 
                         t1 = (t2 * 4) / 7;
         }
 
-        *lifetimep = lifetime;
-        *t2p = t2;
-        *t1p = t1;
+        *lifetimep = lease->message->userdata.base_time + lifetime;
+        *t2p = lease->message->userdata.base_time + t2;
+        *t1p = lease->message->userdata.base_time + t1;
         return 0;
 }
 
 /**
  * n_dhcp4_client_lease_new() - XXX
  */
-int n_dhcp4_client_lease_new(NDhcp4ClientLease **leasep, NDhcp4Incoming *message) {
+int n_dhcp4_client_lease_new(NDhcp4ClientLease **leasep, NDhcp4Incoming *_message) {
         _cleanup_(n_dhcp4_client_lease_unrefp) NDhcp4ClientLease *lease = NULL;
-        uint8_t type;
+        _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *message = _message;
         int r;
 
         assert(leasep);
@@ -67,34 +67,12 @@ int n_dhcp4_client_lease_new(NDhcp4ClientLease **leasep, NDhcp4Incoming *message
                 return -ENOMEM;
 
         *lease = (NDhcp4ClientLease)N_DHCP4_CLIENT_LEASE_NULL(*lease);
-
-        r = n_dhcp4_incoming_query_message_type(message, &type);
-        if (r) {
-                if (r == N_DHCP4_E_UNSET)
-                        return N_DHCP4_E_MALFORMED;
-                else
-                        return r;
-        }
-
-        switch (type) {
-        case N_DHCP4_MESSAGE_OFFER:
-                lease->state = N_DHCP4_CLIENT_LEASE_STATE_OFFERED;
-                break;
-        case N_DHCP4_MESSAGE_ACK:
-                lease->state = N_DHCP4_CLIENT_LEASE_STATE_ACKED;
-                break;
-        default:
-                return N_DHCP4_E_MALFORMED;
-        }
+        lease->message = message;
+        message = NULL;
 
         r = n_dhcp4_client_lease_get_timeouts(lease, &lease->t1, &lease->t2, &lease->lifetime);
         if (r)
                 return r;
-
-        lease->message = message;
-        lease->t1 += message->userdata.base_time;
-        lease->t2 += message->userdata.base_time;
-        lease->lifetime += message->userdata.base_time;
 
         *leasep = lease;
         lease = NULL;
