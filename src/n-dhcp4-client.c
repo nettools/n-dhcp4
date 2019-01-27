@@ -767,6 +767,8 @@ _public_ int n_dhcp4_client_probe(NDhcp4Client *client,
         if (r)
                 return r;
 
+        n_dhcp4_client_arm_timer(client);
+
         *probep = probe;
         probe = NULL;
         return 0;
