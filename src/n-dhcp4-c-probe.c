@@ -610,9 +610,25 @@ int n_dhcp4_client_probe_dispatch_io(NDhcp4ClientProbe *probe, uint32_t events) 
         int r;
 
         r = n_dhcp4_c_connection_dispatch_io(&probe->connection, &message);
-        if (r)
-                return r;
+        if (r) {
+                if (r == N_DHCP4_E_AGAIN)
+                        return 0;
 
+                return r;
+        }
+
+        /*
+         * We fetched something from the sockets, which we will handle below.
+         * We don't know whether there is more data to fetch, so we set the
+         * preempted flag to notify the caller we want to be called again.
+         */
+        probe->client->preempted = true;
+
+        /*
+         * A NULL message is returned on parser errors. That is, we correctly
+         * read data from the sockets, but couldn't create a valid DHCP
+         * message. It is discarded, so we have nothing to do.
+         */
         if (!message)
                 return 0;
 
