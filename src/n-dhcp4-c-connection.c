@@ -108,6 +108,20 @@ int n_dhcp4_c_connection_init(NDhcp4CConnection *connection,
                 assert(!r);
         }
 
+        /*
+         * We explicitly allow initializing connections with an invalid
+         * epoll-fd. The resulting connection immediately transitions into the
+         * CLOSED state. This allows the caller to create dummy connections
+         * useful to provide asynchronous constructor-feedback in the API.
+         *
+         * The effect of this is as if you immediately call
+         * n_dhcp4_c_connection_close() on the new connection. However, by
+         * directly passing -1 in the constructor, you are guaranteed not even
+         * the constructor can ever mess with your epoll-set.
+         */
+        if (connection->fd_epoll < 0)
+                connection->state = N_DHCP4_C_CONNECTION_STATE_CLOSED;
+
         return 0;
 }
 
@@ -273,6 +287,7 @@ void n_dhcp4_c_connection_close(NDhcp4CConnection *connection) {
         }
 
         connection->fd_epoll = -1;
+        connection->state = N_DHCP4_C_CONNECTION_STATE_CLOSED;
 }
 
 static int n_dhcp4_c_connection_verify_incoming(NDhcp4CConnection *connection,
