@@ -604,7 +604,8 @@ void n_dhcp4_client_arm_timer(NDhcp4Client *client);
 
 int n_dhcp4_client_probe_new(NDhcp4ClientProbe **probep,
                              NDhcp4ClientProbeConfig *config,
-                             NDhcp4Client *client);
+                             NDhcp4Client *client,
+                             uint64_t ns_now);
 
 int n_dhcp4_client_probe_raise(NDhcp4ClientProbe *probe, NDhcp4CEventNode **nodep, unsigned int event);
 void n_dhcp4_client_probe_get_timeout(NDhcp4ClientProbe *probe, uint64_t *timeoutp);

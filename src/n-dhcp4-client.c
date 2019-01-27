@@ -758,9 +758,12 @@ _public_ int n_dhcp4_client_probe(NDhcp4Client *client,
                                   NDhcp4ClientProbe **probep,
                                   NDhcp4ClientProbeConfig *config) {
         _cleanup_(n_dhcp4_client_probe_freep) NDhcp4ClientProbe *probe = NULL;
+        uint64_t ns_now;
         int r;
 
-        r = n_dhcp4_client_probe_new(&probe, config, client);
+        ns_now = n_dhcp4_gettime(CLOCK_BOOTTIME);
+
+        r = n_dhcp4_client_probe_new(&probe, config, client, ns_now);
         if (r)
                 return r;
 
