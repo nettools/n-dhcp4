@@ -294,7 +294,7 @@ int n_dhcp4_client_probe_raise(NDhcp4ClientProbe *probe, NDhcp4CEventNode **node
 }
 
 void n_dhcp4_client_probe_get_timeout(NDhcp4ClientProbe *probe, uint64_t *timeoutp) {
-        uint64_t timeout;
+        uint64_t timeout = 0;
 
         n_dhcp4_c_connection_get_timeout(&probe->connection, &timeout);
 
@@ -306,7 +306,7 @@ void n_dhcp4_client_probe_get_timeout(NDhcp4ClientProbe *probe, uint64_t *timeou
                 switch (probe->state) {
                 case N_DHCP4_CLIENT_PROBE_STATE_BOUND:
                         if (t1 && t1 < timeout)
-                                timeout = t2;
+                                timeout = t1;
 
                         /* fall-through */
                 case N_DHCP4_CLIENT_PROBE_STATE_RENEWING:
