@@ -137,7 +137,14 @@ NDhcp4Header *n_dhcp4_outgoing_get_header(NDhcp4Outgoing *outgoing) {
 size_t n_dhcp4_outgoing_get_raw(NDhcp4Outgoing *outgoing, const void **rawp) {
         if (rawp)
                 *rawp = outgoing->message;
-        return outgoing->n_message;
+
+        /*
+         * Return the DHCP message until the END option, excluding any
+         * trailing padding. We overallocate during append, so the
+         * allocated message might be bigger than what we want to
+         * send on the wire.
+         */
+        return outgoing->i_message + 1;
 }
 
 static void n_dhcp4_outgoing_append_option(NDhcp4Outgoing *outgoing,
