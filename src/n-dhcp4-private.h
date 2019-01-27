@@ -257,6 +257,7 @@ struct NDhcp4ClientProbeConfig {
         bool inform_only;
         bool init_reboot;
         struct in_addr requested_ip;
+        struct drand48_data entropy;    /* entropy pool */
 };
 
 #define N_DHCP4_CLIENT_PROBE_CONFIG_NULL(_x) {                                  \
@@ -283,7 +284,6 @@ struct NDhcp4CConnection {
         int fd_packet;                  /* packet socket */
         int fd_udp;                     /* udp socket */
 
-        struct drand48_data entropy;    /* entropy pool */
         NDhcp4Outgoing *request;        /* current request */
 
         uint32_t client_ip;             /* client IP address, or 0 */
@@ -540,6 +540,7 @@ int n_dhcp4_client_config_dup(NDhcp4ClientConfig *config,
 
 int n_dhcp4_client_probe_config_dup(NDhcp4ClientProbeConfig *config,
                                     NDhcp4ClientProbeConfig **dupp);
+uint32_t n_dhcp4_client_probe_config_get_random(NDhcp4ClientProbeConfig *config);
 
 /* client events */
 

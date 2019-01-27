@@ -5,14 +5,12 @@
  */
 
 #include <assert.h>
-#include <c-siphash.h>
 #include <errno.h>
 #include <limits.h>
 #include <net/if_arp.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/auxv.h>
 #include <sys/epoll.h>
 #include "n-dhcp4-private.h"
 #include "util/packet.h"
@@ -47,66 +45,10 @@ int n_dhcp4_c_connection_init(NDhcp4CConnection *connection,
                               NDhcp4ClientConfig *client_config,
                               NDhcp4ClientProbeConfig *probe_config,
                               int fd_epoll) {
-        int r;
-
         *connection = (NDhcp4CConnection)N_DHCP4_C_CONNECTION_NULL(*connection);
         connection->client_config = client_config;
         connection->probe_config = probe_config;
         connection->fd_epoll = fd_epoll;
-
-        /*
-         * Initialize seed48_r(3)
-         *
-         * We need random jitter for all timeouts and delays, used to reduce
-         * network traffic during bursts. This is not meant as security measure
-         * but only meant to improve network utilization during bursts. The
-         * random source is thus negligible. However, we want, under all
-         * circumstances, avoid two instances running with the same seed. Thus
-         * we source the seed from AT_RANDOM, which grants us a per-process
-         * unique seed. We then add the current time to make sure consequetive
-         * instances use different seeds (to avoid clashes if processes are
-         * duplicated, or similar), and lastly we add the connection memory
-         * address to avoid clashes of multiple parallel instances.
-         *
-         * Again, none of these are meant as security measure, but only to
-         * avoid *ACCIDENTAL* seed clashes. That is, in the case that many
-         * transactions are started in parallel, we delay the individual
-         * messages (as described in the spec), to reduce the traffic on the
-         * network and the chance of packets being dropped (and thus triggering
-         * timeouts and resends).
-         *
-         * We hash everything through SipHash, to avoid exposing AT_RANDOM and
-         * other sources to the network. We use a static salt to distinguish it
-         * from other implementations using the same random source.
-         */
-        {
-                uint8_t hash_seed[] = {
-                        0x25, 0x3f, 0x02, 0x75, 0x3a, 0xb8, 0x4f, 0x91,
-                        0x9d, 0x0a, 0xd6, 0x15, 0x9d, 0x72, 0x7b, 0xcb,
-                };
-                CSipHash hash = C_SIPHASH_NULL;
-                unsigned short int seed16v[3];
-                const uint8_t *p;
-                uint64_t u64;
-
-                c_siphash_init(&hash, hash_seed);
-
-                p = (const uint8_t *)getauxval(AT_RANDOM);
-                if (p)
-                        c_siphash_append(&hash, p, 16);
-
-                u64 = n_dhcp4_gettime(CLOCK_MONOTONIC);
-                c_siphash_append(&hash, (const uint8_t *)&u64, sizeof(u64));
-
-                u64 = c_siphash_finalize(&hash);
-
-                seed16v[0] = (u64 >>  0) ^ (u64 >> 48);
-                seed16v[1] = (u64 >> 16) ^ (u64 >>  0);
-                seed16v[2] = (u64 >> 32) ^ (u64 >> 16);
-
-                r = seed48_r(seed16v, &connection->entropy);
-                assert(!r);
-        }
 
         /*
          * We explicitly allow initializing connections with an invalid
@@ -141,22 +83,6 @@ void n_dhcp4_c_connection_deinit(NDhcp4CConnection *connection) {
         n_dhcp4_c_connection_close(connection);
         *connection = (NDhcp4CConnection)N_DHCP4_C_CONNECTION_NULL(*connection);
 }
-
-static uint32_t n_dhcp4_c_connection_get_random(NDhcp4CConnection *connection) {
-        long int result;
-        int r;
-
-        /*
-         * This simply fetches the next 32bit random number from the entropy
-         * pool in @connection. Note that this is in no way suitable for
-         * security purposes.
-         */
-
-        r = mrand48_r(&connection->entropy, &result);
-        assert(!r);
-
-        return result;
-};
 
 static void n_dhcp4_c_connection_outgoing_set_secs(NDhcp4Outgoing *message) {
         uint32_t secs;
@@ -1016,7 +942,7 @@ static int n_dhcp4_c_connection_send_request(NDhcp4CConnection *connection,
         case N_DHCP4_C_MESSAGE_REBIND:
         case N_DHCP4_C_MESSAGE_RENEW:
                 request->userdata.base_time = timestamp;
-                n_dhcp4_outgoing_set_xid(request, n_dhcp4_c_connection_get_random(connection));
+                n_dhcp4_outgoing_set_xid(request, n_dhcp4_client_probe_config_get_random(connection->probe_config));
 
                 break;
         case N_DHCP4_C_MESSAGE_SELECT:
@@ -1028,7 +954,7 @@ static int n_dhcp4_c_connection_send_request(NDhcp4CConnection *connection,
         }
 
         request->userdata.send_time = timestamp;
-        request->userdata.send_jitter = (n_dhcp4_c_connection_get_random(connection) % 1000000000ULL);
+        request->userdata.send_jitter = (n_dhcp4_client_probe_config_get_random(connection->probe_config) % 1000000000ULL);
         n_dhcp4_c_connection_outgoing_set_secs(request);
 
         switch (request->userdata.type) {

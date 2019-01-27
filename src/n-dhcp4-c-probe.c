@@ -8,11 +8,13 @@
 
 #include <assert.h>
 #include <c-list.h>
+#include <c-siphash.h>
 #include <errno.h>
 #include <inttypes.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/auxv.h>
 #include "n-dhcp4.h"
 #include "n-dhcp4-private.h"
 
@@ -161,6 +163,82 @@ _public_ void n_dhcp4_client_probe_config_set_requested_ip(NDhcp4ClientProbeConf
         config->requested_ip = ip;
 }
 
+static void n_dhcp4_client_probe_config_initialize_random_seed(NDhcp4ClientProbeConfig *config) {
+        uint8_t hash_seed[] = {
+                0x25, 0x3f, 0x02, 0x75, 0x3a, 0xb8, 0x4f, 0x91,
+                0x9d, 0x0a, 0xd6, 0x15, 0x9d, 0x72, 0x7b, 0xcb,
+        };
+        CSipHash hash = C_SIPHASH_NULL;
+        unsigned short int seed16v[3];
+        const uint8_t *p;
+        uint64_t u64;
+        int r;
+
+        /*
+         * Initialize seed48_r(3)
+         *
+         * We need random jitter for all timeouts and delays, used to reduce
+         * network traffic during bursts. This is not meant as security measure
+         * but only meant to improve network utilization during bursts. The
+         * random source is thus negligible. However, we want, under all
+         * circumstances, avoid two instances running with the same seed. Thus
+         * we source the seed from AT_RANDOM, which grants us a per-process
+         * unique seed. We then add the current time to make sure consequetive
+         * instances use different seeds (to avoid clashes if processes are
+         * duplicated, or similar), and lastly we add the config memory address
+         * to avoid clashes of multiple parallel instances.
+         *
+         * Again, none of these are meant as security measure, but only to
+         * avoid *ACCIDENTAL* seed clashes. That is, in the case that many
+         * transactions are started in parallel, we delay the individual
+         * messages (as described in the spec), to reduce the traffic on the
+         * network and the chance of packets being dropped (and thus triggering
+         * timeouts and resends).
+         *
+         * We hash everything through SipHash, to avoid exposing AT_RANDOM and
+         * other sources to the network. We use a static salt to distinguish it
+         * from other implementations using the same random source.
+         */
+        c_siphash_init(&hash, hash_seed);
+
+        p = (const uint8_t *)getauxval(AT_RANDOM);
+        if (p)
+                c_siphash_append(&hash, p, 16);
+
+        u64 = n_dhcp4_gettime(CLOCK_MONOTONIC);
+        c_siphash_append(&hash, (const uint8_t *)&u64, sizeof(u64));
+
+        c_siphash_append(&hash, (const uint8_t *)config, sizeof(config));
+
+        u64 = c_siphash_finalize(&hash);
+
+        seed16v[0] = (u64 >>  0) ^ (u64 >> 48);
+        seed16v[1] = (u64 >> 16) ^ (u64 >>  0);
+        seed16v[2] = (u64 >> 32) ^ (u64 >> 16);
+
+        r = seed48_r(seed16v, &config->entropy);
+        assert(!r);
+}
+
+/**
+ * n_dhcp4_client_probe_config_get_random() - XXX
+ */
+uint32_t n_dhcp4_client_probe_config_get_random(NDhcp4ClientProbeConfig *config) {
+        long int result;
+        int r;
+
+        /*
+         * This simply fetches the next 32bit random number from the entropy
+         * pool in @config. Note that this is in no way suitable for security
+         * purposes.
+         */
+
+        r = mrand48_r(&config->entropy, &result);
+        assert(!r);
+
+        return result;
+};
+
 /**
  * n_dhcp4_client_probe_new() - XXX
  */
@@ -189,6 +267,11 @@ int n_dhcp4_client_probe_new(NDhcp4ClientProbe **probep,
         r = n_dhcp4_client_probe_config_dup(config, &probe->config);
         if (r)
                 return r;
+
+        /*
+         * XXX: make seed initialization optional, so the entropy can be reused.
+         */
+        n_dhcp4_client_probe_config_initialize_random_seed(probe->config);
 
         r = n_dhcp4_c_connection_init(&probe->connection,
                                       client->config,
