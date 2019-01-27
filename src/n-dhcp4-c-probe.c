@@ -208,7 +208,7 @@ static void n_dhcp4_client_probe_config_initialize_random_seed(NDhcp4ClientProbe
         u64 = n_dhcp4_gettime(CLOCK_MONOTONIC);
         c_siphash_append(&hash, (const uint8_t *)&u64, sizeof(u64));
 
-        c_siphash_append(&hash, (const uint8_t *)config, sizeof(config));
+        c_siphash_append(&hash, (const uint8_t *)&config, sizeof(config));
 
         u64 = c_siphash_finalize(&hash);
 
