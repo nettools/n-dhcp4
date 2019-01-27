@@ -342,8 +342,8 @@ static int n_dhcp4_socket_packet_send(int sockfd,
                 .sll_halen = halen,
         };
         const void *buf;
-        size_t n_buf;
-        ssize_t len;
+        size_t n_buf, len;
+        int r;
 
         assert(halen <= sizeof(haddr.sll_addr));
 
@@ -351,16 +351,17 @@ static int n_dhcp4_socket_packet_send(int sockfd,
 
         n_buf = n_dhcp4_outgoing_get_raw(message, &buf);
 
-        len = packet_sendto_udp(sockfd, buf, n_buf, src_paddr, &haddr, dest_paddr);
-        if (len < 0) {
-                if (errno == EAGAIN || errno == ENOBUFS)
+        r = packet_sendto_udp(sockfd, buf, n_buf, &len, src_paddr, &haddr, dest_paddr);
+        if (r < 0) {
+                if (r == -EAGAIN || r == -ENOBUFS)
                         return N_DHCP4_E_DROPPED;
-                else if (errno == ENETDOWN || errno == ENXIO)
+                else if (r == -ENETDOWN || r == -ENXIO)
                         return N_DHCP4_E_DOWN;
                 else
-                        return -errno;
-        } else if ((size_t)len != n_buf)
+                        return r;
+        } else if (len != n_buf) {
                 return N_DHCP4_E_DROPPED;
+        }
 
         return 0;
 }
@@ -548,14 +549,14 @@ int n_dhcp4_c_socket_packet_recv(int sockfd,
                                  size_t n_buf,
                                  NDhcp4Incoming **messagep) {
         _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *message = NULL;
-        ssize_t len;
+        size_t len;
         int r;
 
-        len = packet_recv_udp(sockfd, buf, n_buf);
-        if (len < 0) {
-                if (errno == ENETDOWN)
+        r = packet_recv_udp(sockfd, buf, n_buf, &len);
+        if (r < 0) {
+                if (r == -ENETDOWN)
                         return N_DHCP4_E_DOWN;
-                else if (errno == EAGAIN)
+                else if (r == -EAGAIN)
                         return N_DHCP4_E_AGAIN;
                 else
                         return -errno;

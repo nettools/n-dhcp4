@@ -144,7 +144,8 @@ uint16_t packet_internet_checksum_udp(const struct in_addr *src_addr,
  * packet_sendto_udp() - send UDP packet on AF_PACKET socket
  * @sockfd:             AF_PACKET/SOCK_DGRAM socket
  * @buf:                payload
- * @len:                length of payload in bytes
+ * @n_buf:              length of payload in bytes
+ * @n_transmittedp:     output argument for number of transmitted bytes
  * @src_paddr:          source protocol address, see ip(7)
  * @dest_haddr:         destination hardware address, see packet(7)
  * @dest_paddr:         destination protocol address, see ip(7)
@@ -155,19 +156,20 @@ uint16_t packet_internet_checksum_udp(const struct in_addr *src_addr,
  * even if the destination IP is not yet configured on the destination
  * host.
  *
- * Return: the number of payload bytes sent on success, or -1 on error.
+ * Return: 0 on success, negative error code on failure.
  */
-ssize_t packet_sendto_udp(int sockfd,
-                          const void *buf,
-                          size_t len,
-                          const struct sockaddr_in *src_paddr,
-                          const struct packet_sockaddr_ll *dest_haddr,
-                          const struct sockaddr_in *dest_paddr) {
+int packet_sendto_udp(int sockfd,
+                      const void *buf,
+                      size_t n_buf,
+                      size_t *n_transmittedp,
+                      const struct sockaddr_in *src_paddr,
+                      const struct packet_sockaddr_ll *dest_haddr,
+                      const struct sockaddr_in *dest_paddr) {
         struct iphdr ip_hdr = {
                 .version = IPVERSION,
                 .ihl = sizeof(ip_hdr) / 4, /* Length of header in multiples of four bytes */
                 .tos = IPTOS_CLASS_CS6, /* Class Selector for network control */
-                .tot_len = htons(sizeof(struct iphdr) + sizeof(struct udphdr) + len),
+                .tot_len = htons(sizeof(struct iphdr) + sizeof(struct udphdr) + n_buf),
                 .frag_off = htons(IP_DF), /* Do not fragment */
                 .ttl = IPDEFTTL,
                 .protocol = IPPROTO_UDP,
@@ -177,7 +179,7 @@ ssize_t packet_sendto_udp(int sockfd,
         struct udphdr udp_hdr = {
                 .source = src_paddr->sin_port,
                 .dest = dest_paddr->sin_port,
-                .len = htons(sizeof(udp_hdr) + len),
+                .len = htons(sizeof(udp_hdr) + n_buf),
         };
         struct iovec iov[3] = {
                 {
@@ -190,7 +192,7 @@ ssize_t packet_sendto_udp(int sockfd,
                 },
                 {
                         .iov_base = (void *)buf,
-                        .iov_len = len,
+                        .iov_len = n_buf,
                 },
         };
         struct msghdr msg = {
@@ -207,7 +209,7 @@ ssize_t packet_sendto_udp(int sockfd,
                                                      ntohs(src_paddr->sin_port),
                                                      ntohs(dest_paddr->sin_port),
                                                      buf,
-                                                     len,
+                                                     n_buf,
                                                      0);
 
         /*
@@ -220,31 +222,41 @@ ssize_t packet_sendto_udp(int sockfd,
 
         pktlen = sendmsg(sockfd, &msg, 0);
         if (pktlen < 0)
-                return pktlen;
+                return -errno;
 
-        /* Return the length sent, excluding the headers. */
-        assert((size_t)pktlen >= sizeof(ip_hdr) + sizeof(udp_hdr));
-        return pktlen - sizeof(ip_hdr) - sizeof(udp_hdr);
+        /*
+         * Kernel never truncates. Worst case, we get -EMSGSIZE. Kernel *might*
+         * prepend VNET headers, in which case a bigger length than sent is
+         * returned.
+         * Lets assert on this, and then return to the caller the proportion of
+         * its own buffer that we sent (which is always exactly the requested
+         * size).
+         */
+        assert((size_t)pktlen >= sizeof(ip_hdr) + sizeof(udp_hdr) + n_buf);
+        *n_transmittedp = n_buf;
+        return 0;
 }
 
 /**
  * packet_recvfrom_upd() - receive UDP packet from AF_PACKET socket
  * @sockfd:             AF_PACKET/SOCK_DGRAM socket
  * @buf:                buffor for payload
- * @len:                max length of payload in bytes
+ * @n_buf:              max length of payload in bytes
+ * @n_transmittedp:     output argument for number transmitted bytes
  * @src:                return argumnet for source address, or NULL, see ip(7)
  *
  * Receives an UDP packet on a AF_PACKET socket. The difference between
- * this and recevfrom() on an AF_INET socket is that the packet will be
+ * this and recvfrom() on an AF_INET socket is that the packet will be
  * received even if the destination IP address has not been configured
  * on the interface.
  *
- * Return: the number of payload bytes received on success, or -1 on error.
+ * Return: 0 on success, negative error code on failure.
  */
-ssize_t packet_recvfrom_udp(int sockfd,
-                            void *buf,
-                            size_t len,
-                            struct sockaddr_in *src) {
+int packet_recvfrom_udp(int sockfd,
+                        void *buf,
+                        size_t n_buf,
+                        size_t *n_transmittedp,
+                        struct sockaddr_in *src) {
         union {
                 struct iphdr hdr;
                 /*
@@ -265,7 +277,7 @@ ssize_t packet_recvfrom_udp(int sockfd,
                 },
                 {
                         .iov_base = buf,
-                        .iov_len = len,
+                        .iov_len = n_buf,
                 },
         };
         uint8_t cmsgbuf[CMSG_LEN(sizeof(struct tpacket_auxdata))];
@@ -283,7 +295,7 @@ ssize_t packet_recvfrom_udp(int sockfd,
         /* Peek packet to obtain the real IP header length */
         pktlen = recv(sockfd, &ip_hdr.hdr, sizeof(ip_hdr.hdr), MSG_PEEK);
         if (pktlen < 0)
-                return pktlen;
+                return -errno;
 
         if ((size_t)pktlen < sizeof(ip_hdr.hdr)) {
                 /*
@@ -291,6 +303,7 @@ ssize_t packet_recvfrom_udp(int sockfd,
                  * discard it.
                  */
                 recv(sockfd, NULL, 0, 0);
+                *n_transmittedp = 0;
                 return 0;
         }
 
@@ -299,6 +312,7 @@ ssize_t packet_recvfrom_udp(int sockfd,
                  * This is not an IPv4 packet, discard it.
                  */
                 recv(sockfd, NULL, 0, 0);
+                *n_transmittedp = 0;
                 return 0;
         }
 
@@ -309,6 +323,7 @@ ssize_t packet_recvfrom_udp(int sockfd,
                  * header length, discard the packet.
                  */
                 recv(sockfd, NULL, 0, 0);
+                *n_transmittedp = 0;
                 return 0;
         }
 
@@ -319,7 +334,7 @@ ssize_t packet_recvfrom_udp(int sockfd,
         iov[0].iov_len = hdrlen;
         pktlen = recvmsg(sockfd, &msg, 0);
         if (pktlen < 0)
-                return pktlen;
+                return -errno;
 
         cmsg = CMSG_FIRSTHDR(&msg);
         if (cmsg) {
@@ -338,6 +353,7 @@ ssize_t packet_recvfrom_udp(int sockfd,
                  * provided too small a buffer. In both cases, we simply drop
                  * the packet.
                  */
+                *n_transmittedp = 0;
                 return 0;
         }
 
@@ -349,12 +365,14 @@ ssize_t packet_recvfrom_udp(int sockfd,
                  * The packet is too small to even contain an entire UDP
                  * header, so discard it entirely.
                  */
+                *n_transmittedp = 0;
                 return 0;
         } else if ((size_t)pktlen < hdrlen + ntohs(udp_hdr.len)) {
                 /*
                  * The UDP header specified a longer length than the returned
                  * packet, so discard it entirely.
                  */
+                *n_transmittedp = 0;
                 return 0;
         }
 
@@ -366,12 +384,16 @@ ssize_t packet_recvfrom_udp(int sockfd,
 
         /* IP */
 
-        if (ip_hdr.hdr.protocol != IPPROTO_UDP)
+        if (ip_hdr.hdr.protocol != IPPROTO_UDP) {
+                *n_transmittedp = 0;
                 return 0; /* not a UDP packet, discard it */
-        if (ip_hdr.hdr.frag_off & htons(IP_MF | IP_OFFMASK))
+        } else if (ip_hdr.hdr.frag_off & htons(IP_MF | IP_OFFMASK)) {
+                *n_transmittedp = 0;
                 return 0; /* fragmented packet, discard it */
-        if (checksum && packet_internet_checksum(ip_hdr.data, hdrlen))
+        } else if (checksum && packet_internet_checksum(ip_hdr.data, hdrlen)) {
+                *n_transmittedp = 0;
                 return 0; /* invalid checksum, discard it */
+        }
 
         /* UDP */
 
@@ -388,6 +410,7 @@ ssize_t packet_recvfrom_udp(int sockfd,
                                                 buf,
                                                 pktlen,
                                                 udp_hdr.check)) {
+                        *n_transmittedp = 0;
                         return 0;
                }
         }
@@ -399,7 +422,8 @@ ssize_t packet_recvfrom_udp(int sockfd,
         }
 
         /* Return length of UDP payload (i.e., data written to @buf). */
-        return pktlen;
+        *n_transmittedp = pktlen;
+        return 0;
 }
 
 /**
