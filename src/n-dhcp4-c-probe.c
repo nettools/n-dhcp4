@@ -382,35 +382,43 @@ int n_dhcp4_client_probe_raise(NDhcp4ClientProbe *probe, NDhcp4CEventNode **node
 }
 
 void n_dhcp4_client_probe_get_timeout(NDhcp4ClientProbe *probe, uint64_t *timeoutp) {
-        uint64_t timeout = probe->ns_deferred;
+        uint64_t t1 = 0;
+        uint64_t t2 = 0;
+        uint64_t lifetime = 0;
+        uint64_t timeout = 0;
+
+        if (probe->current_lease) {
+                t1 = probe->current_lease->t1;
+                t2 = probe->current_lease->t2;
+                lifetime = probe->current_lease->lifetime;
+        }
 
         n_dhcp4_c_connection_get_timeout(&probe->connection, &timeout);
 
-        if (probe->current_lease) {
-                uint64_t t1 = probe->current_lease->t1;
-                uint64_t t2 = probe->current_lease->t2;
-                uint64_t lifetime = probe->current_lease->lifetime;
+        switch (probe->state) {
+        case N_DHCP4_CLIENT_PROBE_STATE_INIT:
+                if (probe->ns_deferred && probe->ns_deferred < timeout)
+                        timeout = probe->ns_deferred;
 
-                switch (probe->state) {
-                case N_DHCP4_CLIENT_PROBE_STATE_BOUND:
-                        if (t1 && t1 < timeout)
-                                timeout = t1;
+                break;
+        case N_DHCP4_CLIENT_PROBE_STATE_BOUND:
+                if (t1 && t1 < timeout)
+                        timeout = t1;
 
-                        /* fall-through */
-                case N_DHCP4_CLIENT_PROBE_STATE_RENEWING:
-                        if (t2 && t2 < timeout)
-                                timeout = t2;
+                /* fall-through */
+        case N_DHCP4_CLIENT_PROBE_STATE_RENEWING:
+                if (t2 && t2 < timeout)
+                        timeout = t2;
 
-                        /* fall-through */
-                case N_DHCP4_CLIENT_PROBE_STATE_REBINDING:
-                case N_DHCP4_CLIENT_PROBE_STATE_GRANTED:
-                        if (lifetime && lifetime < timeout)
-                                timeout = lifetime;
-                        break;
-                default:
-                        /* ignore */
-                        break;
-                }
+                /* fall-through */
+        case N_DHCP4_CLIENT_PROBE_STATE_REBINDING:
+        case N_DHCP4_CLIENT_PROBE_STATE_GRANTED:
+                if (lifetime && lifetime < timeout)
+                        timeout = lifetime;
+                break;
+        default:
+                /* ignore */
+                break;
         }
 
         *timeoutp = timeout;
