@@ -377,7 +377,7 @@ int n_dhcp4_client_probe_raise(NDhcp4ClientProbe *probe, NDhcp4CEventNode **node
 }
 
 void n_dhcp4_client_probe_get_timeout(NDhcp4ClientProbe *probe, uint64_t *timeoutp) {
-        uint64_t timeout = 0;
+        uint64_t timeout = probe->ns_deferred;
 
         n_dhcp4_c_connection_get_timeout(&probe->connection, &timeout);
 
@@ -409,6 +409,29 @@ void n_dhcp4_client_probe_get_timeout(NDhcp4ClientProbe *probe, uint64_t *timeou
         }
 
         *timeoutp = timeout;
+}
+
+static int n_dhcp4_client_probe_transition_deferred(NDhcp4ClientProbe *probe, uint64_t ns_now) {
+        _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *request = NULL;
+        int r;
+
+        switch (probe->state) {
+        case N_DHCP4_CLIENT_PROBE_STATE_INIT:
+        case N_DHCP4_CLIENT_PROBE_STATE_SELECTING:
+        case N_DHCP4_CLIENT_PROBE_STATE_INIT_REBOOT:
+        case N_DHCP4_CLIENT_PROBE_STATE_REBOOTING:
+        case N_DHCP4_CLIENT_PROBE_STATE_REQUESTING:
+        case N_DHCP4_CLIENT_PROBE_STATE_GRANTED:
+        case N_DHCP4_CLIENT_PROBE_STATE_BOUND:
+        case N_DHCP4_CLIENT_PROBE_STATE_RENEWING:
+        case N_DHCP4_CLIENT_PROBE_STATE_REBINDING:
+        case N_DHCP4_CLIENT_PROBE_STATE_EXPIRED:
+        default:
+                abort();
+                break;
+        }
+
+        return 0;
 }
 
 static int n_dhcp4_client_probe_transition_t1(NDhcp4ClientProbe *probe, uint64_t ns_now) {

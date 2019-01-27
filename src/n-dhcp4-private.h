@@ -334,6 +334,7 @@ struct NDhcp4ClientProbe {
         void *userdata;
 
         unsigned int state;                     /* current probe state */
+        uint64_t ns_deferred;                   /* timeout for deferred action */
         NDhcp4ClientLease *current_lease;       /* current lease */
 
         NDhcp4CConnection connection;           /* client connection wrapper */
