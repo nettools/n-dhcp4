@@ -715,6 +715,127 @@ static int n_dhcp4_client_probe_transition_nak(NDhcp4ClientProbe *probe) {
         return 0;
 }
 
+int n_dhcp4_client_probe_transition_select(NDhcp4ClientProbe *probe, NDhcp4Incoming *offer, uint64_t ns_now) {
+        _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *request = NULL;
+        int r;
+
+        switch (probe->state) {
+        case N_DHCP4_CLIENT_PROBE_STATE_SELECTING:
+                r = n_dhcp4_c_connection_select_new(&probe->connection, &request, offer);
+                if (r)
+                        return r;
+
+                r = n_dhcp4_c_connection_start_request(&probe->connection, request, ns_now);
+                if (r)
+                        return r;
+                else
+                        request = NULL; /* consumed */
+
+                /* XXX: ignore other offers */
+
+                probe->state = N_DHCP4_CLIENT_PROBE_STATE_REQUESTING;
+
+                break;
+        case N_DHCP4_CLIENT_PROBE_STATE_INIT:
+        case N_DHCP4_CLIENT_PROBE_STATE_INIT_REBOOT:
+        case N_DHCP4_CLIENT_PROBE_STATE_REBOOTING:
+        case N_DHCP4_CLIENT_PROBE_STATE_REQUESTING:
+        case N_DHCP4_CLIENT_PROBE_STATE_BOUND:
+        case N_DHCP4_CLIENT_PROBE_STATE_GRANTED:
+        case N_DHCP4_CLIENT_PROBE_STATE_RENEWING:
+        case N_DHCP4_CLIENT_PROBE_STATE_REBINDING:
+        case N_DHCP4_CLIENT_PROBE_STATE_EXPIRED:
+        default:
+                /* ignore */
+                break;
+        }
+
+        return 0;
+}
+
+/**
+ * n_dhcp4_client_probe_transition_accept() - XXX
+ */
+int n_dhcp4_client_probe_transition_accept(NDhcp4ClientProbe *probe, NDhcp4Incoming *ack) {
+        struct in_addr client = {};
+        struct in_addr server = {};
+        int r;
+
+        switch (probe->state) {
+        case N_DHCP4_CLIENT_PROBE_STATE_GRANTED:
+                n_dhcp4_incoming_get_yiaddr(ack, &client);
+
+                r = n_dhcp4_incoming_query_server_identifier(ack, &server);
+                if (r)
+                        return r;
+
+                r = n_dhcp4_c_connection_connect(&probe->connection, &client, &server);
+                if (r)
+                        return r;
+
+                probe->state = N_DHCP4_CLIENT_PROBE_STATE_BOUND;
+
+                /* XXX: trigger timers */
+
+                break;
+
+        case N_DHCP4_CLIENT_PROBE_STATE_INIT:
+        case N_DHCP4_CLIENT_PROBE_STATE_INIT_REBOOT:
+        case N_DHCP4_CLIENT_PROBE_STATE_REBOOTING:
+        case N_DHCP4_CLIENT_PROBE_STATE_SELECTING:
+        case N_DHCP4_CLIENT_PROBE_STATE_REQUESTING:
+        case N_DHCP4_CLIENT_PROBE_STATE_BOUND:
+        case N_DHCP4_CLIENT_PROBE_STATE_RENEWING:
+        case N_DHCP4_CLIENT_PROBE_STATE_REBINDING:
+        case N_DHCP4_CLIENT_PROBE_STATE_EXPIRED:
+        default:
+                /* ignore */
+                break;
+        }
+
+        return 0;
+}
+
+/**
+ * n_dhc4_client_probe_transition_decline() - XXX
+ */
+int n_dhcp4_client_probe_transition_decline(NDhcp4ClientProbe *probe, NDhcp4Incoming *offer, const char *error, uint64_t ns_now) {
+        _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *request = NULL;
+        int r;
+
+        switch (probe->state) {
+        case N_DHCP4_CLIENT_PROBE_STATE_GRANTED:
+                r = n_dhcp4_c_connection_decline_new(&probe->connection, &request, offer, error);
+                if (r)
+                        return r;
+
+                r = n_dhcp4_c_connection_start_request(&probe->connection, request, ns_now);
+                if (r)
+                        return r;
+                else
+                        request = NULL; /* consumed */
+
+                /* XXX: what state to transition to? */
+
+                break;
+
+        case N_DHCP4_CLIENT_PROBE_STATE_INIT:
+        case N_DHCP4_CLIENT_PROBE_STATE_INIT_REBOOT:
+        case N_DHCP4_CLIENT_PROBE_STATE_REBOOTING:
+        case N_DHCP4_CLIENT_PROBE_STATE_SELECTING:
+        case N_DHCP4_CLIENT_PROBE_STATE_REQUESTING:
+        case N_DHCP4_CLIENT_PROBE_STATE_BOUND:
+        case N_DHCP4_CLIENT_PROBE_STATE_RENEWING:
+        case N_DHCP4_CLIENT_PROBE_STATE_REBINDING:
+        case N_DHCP4_CLIENT_PROBE_STATE_EXPIRED:
+        default:
+                /* ignore */
+                break;
+        }
+
+        return 0;
+}
+
 /**
  * n_dhcp4_client_probe_dispatch_timer() - XXX
  */

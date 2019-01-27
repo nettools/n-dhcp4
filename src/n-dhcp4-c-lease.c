@@ -130,16 +130,13 @@ _public_ int n_dhcp4_client_lease_query(NDhcp4ClientLease *lease, uint8_t option
 }
 
 _public_ int n_dhcp4_client_lease_select(NDhcp4ClientLease *lease) {
-        /* XXX */
-        return -ENOTRECOVERABLE;
+        return n_dhcp4_client_probe_transition_select(lease->probe, lease->message, n_dhcp4_gettime(CLOCK_BOOTTIME));
 }
 
 _public_ int n_dhcp4_client_lease_accept(NDhcp4ClientLease *lease) {
-        /* XXX */
-        return -ENOTRECOVERABLE;
+        return n_dhcp4_client_probe_transition_accept(lease->probe, lease->message);
 }
 
-_public_ int n_dhcp4_client_lease_decline(NDhcp4ClientLease *lease) {
-        /* XXX */
-        return -ENOTRECOVERABLE;
+_public_ int n_dhcp4_client_lease_decline(NDhcp4ClientLease *lease, const char *error) {
+        return n_dhcp4_client_probe_transition_decline(lease->probe, lease->message, error, n_dhcp4_gettime(CLOCK_BOOTTIME));
 }

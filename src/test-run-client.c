@@ -120,9 +120,15 @@ static int manager_dispatch(Manager *manager) {
                         break;
                 case N_DHCP4_CLIENT_EVENT_OFFER:
                         fprintf(stderr, "OFFER\n");
+                        r = n_dhcp4_client_lease_select(event->offer.lease);
+                        if (r)
+                                return r;
                         break;
                 case N_DHCP4_CLIENT_EVENT_GRANTED:
                         fprintf(stderr, "GRANTED\n");
+                        r = n_dhcp4_client_lease_accept(event->granted.lease);
+                        if (r)
+                                return r;
                         break;
                 case N_DHCP4_CLIENT_EVENT_RETRACTED:
                         fprintf(stderr, "RETRACTED\n");
