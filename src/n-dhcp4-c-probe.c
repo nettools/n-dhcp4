@@ -580,19 +580,25 @@ static int n_dhcp4_client_probe_transition_lifetime(NDhcp4ClientProbe *probe) {
         return 0;
 }
 
-static int n_dhcp4_client_probe_transition_offer(NDhcp4ClientProbe *probe) {
+static int n_dhcp4_client_probe_transition_offer(NDhcp4ClientProbe *probe, NDhcp4Incoming *message) {
+        _cleanup_(n_dhcp4_client_lease_unrefp) NDhcp4ClientLease *lease = NULL;
+        NDhcp4CEventNode *node;
         int r;
 
         switch (probe->state) {
         case N_DHCP4_CLIENT_PROBE_STATE_SELECTING:
 
-                /* XXX */
+                r = n_dhcp4_client_lease_new(&lease, message);
+                if (r)
+                        return r;
 
                 r = n_dhcp4_client_probe_raise(probe,
-                                               NULL,
+                                               &node,
                                                N_DHCP4_CLIENT_EVENT_OFFER);
                 if (r)
                         return r;
+
+                node->event.offer.lease = n_dhcp4_client_lease_ref(lease);
 
                 break;
 
@@ -613,35 +619,48 @@ static int n_dhcp4_client_probe_transition_offer(NDhcp4ClientProbe *probe) {
         return 0;
 }
 
-static int n_dhcp4_client_probe_transition_ack(NDhcp4ClientProbe *probe) {
+static int n_dhcp4_client_probe_transition_ack(NDhcp4ClientProbe *probe, NDhcp4Incoming *_message) {
+        _cleanup_(n_dhcp4_client_lease_unrefp) NDhcp4ClientLease *lease = NULL;
+        _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *message = _message;
+        NDhcp4CEventNode *node;
         int r;
 
         switch (probe->state) {
         case N_DHCP4_CLIENT_PROBE_STATE_RENEWING:
         case N_DHCP4_CLIENT_PROBE_STATE_REBINDING:
 
-                /* XXX */
+                r = n_dhcp4_client_lease_new(&lease, message);
+                if (r)
+                        return r;
+                else
+                        message = NULL;
 
                 r = n_dhcp4_client_probe_raise(probe,
-                                               NULL,
+                                               &node,
                                                N_DHCP4_CLIENT_EVENT_EXTENDED);
                 if (r)
                         return r;
 
+                node->event.extended.lease = n_dhcp4_client_lease_ref(lease);
                 probe->state = N_DHCP4_CLIENT_PROBE_STATE_BOUND;
 
                 break;
 
         case N_DHCP4_CLIENT_PROBE_STATE_REQUESTING:
 
-                /* XXX */
+                r = n_dhcp4_client_lease_new(&lease, message);
+                if (r)
+                        return r;
+                else
+                        message = NULL;
 
                 r = n_dhcp4_client_probe_raise(probe,
-                                               NULL,
+                                               &node,
                                                N_DHCP4_CLIENT_EVENT_GRANTED);
                 if (r)
                         return r;
 
+                node->event.granted.lease = n_dhcp4_client_lease_ref(lease);
                 probe->state = N_DHCP4_CLIENT_PROBE_STATE_GRANTED;
 
                 break;
@@ -792,14 +811,18 @@ int n_dhcp4_client_probe_dispatch_io(NDhcp4ClientProbe *probe, uint32_t events) 
 
         switch (type) {
         case N_DHCP4_MESSAGE_OFFER:
-                r = n_dhcp4_client_probe_transition_offer(probe);
+                r = n_dhcp4_client_probe_transition_offer(probe, message);
                 if (r)
                         return r;
+                else
+                        message = NULL;
                 break;
         case N_DHCP4_MESSAGE_ACK:
-                r = n_dhcp4_client_probe_transition_ack(probe);
+                r = n_dhcp4_client_probe_transition_ack(probe, message);
                 if (r)
                         return r;
+                else
+                        message = NULL;
                 break;
         case N_DHCP4_MESSAGE_NAK:
                 r = n_dhcp4_client_probe_transition_nak(probe);
