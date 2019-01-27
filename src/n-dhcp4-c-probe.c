@@ -784,6 +784,10 @@ int n_dhcp4_client_probe_dispatch_io(NDhcp4ClientProbe *probe, uint32_t events) 
 
         r = n_dhcp4_incoming_query_message_type(message, &type);
         if (r == N_DHCP4_E_UNSET || r == N_DHCP4_E_MALFORMED)
+                /*
+                 * XXX: this can never happen as we already queried the message
+                 * type.
+                 */
                 return 0;
 
         switch (type) {
