@@ -116,7 +116,32 @@ static int manager_dispatch(Manager *manager) {
                 if (!event)
                         break;
 
-                fprintf(stderr, "Event: %u\n", event->event);
+                switch (event->event) {
+                case N_DHCP4_CLIENT_EVENT_DOWN:
+                        fprintf(stderr, "DOWN\n");
+                        break;
+                case N_DHCP4_CLIENT_EVENT_OFFER:
+                        fprintf(stderr, "OFFER\n");
+                        break;
+                case N_DHCP4_CLIENT_EVENT_GRANTED:
+                        fprintf(stderr, "GRANTED\n");
+                        break;
+                case N_DHCP4_CLIENT_EVENT_RETRACTED:
+                        fprintf(stderr, "RETRACTED\n");
+                        break;
+                case N_DHCP4_CLIENT_EVENT_EXTENDED:
+                        fprintf(stderr, "EXTENDED\n");
+                        break;
+                case N_DHCP4_CLIENT_EVENT_EXPIRED:
+                        fprintf(stderr, "EXPIRED\n");
+                        break;
+                case N_DHCP4_CLIENT_EVENT_CANCELLED:
+                        fprintf(stderr, "CANCELLED\n");
+                        break;
+                default:
+                        fprintf(stderr, "Unexpected event: %u\n", event->event);
+                        break;
+                }
         }
 
         return 0;
