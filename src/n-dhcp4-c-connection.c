@@ -282,18 +282,21 @@ static int n_dhcp4_c_connection_verify_incoming(NDhcp4CConnection *connection,
         }
 
         /*
-         * We require servers to copy our client-id into the replies. Hence, we
-         * ignore any packets that have mismatching client-ids.
+         * If a server passes us back a client ID, it must be the one we
+         * provided. We ignore any packets that have mismatching client-ids.
          */
         id = NULL;
         n_id = 0;
         r = n_dhcp4_incoming_query(message, N_DHCP4_OPTION_CLIENT_IDENTIFIER, &id, &n_id);
-        if (r && r != N_DHCP4_E_UNSET)
-                return r;
-        if (n_id != connection->client_config->n_client_id)
-                return N_DHCP4_E_UNEXPECTED;
-        if (memcmp(id, connection->client_config->client_id, n_id) != 0)
-                return N_DHCP4_E_UNEXPECTED;
+        if (r) {
+                if (r != N_DHCP4_E_UNSET)
+                        return r;
+        } else {
+                if (n_id != connection->client_config->n_client_id)
+                        return N_DHCP4_E_UNEXPECTED;
+                if (memcmp(id, connection->client_config->client_id, n_id) != 0)
+                        return N_DHCP4_E_UNEXPECTED;
+        }
 
         *typep = type;
         return 0;
