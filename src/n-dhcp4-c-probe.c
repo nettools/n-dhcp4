@@ -285,7 +285,7 @@ int n_dhcp4_client_probe_new(NDhcp4ClientProbe **probep,
                 /*
                  * Defer the sending of DISCOVER by up to 9 seconds.
                  */
-                probe->ns_deferred = ns_now + (n_dhcp4_client_probe_config_get_random(config) % 9000000000ULL);
+                probe->ns_deferred = ns_now + (n_dhcp4_client_probe_config_get_random(probe->config) % 9000000000ULL);
                 probe->client->current_probe = probe;
         } else {
                 r = n_dhcp4_client_probe_raise(probe,
