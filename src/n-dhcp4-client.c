@@ -614,8 +614,20 @@ _public_ int n_dhcp4_client_dispatch(NDhcp4Client *client) {
                         break;
                 }
 
-                if (r)
-                        return r;
+                if (r) {
+                        if (r == N_DHCP4_E_DOWN) {
+                                r = n_dhcp4_client_raise(client,
+                                                         NULL,
+                                                         N_DHCP4_CLIENT_EVENT_DOWN);
+                                if (r)
+                                        return r;
+
+                                /* continue normally */
+                        } else if (r) {
+                                assert(r < _N_DHCP4_E_INTERNAL);
+                                return r;
+                        }
+                }
         }
 
         n_dhcp4_client_arm_timer(client);
