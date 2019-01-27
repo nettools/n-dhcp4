@@ -504,29 +504,41 @@ static int n_dhcp4_c_connection_new_message(NDhcp4CConnection *connection,
         _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *message = NULL;
         NDhcp4Header *header;
         uint8_t message_type;
+        bool via_packet_socket = false;
         int r;
 
         switch (type) {
         case N_DHCP4_C_MESSAGE_DISCOVER:
                 message_type = N_DHCP4_MESSAGE_DISCOVER;
+                via_packet_socket = true;
                 break;
         case N_DHCP4_C_MESSAGE_INFORM:
                 message_type = N_DHCP4_MESSAGE_INFORM;
                 break;
         case N_DHCP4_C_MESSAGE_SELECT:
+                message_type = N_DHCP4_MESSAGE_REQUEST;
+                via_packet_socket = true;
+                break;
         case N_DHCP4_C_MESSAGE_RENEW:
+                message_type = N_DHCP4_MESSAGE_REQUEST;
+                break;
         case N_DHCP4_C_MESSAGE_REBIND:
+                message_type = N_DHCP4_MESSAGE_REQUEST;
+                break;
         case N_DHCP4_C_MESSAGE_REBOOT:
                 message_type = N_DHCP4_MESSAGE_REQUEST;
+                via_packet_socket = true;
                 break;
         case N_DHCP4_C_MESSAGE_RELEASE:
                 message_type = N_DHCP4_MESSAGE_RELEASE;
                 break;
         case N_DHCP4_C_MESSAGE_DECLINE:
                 message_type = N_DHCP4_MESSAGE_DECLINE;
+                via_packet_socket = true;
                 break;
         default:
-                assert(0);
+                abort();
+                return -ENOTRECOVERABLE;
         }
 
         /*
@@ -574,7 +586,7 @@ static int n_dhcp4_c_connection_new_message(NDhcp4CConnection *connection,
         case N_DHCP4_MESSAGE_INFORM: {
                 uint16_t mtu;
 
-                if (connection->state <= N_DHCP4_C_CONNECTION_STATE_PACKET) {
+                if (via_packet_socket) {
                         /*
                          * In case of packet sockets, we do not support
                          * fragmentation. Hence, our maximum message size
