@@ -430,17 +430,19 @@ static int n_dhcp4_client_probe_transition_deferred(NDhcp4ClientProbe *probe, ui
 
         switch (probe->state) {
         case N_DHCP4_CLIENT_PROBE_STATE_INIT:
-                r = n_dhcp4_c_connection_discover_new(&probe->connection, &request);
+                r = n_dhcp4_c_connection_listen(&probe->connection);
                 if (r)
                         return r;
 
-                r = n_dhcp4_c_connection_listen(&probe->connection);
+                r = n_dhcp4_c_connection_discover_new(&probe->connection, &request);
                 if (r)
                         return r;
 
                 r = n_dhcp4_c_connection_start_request(&probe->connection, request, ns_now);
                 if (r)
                         return r;
+                else
+                        request = NULL; /* consumed */
 
                 probe->state = N_DHCP4_CLIENT_PROBE_STATE_SELECTING;
                 probe->ns_deferred = 0;
@@ -477,6 +479,8 @@ static int n_dhcp4_client_probe_transition_t1(NDhcp4ClientProbe *probe, uint64_t
                 r = n_dhcp4_c_connection_start_request(&probe->connection, request, ns_now);
                 if (r)
                         return r;
+                else
+                        request = NULL; /* consumed */
 
                 probe->state = N_DHCP4_CLIENT_PROBE_STATE_RENEWING;
 
@@ -513,6 +517,8 @@ static int n_dhcp4_client_probe_transition_t2(NDhcp4ClientProbe *probe, uint64_t
                 r = n_dhcp4_c_connection_start_request(&probe->connection, request, ns_now);
                 if (r)
                         return r;
+                else
+                        request = NULL; /* consumed */
 
                 probe->state = N_DHCP4_CLIENT_PROBE_STATE_REBINDING;
 
