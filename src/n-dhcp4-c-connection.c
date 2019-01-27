@@ -124,16 +124,7 @@ int n_dhcp4_c_connection_init(NDhcp4CConnection *connection,
  * connection, it is a no-op.
  */
 void n_dhcp4_c_connection_deinit(NDhcp4CConnection *connection) {
-        if (connection->fd_udp >= 0) {
-                epoll_ctl(connection->fd_epoll, EPOLL_CTL_DEL, connection->fd_udp, NULL);
-                close(connection->fd_udp);
-        }
-
-        if (connection->fd_packet >= 0) {
-                epoll_ctl(connection->fd_epoll, EPOLL_CTL_DEL, connection->fd_packet, NULL);
-                close(connection->fd_packet);
-        }
-
+        n_dhcp4_c_connection_close(connection);
         *connection = (NDhcp4CConnection)N_DHCP4_C_CONNECTION_NULL(*connection);
 }
 
@@ -268,6 +259,20 @@ exit_epoll:
 exit_fd:
         close(fd_udp);
         return r;
+}
+
+void n_dhcp4_c_connection_close(NDhcp4CConnection *connection) {
+        if (connection->fd_udp >= 0) {
+                epoll_ctl(connection->fd_epoll, EPOLL_CTL_DEL, connection->fd_udp, NULL);
+                connection->fd_udp = n_dhcp4_close(connection->fd_udp);
+        }
+
+        if (connection->fd_packet >= 0) {
+                epoll_ctl(connection->fd_epoll, EPOLL_CTL_DEL, connection->fd_packet, NULL);
+                connection->fd_packet = n_dhcp4_close(connection->fd_packet);
+        }
+
+        connection->fd_epoll = -1;
 }
 
 static int n_dhcp4_c_connection_verify_incoming(NDhcp4CConnection *connection,

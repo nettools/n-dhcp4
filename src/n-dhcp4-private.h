@@ -555,6 +555,7 @@ int n_dhcp4_c_connection_listen(NDhcp4CConnection *connection);
 int n_dhcp4_c_connection_connect(NDhcp4CConnection *connection,
                                  const struct in_addr *client,
                                  const struct in_addr *server);
+void n_dhcp4_c_connection_close(NDhcp4CConnection *connection);
 
 void n_dhcp4_c_connection_get_timeout(NDhcp4CConnection *connection,
                                       uint64_t *timeoutp);
