@@ -315,6 +315,7 @@ void n_dhcp4_client_probe_get_timeout(NDhcp4ClientProbe *probe, uint64_t *timeou
 
                         /* fall-through */
                 case N_DHCP4_CLIENT_PROBE_STATE_REBINDING:
+                case N_DHCP4_CLIENT_PROBE_STATE_GRANTED:
                         if (lifetime && lifetime < timeout)
                                 timeout = lifetime;
                         break;
@@ -349,6 +350,7 @@ static int n_dhcp4_client_probe_transition_t1(NDhcp4ClientProbe *probe, uint64_t
         case N_DHCP4_CLIENT_PROBE_STATE_INIT_REBOOT:
         case N_DHCP4_CLIENT_PROBE_STATE_REBOOTING:
         case N_DHCP4_CLIENT_PROBE_STATE_REQUESTING:
+        case N_DHCP4_CLIENT_PROBE_STATE_GRANTED:
         case N_DHCP4_CLIENT_PROBE_STATE_RENEWING:
         case N_DHCP4_CLIENT_PROBE_STATE_REBINDING:
         default:
@@ -382,6 +384,7 @@ static int n_dhcp4_client_probe_transition_t2(NDhcp4ClientProbe *probe, uint64_t
         case N_DHCP4_CLIENT_PROBE_STATE_INIT_REBOOT:
         case N_DHCP4_CLIENT_PROBE_STATE_REBOOTING:
         case N_DHCP4_CLIENT_PROBE_STATE_REQUESTING:
+        case N_DHCP4_CLIENT_PROBE_STATE_GRANTED:
         case N_DHCP4_CLIENT_PROBE_STATE_REBINDING:
         default:
                 /* ignore */
@@ -394,6 +397,7 @@ static int n_dhcp4_client_probe_transition_t2(NDhcp4ClientProbe *probe, uint64_t
 static int n_dhcp4_client_probe_transition_lifetime(NDhcp4ClientProbe *probe) {
         switch (probe->state) {
         case N_DHCP4_CLIENT_PROBE_STATE_BOUND:
+        case N_DHCP4_CLIENT_PROBE_STATE_GRANTED:
         case N_DHCP4_CLIENT_PROBE_STATE_RENEWING:
         case N_DHCP4_CLIENT_PROBE_STATE_REBINDING:
                 probe->state = N_DHCP4_CLIENT_PROBE_STATE_INIT;
@@ -423,6 +427,7 @@ static int n_dhcp4_client_probe_transition_offer(NDhcp4ClientProbe *probe) {
         case N_DHCP4_CLIENT_PROBE_STATE_REBOOTING:
         case N_DHCP4_CLIENT_PROBE_STATE_REQUESTING:
         case N_DHCP4_CLIENT_PROBE_STATE_BOUND:
+        case N_DHCP4_CLIENT_PROBE_STATE_GRANTED:
         case N_DHCP4_CLIENT_PROBE_STATE_RENEWING:
         case N_DHCP4_CLIENT_PROBE_STATE_REBINDING:
         default:
@@ -443,6 +448,7 @@ static int n_dhcp4_client_probe_transition_ack(NDhcp4ClientProbe *probe) {
         case N_DHCP4_CLIENT_PROBE_STATE_BOUND:
         case N_DHCP4_CLIENT_PROBE_STATE_RENEWING:
         case N_DHCP4_CLIENT_PROBE_STATE_REBINDING:
+        case N_DHCP4_CLIENT_PROBE_STATE_GRANTED:
         default:
                 /* ignore */
                 break;
@@ -464,6 +470,7 @@ static int n_dhcp4_client_probe_transition_nak(NDhcp4ClientProbe *probe) {
         case N_DHCP4_CLIENT_PROBE_STATE_INIT_REBOOT:
         case N_DHCP4_CLIENT_PROBE_STATE_INIT:
         case N_DHCP4_CLIENT_PROBE_STATE_BOUND:
+        case N_DHCP4_CLIENT_PROBE_STATE_GRANTED:
         default:
                 /* ignore */
                 break;
@@ -480,6 +487,14 @@ int n_dhcp4_client_probe_dispatch_timer(NDhcp4ClientProbe *probe, uint64_t ns_no
 
         if (probe->current_lease) {
                 switch (probe->state) {
+                case N_DHCP4_CLIENT_PROBE_STATE_GRANTED:
+                        if (ns_now >= probe->current_lease->lifetime) {
+                                r = n_dhcp4_client_probe_transition_lifetime(probe);
+                                if (r)
+                                        return r;
+                        }
+
+                        break;
                 case N_DHCP4_CLIENT_PROBE_STATE_BOUND:
                 case N_DHCP4_CLIENT_PROBE_STATE_RENEWING:
                 case N_DHCP4_CLIENT_PROBE_STATE_REBINDING:
