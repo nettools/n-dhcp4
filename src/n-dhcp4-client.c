@@ -282,6 +282,20 @@ NDhcp4CEventNode *n_dhcp4_c_event_node_free(NDhcp4CEventNode *node) {
         if (!node)
                 return NULL;
 
+        switch (node->event.event) {
+        case N_DHCP4_CLIENT_EVENT_OFFER:
+                node->event.offer.lease = n_dhcp4_client_lease_unref(node->event.offer.lease);
+                break;
+        case N_DHCP4_CLIENT_EVENT_GRANTED:
+                node->event.granted.lease = n_dhcp4_client_lease_unref(node->event.granted.lease);
+                break;
+        case N_DHCP4_CLIENT_EVENT_EXTENDED:
+                node->event.extended.lease = n_dhcp4_client_lease_unref(node->event.extended.lease);
+                break;
+        default:
+                break;
+        }
+
         c_list_unlink(&node->probe_link);
         c_list_unlink(&node->client_link);
         free(node);
