@@ -561,19 +561,12 @@ int n_dhcp4_c_socket_packet_recv(int sockfd,
                 else
                         return -errno;
         } else if (len == 0) {
-                *messagep = NULL;
-                return 0;
+                return N_DHCP4_E_MALFORMED;
         }
 
         r = n_dhcp4_incoming_new(&message, buf, len);
-        if (r) {
-                if (r == N_DHCP4_E_MALFORMED) {
-                        *messagep = NULL;
-                        return 0;
-                }
-
+        if (r)
                 return r;
-        }
 
         *messagep = message;
         message = NULL;
@@ -609,19 +602,12 @@ static int n_dhcp4_socket_udp_recv(int sockfd,
                 else
                         return -errno;
         } else if (len == 0 || (size_t)len > n_buf) {
-                *messagep = NULL;
-                return 0;
+                return N_DHCP4_E_MALFORMED;
         }
 
         r = n_dhcp4_incoming_new(&message, buf, len);
-        if (r) {
-                if (r == N_DHCP4_E_MALFORMED) {
-                        *messagep = NULL;
-                        return 0;
-                }
-
+        if (r)
                 return r;
-        }
 
         if (pktinfo) {
                 struct cmsghdr *cmsg;

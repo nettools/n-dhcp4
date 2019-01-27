@@ -761,6 +761,16 @@ int n_dhcp4_client_probe_dispatch_io(NDhcp4ClientProbe *probe, uint32_t events) 
         if (r) {
                 if (r == N_DHCP4_E_AGAIN)
                         return 0;
+                else if (r == N_DHCP4_E_MALFORMED || r == N_DHCP4_E_UNEXPECTED) {
+                        /*
+                         * We fetched something from the sockets, which we
+                         * discarded. We don't know whether there is more data
+                         * to fetch, so we set the preempted flag to notify the
+                         * caller we want to be called again.
+                         */
+                        probe->client->preempted = true;
+                        return 0;
+                }
 
                 return r;
         }
@@ -771,14 +781,6 @@ int n_dhcp4_client_probe_dispatch_io(NDhcp4ClientProbe *probe, uint32_t events) 
          * preempted flag to notify the caller we want to be called again.
          */
         probe->client->preempted = true;
-
-        /*
-         * A NULL message is returned on parser errors. That is, we correctly
-         * read data from the sockets, but couldn't create a valid DHCP
-         * message. It is discarded, so we have nothing to do.
-         */
-        if (!message)
-                return 0;
 
         r = n_dhcp4_incoming_query_message_type(message, &type);
         if (r == N_DHCP4_E_UNSET || r == N_DHCP4_E_MALFORMED)
@@ -799,6 +801,12 @@ int n_dhcp4_client_probe_dispatch_io(NDhcp4ClientProbe *probe, uint32_t events) 
                 r = n_dhcp4_client_probe_transition_nak(probe);
                 if (r)
                         return r;
+                break;
+        default:
+                /*
+                 * We receiveda message type we do not support, simply discard
+                 * it.
+                 */
                 break;
         }
 

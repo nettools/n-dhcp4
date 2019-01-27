@@ -1086,20 +1086,9 @@ int n_dhcp4_c_connection_dispatch_io(NDhcp4CConnection *connection,
                 return -ENOTRECOVERABLE;
         }
 
-        if (!message) {
-                *messagep = NULL;
-                return 0;
-        }
-
         r = n_dhcp4_c_connection_verify_incoming(connection, message, &type);
-        if (r) {
-                if (r == N_DHCP4_E_MALFORMED || r == N_DHCP4_E_UNEXPECTED) {
-                        *messagep = NULL;
-                        return 0;
-                }
-
-                return -ENOTRECOVERABLE;
-        }
+        if (r)
+                return r;
 
         switch (type) {
         case N_DHCP4_MESSAGE_OFFER:
