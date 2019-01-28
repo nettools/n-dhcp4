@@ -604,8 +604,9 @@ static int n_dhcp4_client_probe_transition_lifetime(NDhcp4ClientProbe *probe) {
         return 0;
 }
 
-static int n_dhcp4_client_probe_transition_offer(NDhcp4ClientProbe *probe, NDhcp4Incoming *message) {
+static int n_dhcp4_client_probe_transition_offer(NDhcp4ClientProbe *probe, NDhcp4Incoming *_message) {
         _cleanup_(n_dhcp4_client_lease_unrefp) NDhcp4ClientLease *lease = NULL;
+        _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *message = _message;
         NDhcp4CEventNode *node;
         int r;
 
@@ -615,6 +616,8 @@ static int n_dhcp4_client_probe_transition_offer(NDhcp4ClientProbe *probe, NDhcp
                 r = n_dhcp4_client_lease_new(&lease, message);
                 if (r)
                         return r;
+                else
+                        message = NULL;
 
                 n_dhcp4_client_lease_link(lease, probe);
 
