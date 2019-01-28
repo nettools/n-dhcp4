@@ -619,6 +619,8 @@ int n_dhcp4_client_probe_update_mtu(NDhcp4ClientProbe *probe, uint16_t mtu);
 /* client leases */
 
 int n_dhcp4_client_lease_new(NDhcp4ClientLease **leasep, NDhcp4Incoming *message);
+void n_dhcp4_client_lease_link(NDhcp4ClientLease *lease, NDhcp4ClientProbe *probe);
+void n_dhcp4_client_lease_unlink(NDhcp4ClientLease *lease);
 
 /* server connections */
 

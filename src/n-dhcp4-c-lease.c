@@ -80,10 +80,7 @@ int n_dhcp4_client_lease_new(NDhcp4ClientLease **leasep, NDhcp4Incoming *_messag
 }
 
 static void n_dhcp4_client_lease_free(NDhcp4ClientLease *lease) {
-        assert(!lease->probe);
-
-        c_list_unlink(&lease->probe_link);
-
+        n_dhcp4_client_lease_unlink(lease);
         n_dhcp4_incoming_free(lease->message);
         free(lease);
 }
@@ -104,6 +101,22 @@ _public_ NDhcp4ClientLease *n_dhcp4_client_lease_unref(NDhcp4ClientLease *lease)
         if (lease && !--lease->n_refs)
                 n_dhcp4_client_lease_free(lease);
         return NULL;
+}
+
+/**
+ * n_dhcp4_client_lease_link() - XXX
+ */
+void n_dhcp4_client_lease_link(NDhcp4ClientLease *lease, NDhcp4ClientProbe *probe) {
+        lease->probe = probe;
+        c_list_link_tail(&probe->lease_list, &lease->probe_link);
+}
+
+/**
+ * n_dhcp4_client_lease_unlink() - XXX
+ */
+void n_dhcp4_client_lease_unlink(NDhcp4ClientLease *lease) {
+        lease->probe = NULL;
+        c_list_unlink(&lease->probe_link);
 }
 
 /**

@@ -325,9 +325,13 @@ int n_dhcp4_client_probe_new(NDhcp4ClientProbe **probep,
  */
 _public_ NDhcp4ClientProbe *n_dhcp4_client_probe_free(NDhcp4ClientProbe *probe) {
         NDhcp4CEventNode *node, *t_node;
+        NDhcp4ClientLease *lease, *t_lease;
 
         if (!probe)
                 return NULL;
+
+        c_list_for_each_entry_safe(lease, t_lease, &probe->lease_list, probe_link)
+                n_dhcp4_client_lease_unlink(lease);
 
         c_list_for_each_entry_safe(node, t_node, &probe->event_list, probe_link)
                 n_dhcp4_c_event_node_free(node);
@@ -612,6 +616,8 @@ static int n_dhcp4_client_probe_transition_offer(NDhcp4ClientProbe *probe, NDhcp
                 if (r)
                         return r;
 
+                n_dhcp4_client_lease_link(lease, probe);
+
                 r = n_dhcp4_client_probe_raise(probe,
                                                &node,
                                                N_DHCP4_CLIENT_EVENT_OFFER);
@@ -655,6 +661,8 @@ static int n_dhcp4_client_probe_transition_ack(NDhcp4ClientProbe *probe, NDhcp4I
                 else
                         message = NULL;
 
+                n_dhcp4_client_lease_link(lease, probe);
+
                 r = n_dhcp4_client_probe_raise(probe,
                                                &node,
                                                N_DHCP4_CLIENT_EVENT_EXTENDED);
@@ -673,6 +681,8 @@ static int n_dhcp4_client_probe_transition_ack(NDhcp4ClientProbe *probe, NDhcp4I
                         return r;
                 else
                         message = NULL;
+
+                n_dhcp4_client_lease_link(lease, probe);
 
                 r = n_dhcp4_client_probe_raise(probe,
                                                &node,
