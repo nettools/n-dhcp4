@@ -10,12 +10,12 @@
 #include "n-dhcp4.h"
 #include "n-dhcp4-private.h"
 
-static int n_dhcp4_client_lease_get_timeouts(NDhcp4ClientLease *lease, uint64_t *t1p, uint64_t *t2p, uint64_t *lifetimep) {
+static int n_dhcp4_incoming_get_timeouts(NDhcp4Incoming *message, uint64_t *t1p, uint64_t *t2p, uint64_t *lifetimep) {
         uint64_t lifetime, t2, t1;
         uint32_t u32;
         int r;
 
-        r = n_dhcp4_incoming_query_lifetime(lease->message, &u32);
+        r = n_dhcp4_incoming_query_lifetime(message, &u32);
         if (r == N_DHCP4_E_UNSET) {
                 lifetime = 0;
         } else if (r) {
@@ -24,7 +24,7 @@ static int n_dhcp4_client_lease_get_timeouts(NDhcp4ClientLease *lease, uint64_t 
                 lifetime = u32 * (1000000000ULL);
         }
 
-        r = n_dhcp4_incoming_query_t2(lease->message, &u32);
+        r = n_dhcp4_incoming_query_t2(message, &u32);
         if (r == N_DHCP4_E_UNSET) {
                 t2 = (lifetime * 7) / 8;
         } else if (r) {
@@ -35,7 +35,7 @@ static int n_dhcp4_client_lease_get_timeouts(NDhcp4ClientLease *lease, uint64_t 
                         t2 = (lifetime * 7) / 8;
         }
 
-        r = n_dhcp4_incoming_query_t1(lease->message, &u32);
+        r = n_dhcp4_incoming_query_t1(message, &u32);
         if (r == N_DHCP4_E_UNSET) {
                 t1 = (t2 * 4) / 7;
         } else if (r) {
@@ -46,18 +46,17 @@ static int n_dhcp4_client_lease_get_timeouts(NDhcp4ClientLease *lease, uint64_t 
                         t1 = (t2 * 4) / 7;
         }
 
-        *lifetimep = lease->message->userdata.base_time + lifetime;
-        *t2p = lease->message->userdata.base_time + t2;
-        *t1p = lease->message->userdata.base_time + t1;
+        *lifetimep = message->userdata.base_time + lifetime;
+        *t2p = message->userdata.base_time + t2;
+        *t1p = message->userdata.base_time + t1;
         return 0;
 }
 
 /**
  * n_dhcp4_client_lease_new() - XXX
  */
-int n_dhcp4_client_lease_new(NDhcp4ClientLease **leasep, NDhcp4Incoming *_message) {
+int n_dhcp4_client_lease_new(NDhcp4ClientLease **leasep, NDhcp4Incoming *message) {
         _cleanup_(n_dhcp4_client_lease_unrefp) NDhcp4ClientLease *lease = NULL;
-        _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *message = _message;
         int r;
 
         assert(leasep);
@@ -67,13 +66,13 @@ int n_dhcp4_client_lease_new(NDhcp4ClientLease **leasep, NDhcp4Incoming *_messag
                 return -ENOMEM;
 
         *lease = (NDhcp4ClientLease)N_DHCP4_CLIENT_LEASE_NULL(*lease);
-        lease->message = message;
         message = NULL;
 
-        r = n_dhcp4_client_lease_get_timeouts(lease, &lease->t1, &lease->t2, &lease->lifetime);
+        r = n_dhcp4_incoming_get_timeouts(message, &lease->t1, &lease->t2, &lease->lifetime);
         if (r)
                 return r;
 
+        lease->message = message;
         *leasep = lease;
         lease = NULL;
         return 0;
