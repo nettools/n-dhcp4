@@ -9,6 +9,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <getopt.h>
+#include <net/if.h>
 #include <poll.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -91,6 +92,101 @@ static int manager_new(Manager **managerp) {
         return 0;
 }
 
+static int manager_lease_get_router(NDhcp4ClientLease *lease, struct in_addr *router) {
+        uint8_t *data;
+        size_t n_data;
+        int r;
+
+        r = n_dhcp4_client_lease_query(lease, N_DHCP4_OPTION_ROUTER, &data, &n_data);
+        if (r)
+                return r;
+
+        if (n_data < sizeof(router->s_addr))
+                return N_DHCP4_E_MALFORMED;
+
+        memcpy(&router->s_addr, data, sizeof(router->s_addr));
+
+        return 0;
+}
+
+static int manager_lease_get_subnetmask(NDhcp4ClientLease *lease, struct in_addr *mask) {
+        uint8_t *data;
+        size_t n_data;
+        int r;
+
+        r = n_dhcp4_client_lease_query(lease, N_DHCP4_OPTION_SUBNET_MASK, &data, &n_data);
+        if (r)
+                return r;
+
+        if (n_data != sizeof(mask->s_addr))
+                return N_DHCP4_E_MALFORMED;
+
+        memcpy(&mask->s_addr, data, sizeof(mask->s_addr));
+
+        return 0;
+}
+
+static int manager_lease_get_prefix(NDhcp4ClientLease *lease, unsigned int *prefixp) {
+        struct in_addr mask = {};
+        unsigned int prefix;
+        int r;
+
+        r = manager_lease_get_subnetmask(lease, &mask);
+        if (r)
+                return r;
+
+        prefix =__builtin_ctz(ntohl(mask.s_addr));
+        assert(prefix <= 32);
+
+        if (prefix < 32) {
+                if ((~ntohl(mask.s_addr)) >> prefix != 0)
+                        return N_DHCP4_E_MALFORMED;
+        }
+
+        *prefixp = prefix;
+        return 0;
+}
+
+static int manager_add(Manager *manager, NDhcp4ClientLease *lease) {
+        char *p, ifname[IF_NAMESIZE + 1] = {};
+        struct in_addr router = {}, yiaddr = {};
+        unsigned int prefix;
+        int r;
+
+        n_dhcp4_client_lease_get_yiaddr(lease, &yiaddr);
+
+        r = manager_lease_get_router(lease, &router);
+        if (r)
+                return r;
+
+        r = manager_lease_get_prefix(lease, &prefix);
+        if (r)
+                return r;
+
+        p = if_indextoname(main_arg_ifindex, ifname);
+        assert(p);
+
+        r = asprintf(&p, "ip addr add %s/%u dev %s", inet_ntoa(yiaddr), prefix, ifname);
+        assert(r >= 0);
+        r = system(p);
+        assert(r == 0);
+        free(p);
+
+        r = asprintf(&p, "ip route add %s/32 dev %s", inet_ntoa(router), ifname);
+        assert(r >= 0);
+        r = system(p);
+        assert(r == 0);
+        free(p);
+
+        r = asprintf(&p, "ip route add default via %s dev %s", inet_ntoa(router), ifname);
+        assert(r >= 0);
+        r = system(p);
+        assert(r == 0);
+        free(p);
+
+        return 0;
+}
+
 static int manager_dispatch(Manager *manager) {
         NDhcp4ClientEvent *event;
         int r;
@@ -117,33 +213,54 @@ static int manager_dispatch(Manager *manager) {
                 switch (event->event) {
                 case N_DHCP4_CLIENT_EVENT_DOWN:
                         fprintf(stderr, "DOWN\n");
+
                         break;
+
                 case N_DHCP4_CLIENT_EVENT_OFFER:
                         fprintf(stderr, "OFFER\n");
+
                         r = n_dhcp4_client_lease_select(event->offer.lease);
                         if (r)
                                 return r;
+
                         break;
+
                 case N_DHCP4_CLIENT_EVENT_GRANTED:
                         fprintf(stderr, "GRANTED\n");
+
+                        r = manager_add(manager, event->granted.lease);
+                        if (r)
+                                return r;
+
                         r = n_dhcp4_client_lease_accept(event->granted.lease);
                         if (r)
                                 return r;
+
                         break;
+
                 case N_DHCP4_CLIENT_EVENT_RETRACTED:
                         fprintf(stderr, "RETRACTED\n");
+
                         break;
+
                 case N_DHCP4_CLIENT_EVENT_EXTENDED:
                         fprintf(stderr, "EXTENDED\n");
+
                         break;
+
                 case N_DHCP4_CLIENT_EVENT_EXPIRED:
                         fprintf(stderr, "EXPIRED\n");
+
                         break;
+
                 case N_DHCP4_CLIENT_EVENT_CANCELLED:
                         fprintf(stderr, "CANCELLED\n");
+
                         break;
+
                 default:
                         fprintf(stderr, "Unexpected event: %u\n", event->event);
+
                         break;
                 }
         }
