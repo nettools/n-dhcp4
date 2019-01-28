@@ -89,6 +89,7 @@ int n_dhcp4_client_probe_config_dup(NDhcp4ClientProbeConfig *config,
         dup->inform_only = config->inform_only;
         dup->init_reboot = config->init_reboot;
         dup->requested_ip = config->requested_ip;
+        dup->ms_start_delay = config->ms_start_delay;
 
         *dupp = dup;
         dup = NULL;
@@ -161,6 +162,25 @@ _public_ void n_dhcp4_client_probe_config_set_init_reboot(NDhcp4ClientProbeConfi
  */
 _public_ void n_dhcp4_client_probe_config_set_requested_ip(NDhcp4ClientProbeConfig *config, struct in_addr ip) {
         config->requested_ip = ip;
+}
+
+/**
+ * n_dhcp4_client_probe_config_set_start_delay() - set start delay
+ * @config:                     configuration to operate on
+ * @msecs:                      value to set
+ *
+ * This sets the start delay property of the given configuration object.
+ *
+ * The default is 9000 ms, which is based on RFC2131. In the RFC the start
+ * delay is specified to be a random value in the range 1000 to 10.000 ms.
+ * However, there does not appear to be any particular reason to
+ * unconditionally wait at least one second, so we move the range down to
+ * start at 0 ms. The reaon for the random delay is to avoid network-wide
+ * events causing too much simultaneous network traffic. However, on modern
+ * networks, a more reasonable value may be in the 10 ms range.
+ */
+_public_ void n_dhcp4_client_probe_config_set_start_delay(NDhcp4ClientProbeConfig *config, uint64_t msecs) {
+        config->ms_start_delay = msecs;
 }
 
 static void n_dhcp4_client_probe_config_initialize_random_seed(NDhcp4ClientProbeConfig *config) {
@@ -283,9 +303,9 @@ int n_dhcp4_client_probe_new(NDhcp4ClientProbe **probep,
 
         if (active) {
                 /*
-                 * Defer the sending of DISCOVER by up to 9 seconds.
+                 * Defer the sending of DISCOVER by a random amount (by default up to 9 seconds).
                  */
-                probe->ns_deferred = ns_now + (n_dhcp4_client_probe_config_get_random(probe->config) % 9000000000ULL);
+                probe->ns_deferred = ns_now + (n_dhcp4_client_probe_config_get_random(probe->config) % (probe->config->ms_start_delay * 1000000ULL));
                 probe->client->current_probe = probe;
         } else {
                 r = n_dhcp4_client_probe_raise(probe,

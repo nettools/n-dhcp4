@@ -29,6 +29,8 @@ typedef struct NDhcp4ServerEvent NDhcp4ServerEvent;
 typedef struct NDhcp4ServerIp NDhcp4ServerIp;
 typedef struct NDhcp4ServerLease NDhcp4ServerLease;
 
+#define N_DHCP4_CLIENT_START_DELAY_RFC2131 (UINT64_C(9000))
+
 enum {
         _N_DHCP4_E_SUCCESS,
 
@@ -116,6 +118,7 @@ NDhcp4ClientProbeConfig *n_dhcp4_client_probe_config_free(NDhcp4ClientProbeConfi
 void n_dhcp4_client_probe_config_set_inform_only(NDhcp4ClientProbeConfig *config, bool inform_only);
 void n_dhcp4_client_probe_config_set_init_reboot(NDhcp4ClientProbeConfig *config, bool init_reboot);
 void n_dhcp4_client_probe_config_set_requested_ip(NDhcp4ClientProbeConfig *config, struct in_addr ip);
+void n_dhcp4_client_probe_config_set_start_delay(NDhcp4ClientProbeConfig *config, uint64_t msecs);
 
 /* clients */
 

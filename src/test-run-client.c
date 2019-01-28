@@ -159,6 +159,12 @@ static int manager_run(Manager *manager) {
         if (r)
                 return r;
 
+        /*
+         * Let's speed up our tests, while still making sure the code-path
+         * for the deferrment is actually tested (so don't set it to zero).
+         */
+        n_dhcp4_client_probe_config_set_start_delay(config, 10);
+
         r = n_dhcp4_client_probe(manager->client, &manager->probe, config);
         if (r)
                 return r;

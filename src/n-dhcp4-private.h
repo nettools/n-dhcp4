@@ -258,9 +258,11 @@ struct NDhcp4ClientProbeConfig {
         bool init_reboot;
         struct in_addr requested_ip;
         struct drand48_data entropy;    /* entropy pool */
+        uint64_t ms_start_delay;        /* max ms to wait before starting probe */
 };
 
 #define N_DHCP4_CLIENT_PROBE_CONFIG_NULL(_x) {                                  \
+                .ms_start_delay = N_DHCP4_CLIENT_START_DELAY_RFC2131,           \
         }
 
 struct NDhcp4CEventNode {
