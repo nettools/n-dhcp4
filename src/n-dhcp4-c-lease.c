@@ -120,6 +120,15 @@ void n_dhcp4_client_lease_unlink(NDhcp4ClientLease *lease) {
 }
 
 /**
+ * n_dhcp4_client_lease_get_yiaddr() - XXX
+ */
+_public_ void n_dhcp4_client_lease_get_yiaddr(NDhcp4ClientLease *lease, struct in_addr *yiaddr) {
+        NDhcp4Header *header = n_dhcp4_incoming_get_header(lease->message);
+
+        yiaddr->s_addr = header->yiaddr;
+}
+
+/**
  * n_dhcp4_client_lease_query() - XXX
  */
 _public_ int n_dhcp4_client_lease_query(NDhcp4ClientLease *lease, uint8_t option, uint8_t **datap, size_t *n_datap) {
