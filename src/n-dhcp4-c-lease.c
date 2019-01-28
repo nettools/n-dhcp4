@@ -202,6 +202,7 @@ _public_ int n_dhcp4_client_lease_decline(NDhcp4ClientLease *lease, const char *
         if (r)
                 return r;
 
+        lease->probe->current_lease = n_dhcp4_client_lease_unref(lease->probe->current_lease);
         n_dhcp4_client_lease_unlink(lease);
 
         return 0;

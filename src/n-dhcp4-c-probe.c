@@ -673,6 +673,8 @@ static int n_dhcp4_client_probe_transition_ack(NDhcp4ClientProbe *probe, NDhcp4I
                         return r;
 
                 node->event.extended.lease = n_dhcp4_client_lease_ref(lease);
+                n_dhcp4_client_lease_unref(probe->current_lease);
+                probe->current_lease = n_dhcp4_client_lease_ref(lease);
                 probe->state = N_DHCP4_CLIENT_PROBE_STATE_BOUND;
 
                 break;
@@ -694,6 +696,7 @@ static int n_dhcp4_client_probe_transition_ack(NDhcp4ClientProbe *probe, NDhcp4I
                         return r;
 
                 node->event.granted.lease = n_dhcp4_client_lease_ref(lease);
+                probe->current_lease = n_dhcp4_client_lease_ref(lease);
                 probe->state = N_DHCP4_CLIENT_PROBE_STATE_GRANTED;
 
                 break;
