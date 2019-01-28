@@ -97,15 +97,13 @@ static int manager_dispatch(Manager *manager) {
 
         r = n_dhcp4_client_dispatch(manager->client);
         if (r) {
-                if (r == N_DHCP4_E_PREEMPTED) {
+                if (r != N_DHCP4_E_PREEMPTED) {
                         /*
                          * We are level-triggered, so we do not need to react
                          * to preemption. We simply continue the mainloop.
                          */
-                        return 0;
+                        return r;
                 }
-
-                return r;
         }
 
         for (;;) {
