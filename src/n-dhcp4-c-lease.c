@@ -107,6 +107,9 @@ _public_ NDhcp4ClientLease *n_dhcp4_client_lease_unref(NDhcp4ClientLease *lease)
  * n_dhcp4_client_lease_link() - XXX
  */
 void n_dhcp4_client_lease_link(NDhcp4ClientLease *lease, NDhcp4ClientProbe *probe) {
+        assert(!lease->probe);
+        assert(!c_list_is_linked(&lease->probe_link));
+
         lease->probe = probe;
         c_list_link_tail(&probe->lease_list, &lease->probe_link);
 }
