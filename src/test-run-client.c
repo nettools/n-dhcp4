@@ -151,9 +151,11 @@ static int manager_add(Manager *manager, NDhcp4ClientLease *lease) {
         char *p, ifname[IF_NAMESIZE + 1] = {};
         struct in_addr router = {}, yiaddr = {};
         unsigned int prefix;
+        uint64_t lifetime;
         int r;
 
         n_dhcp4_client_lease_get_yiaddr(lease, &yiaddr);
+        n_dhcp4_client_lease_get_lifetime(lease, &lifetime);
 
         r = manager_lease_get_router(lease, &router);
         if (r)
@@ -166,8 +168,13 @@ static int manager_add(Manager *manager, NDhcp4ClientLease *lease) {
         p = if_indextoname(main_arg_ifindex, ifname);
         assert(p);
 
-        r = asprintf(&p, "ip addr add %s/%u dev %s", inet_ntoa(yiaddr), prefix, ifname);
-        assert(r >= 0);
+        if (lifetime == UINT64_MAX) {
+                r = asprintf(&p, "ip addr add %s/%u dev %s preferred_lft forever valid_lft forever", inet_ntoa(yiaddr), prefix, ifname);
+                assert(r >= 0);
+        } else {
+                r = asprintf(&p, "ip addr add %s/%u dev %s preferred_lft %llu valid_lft %llu", inet_ntoa(yiaddr), prefix, ifname, lifetime / 1000000000ULL, lifetime / 1000000000ULL);
+                assert(r >= 0);
+        }
         r = system(p);
         assert(r == 0);
         free(p);
