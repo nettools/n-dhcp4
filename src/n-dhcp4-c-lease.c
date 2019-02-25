@@ -17,38 +17,64 @@ static int n_dhcp4_incoming_get_timeouts(NDhcp4Incoming *message, uint64_t *t1p,
 
         r = n_dhcp4_incoming_query_lifetime(message, &u32);
         if (r == N_DHCP4_E_UNSET) {
-                lifetime = 0;
+                lifetime = UINT64_MAX;
         } else if (r) {
                 return r;
+        } else if (u32 == UINT32_MAX) {
+                lifetime = UINT64_MAX;
         } else {
-                lifetime = u32 * (1000000000ULL);
+                if (u32 == UINT32_MAX)
+                        lifetime = UINT64_MAX;
+                else
+                        lifetime = u32 * (1000000000ULL);
         }
 
         r = n_dhcp4_incoming_query_t2(message, &u32);
         if (r == N_DHCP4_E_UNSET) {
-                t2 = (lifetime * 7) / 8;
+                if (lifetime == UINT64_MAX)
+                        t2 = UINT64_MAX;
+                else
+                        t2 = (lifetime * 7) / 8;
         } else if (r) {
                 return r;
         } else {
-                t2 = u32 * (1000000000ULL);
+                if (u32 == UINT32_MAX)
+                        t2 = UINT64_MAX;
+                else
+                        t2 = u32 * (1000000000ULL);
+
                 if (t2 > lifetime)
                         t2 = (lifetime * 7) / 8;
         }
 
         r = n_dhcp4_incoming_query_t1(message, &u32);
         if (r == N_DHCP4_E_UNSET) {
-                t1 = (t2 * 4) / 7;
+                if (t2 == UINT64_MAX)
+                        t1 = UINT64_MAX;
+                else
+                        t1 = (t2 * 4) / 7;
         } else if (r) {
                 return r;
         } else {
-                t1 = u32 * (1000000000ULL);
+                if (u32 == UINT32_MAX)
+                        t1 = UINT64_MAX;
+                else
+                        t1 = u32 * (1000000000ULL);
+
                 if (t1 > t2)
                         t1 = (t2 * 4) / 7;
         }
 
-        *lifetimep = message->userdata.base_time + lifetime;
-        *t2p = message->userdata.base_time + t2;
-        *t1p = message->userdata.base_time + t1;
+        if (lifetime != UINT64_MAX)
+                lifetime += message->userdata.base_time;
+        if (t2 != UINT64_MAX)
+                t2 += message->userdata.base_time;
+        if (t1 != UINT64_MAX)
+                t1 += message->userdata.base_time;
+
+        *lifetimep = lifetime;
+        *t2p = t2;
+        *t1p = t1;
         return 0;
 }
 
