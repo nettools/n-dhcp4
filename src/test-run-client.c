@@ -92,6 +92,23 @@ static int manager_new(Manager **managerp) {
         return 0;
 }
 
+static int manager_lease_get_dns(NDhcp4ClientLease *lease, struct in_addr *dns) {
+        uint8_t *data;
+        size_t n_data;
+        int r;
+
+        r = n_dhcp4_client_lease_query(lease, N_DHCP4_OPTION_DOMAIN_NAME_SERVER, &data, &n_data);
+        if (r)
+                return r;
+
+        if (n_data < sizeof(dns->s_addr))
+                return N_DHCP4_E_MALFORMED;
+
+        memcpy(&dns->s_addr, data, sizeof(dns->s_addr));
+
+        return 0;
+}
+
 static int manager_lease_get_router(NDhcp4ClientLease *lease, struct in_addr *router) {
         uint8_t *data;
         size_t n_data;
@@ -149,7 +166,7 @@ static int manager_lease_get_prefix(NDhcp4ClientLease *lease, unsigned int *pref
 
 static int manager_add(Manager *manager, NDhcp4ClientLease *lease) {
         char *p, ifname[IF_NAMESIZE + 1] = {};
-        struct in_addr router = {}, yiaddr = {};
+        struct in_addr router = {}, yiaddr = {}, dns = {};
         unsigned int prefix;
         uint64_t lifetime;
         int r;
@@ -190,6 +207,14 @@ static int manager_add(Manager *manager, NDhcp4ClientLease *lease) {
         r = system(p);
         assert(r == 0);
         free(p);
+
+        r = manager_lease_get_dns(lease, &dns);
+        if (r) {
+                if (r != N_DHCP4_E_UNSET)
+                        return r;
+        } else {
+                fprintf(stderr, "DNS: %s\n", inet_ntoa(dns));
+        }
 
         return 0;
 }
