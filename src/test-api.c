@@ -93,6 +93,7 @@ static void test_api_functions(void) {
                 (void *)n_dhcp4_client_lease_unrefp,
                 (void *)n_dhcp4_client_lease_unrefv,
                 (void *)n_dhcp4_client_lease_get_yiaddr,
+                (void *)n_dhcp4_client_lease_get_lifetime,
                 (void *)n_dhcp4_client_lease_query,
                 (void *)n_dhcp4_client_lease_select,
                 (void *)n_dhcp4_client_lease_accept,
