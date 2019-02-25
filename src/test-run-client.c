@@ -128,22 +128,22 @@ static int manager_lease_get_subnetmask(NDhcp4ClientLease *lease, struct in_addr
 
 static int manager_lease_get_prefix(NDhcp4ClientLease *lease, unsigned int *prefixp) {
         struct in_addr mask = {};
-        unsigned int prefix;
+        unsigned int postfix;
         int r;
 
         r = manager_lease_get_subnetmask(lease, &mask);
         if (r)
                 return r;
 
-        prefix =__builtin_ctz(ntohl(mask.s_addr));
-        assert(prefix <= 32);
+        postfix =__builtin_ctz(ntohl(mask.s_addr));
+        assert(postfix <= 32);
 
-        if (prefix < 32) {
-                if ((~ntohl(mask.s_addr)) >> prefix != 0)
+        if (postfix < 32) {
+                if ((~ntohl(mask.s_addr)) >> postfix != 0)
                         return N_DHCP4_E_MALFORMED;
         }
 
-        *prefixp = prefix;
+        *prefixp = 32 - postfix;
         return 0;
 }
 
