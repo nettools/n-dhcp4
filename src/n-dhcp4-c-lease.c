@@ -92,7 +92,6 @@ int n_dhcp4_client_lease_new(NDhcp4ClientLease **leasep, NDhcp4Incoming *message
                 return -ENOMEM;
 
         *lease = (NDhcp4ClientLease)N_DHCP4_CLIENT_LEASE_NULL(*lease);
-        message = NULL;
 
         r = n_dhcp4_incoming_get_timeouts(message, &lease->t1, &lease->t2, &lease->lifetime);
         if (r)
