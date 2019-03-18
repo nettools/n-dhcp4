@@ -335,6 +335,10 @@ int n_dhcp4_outgoing_append_server_identifier(NDhcp4Outgoing *message, struct in
         return n_dhcp4_outgoing_append_in_addr(message, N_DHCP4_OPTION_SERVER_IDENTIFIER, addr);
 }
 
+int n_dhcp4_outgoing_append_requested_ip(NDhcp4Outgoing *message, struct in_addr addr) {
+        return n_dhcp4_outgoing_append_in_addr(message, N_DHCP4_OPTION_REQUESTED_IP_ADDRESS, addr);
+}
+
 void n_dhcp4_outgoing_set_secs(NDhcp4Outgoing *message, uint32_t secs) {
         NDhcp4Header *header = n_dhcp4_outgoing_get_header(message);
 

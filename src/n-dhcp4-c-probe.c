@@ -574,6 +574,12 @@ static int n_dhcp4_client_probe_transition_deferred(NDhcp4ClientProbe *probe, ui
                 if (r)
                         return r;
 
+                if (probe->config->requested_ip.s_addr != INADDR_ANY) {
+                        r = n_dhcp4_outgoing_append_requested_ip(request, probe->config->requested_ip);
+                        if (r)
+                                return r;
+                }
+
                 r = n_dhcp4_client_probe_outgoing_append_options(probe, request);
                 if (r)
                         return r;
