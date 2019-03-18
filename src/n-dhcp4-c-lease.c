@@ -10,6 +10,14 @@
 #include "n-dhcp4.h"
 #include "n-dhcp4-private.h"
 
+/*
+ * Compute the absolute timeouts from an incoming message. A message contains relative timeouts and the userdata
+ * of the incoming message is set to the offset we must apply to get the absolute values.
+ *
+ * The special value UINT64_MAX is returned to indicate no or infinite timeouts. In case the given timeouts
+ * are invalid relative to each other, we recompute T1 and/or T2 to take their default values. Later timeouts
+ * take predecende above earlier ones (T1 is adjusted if it conflicts with T2, etc).
+ */
 static int n_dhcp4_incoming_get_timeouts(NDhcp4Incoming *message, uint64_t *t1p, uint64_t *t2p, uint64_t *lifetimep) {
         uint64_t lifetime, t2, t1;
         uint32_t u32;

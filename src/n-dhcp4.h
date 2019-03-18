@@ -41,6 +41,7 @@ enum {
         N_DHCP4_E_INVALID_TRANSPORT,
         N_DHCP4_E_INVALID_ADDRESS,
         N_DHCP4_E_INVALID_CLIENT_ID,
+        N_DHCP4_E_DUPLICATE_OPTION,
 
         _N_DHCP4_E_N,
 };
@@ -119,6 +120,10 @@ void n_dhcp4_client_probe_config_set_inform_only(NDhcp4ClientProbeConfig *config
 void n_dhcp4_client_probe_config_set_init_reboot(NDhcp4ClientProbeConfig *config, bool init_reboot);
 void n_dhcp4_client_probe_config_set_requested_ip(NDhcp4ClientProbeConfig *config, struct in_addr ip);
 void n_dhcp4_client_probe_config_set_start_delay(NDhcp4ClientProbeConfig *config, uint64_t msecs);
+int n_dhcp4_client_probe_config_append_option(NDhcp4ClientProbeConfig *config,
+                                              uint8_t option,
+                                              const void *data,
+                                              uint8_t n_data);
 
 /* clients */
 

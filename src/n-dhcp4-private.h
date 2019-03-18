@@ -15,6 +15,7 @@
 
 typedef struct NDhcp4CConnection NDhcp4CConnection;
 typedef struct NDhcp4CEventNode NDhcp4CEventNode;
+typedef struct NDhcp4ClientProbeOption NDhcp4ClientProbeOption;
 typedef struct NDhcp4Header NDhcp4Header;
 typedef struct NDhcp4Incoming NDhcp4Incoming;
 typedef struct NDhcp4Message NDhcp4Message;
@@ -253,12 +254,23 @@ struct NDhcp4ClientConfig {
                 .transport = _N_DHCP4_TRANSPORT_N,                              \
         }
 
+struct NDhcp4ClientProbeOption {
+        uint8_t option;
+        uint8_t n_data;
+        uint8_t data[];
+};
+
+#define N_DHCP4_CLIENT_PROBE_OPTION_NULL(_x) {                                  \
+                .option = N_DHCP4_OPTION_PAD,                                   \
+        }
+
 struct NDhcp4ClientProbeConfig {
         bool inform_only;
         bool init_reboot;
         struct in_addr requested_ip;
         struct drand48_data entropy;    /* entropy pool */
         uint64_t ms_start_delay;        /* max ms to wait before starting probe */
+        NDhcp4ClientProbeOption *options[UINT8_MAX + 1];
 };
 
 #define N_DHCP4_CLIENT_PROBE_CONFIG_NULL(_x) {                                  \

@@ -15,6 +15,7 @@ global:
         n_dhcp4_client_probe_config_set_init_reboot;
         n_dhcp4_client_probe_config_set_requested_ip;
         n_dhcp4_client_probe_config_set_start_delay;
+        n_dhcp4_client_probe_config_append_option;
 
         n_dhcp4_client_new;
         n_dhcp4_client_ref;

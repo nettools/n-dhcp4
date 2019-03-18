@@ -18,6 +18,30 @@
 #include "n-dhcp4.h"
 #include "n-dhcp4-private.h"
 
+
+static int n_dhcp4_client_probe_option_new(NDhcp4ClientProbeOption **optionp,
+                                    uint8_t option,
+                                    const void *data,
+                                    uint8_t n_data) {
+        NDhcp4ClientProbeOption *op;
+
+        op = malloc(sizeof(op) + n_data);
+        if (!op)
+                return -ENOMEM;
+
+        op->option = option;
+        op->n_data = n_data;
+        memcpy(op->data, data, n_data);
+
+        *optionp = op;
+        return 0;
+}
+
+static void n_dhcp4_client_probe_option_free(NDhcp4ClientProbeOption *option) {
+        if (option)
+                free(option);
+}
+
 /**
  * n_dhcp4_client_probe_config_new() - create new probe configuration
  * @configp:                    output argument to store new configuration
@@ -62,6 +86,9 @@ _public_ NDhcp4ClientProbeConfig *n_dhcp4_client_probe_config_free(NDhcp4ClientP
         if (!config)
                 return NULL;
 
+        for (unsigned int i = 0; i <= UINT8_MAX; ++i)
+                n_dhcp4_client_probe_option_free(config->options[i]);
+
         free(config);
 
         return NULL;
@@ -90,6 +117,18 @@ int n_dhcp4_client_probe_config_dup(NDhcp4ClientProbeConfig *config,
         dup->init_reboot = config->init_reboot;
         dup->requested_ip = config->requested_ip;
         dup->ms_start_delay = config->ms_start_delay;
+
+        for (unsigned int i = 0; i <= UINT8_MAX; ++i) {
+                if (!config->options[i])
+                        break;
+
+                r = n_dhcp4_client_probe_option_new(&dup->options[i],
+                                                    config->options[i]->option,
+                                                    config->options[i]->data,
+                                                    config->options[i]->n_data);
+                if (r)
+                        return r;
+        }
 
         *dupp = dup;
         dup = NULL;
@@ -181,6 +220,56 @@ _public_ void n_dhcp4_client_probe_config_set_requested_ip(NDhcp4ClientProbeConf
  */
 _public_ void n_dhcp4_client_probe_config_set_start_delay(NDhcp4ClientProbeConfig *config, uint64_t msecs) {
         config->ms_start_delay = msecs;
+}
+
+/**
+ * n_dhcp4_client_probe_config_append_option() - append option to outgoing messages
+ * @config:                     configuration to operate on
+ * @option:                     DHCP option number
+ * @data:                       payload
+ * @n_data:                     number of bytes in payload
+ *
+ * This sets sthe options on a given configuration object.
+ *
+ * These options are appended verbatim to outgoing messages where
+ * that is supported by the specification. The same options are
+ * appended to all messages.
+ *
+ * No option may be appended more than once. Options considered internal
+ * to the DHCP protocol may not be appended.
+ *
+ * Return: 0 on success, N_DHCP4_E_DUPLICATE_OPTION if an option has already been
+ *         appended, N_DHCP4_E_INTERNAL if the option is not configurable, or
+ *         a negative error code on failure.
+ */
+_public_ int n_dhcp4_client_probe_config_append_option(NDhcp4ClientProbeConfig *config,
+                                                       uint8_t option,
+                                                       const void *data,
+                                                       uint8_t n_data) {
+        int r;
+
+        /* XXX: filter internal options */
+
+        for (unsigned int i = 0; i <= UINT8_MAX; ++i) {
+                if (config->options[i]) {
+                        if (config->options[i]->option == option)
+                                return N_DHCP4_E_DUPLICATE_OPTION;
+
+                        continue;
+                }
+
+                r = n_dhcp4_client_probe_option_new(&config->options[i],
+                                                    option,
+                                                    data,
+                                                    n_data);
+                if (r)
+                        return r;
+
+                return 0;
+        }
+
+        assert(0);
+        return -ENOTRECOVERABLE;
 }
 
 static void n_dhcp4_client_probe_config_initialize_random_seed(NDhcp4ClientProbeConfig *config) {
@@ -448,6 +537,29 @@ void n_dhcp4_client_probe_get_timeout(NDhcp4ClientProbe *probe, uint64_t *timeou
         *timeoutp = timeout;
 }
 
+static int n_dhcp4_client_probe_outgoing_append_options(NDhcp4ClientProbe *probe, NDhcp4Outgoing *outgoing) {
+        int r;
+
+        for (unsigned int i = 0; i <= UINT8_MAX; ++i) {
+                if (!probe->config->options[i])
+                        break;
+
+                r = n_dhcp4_outgoing_append(outgoing,
+                                            probe->config->options[i]->option,
+                                            probe->config->options[i]->data,
+                                            probe->config->options[i]->n_data);
+                if (r) {
+                        if (r == N_DHCP4_E_NO_SPACE)
+                                /* XXX */
+                                break;
+
+                        return r;
+                }
+        }
+
+        return 0;
+}
+
 static int n_dhcp4_client_probe_transition_deferred(NDhcp4ClientProbe *probe, uint64_t ns_now) {
         _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *request = NULL;
         int r;
@@ -459,6 +571,10 @@ static int n_dhcp4_client_probe_transition_deferred(NDhcp4ClientProbe *probe, ui
                         return r;
 
                 r = n_dhcp4_c_connection_discover_new(&probe->connection, &request);
+                if (r)
+                        return r;
+
+                r = n_dhcp4_client_probe_outgoing_append_options(probe, request);
                 if (r)
                         return r;
 
@@ -500,6 +616,10 @@ static int n_dhcp4_client_probe_transition_t1(NDhcp4ClientProbe *probe, uint64_t
                 if (r)
                         return r;
 
+                r = n_dhcp4_client_probe_outgoing_append_options(probe, request);
+                if (r)
+                        return r;
+
                 r = n_dhcp4_c_connection_start_request(&probe->connection, request, ns_now);
                 if (r)
                         return r;
@@ -535,6 +655,10 @@ static int n_dhcp4_client_probe_transition_t2(NDhcp4ClientProbe *probe, uint64_t
         case N_DHCP4_CLIENT_PROBE_STATE_BOUND:
         case N_DHCP4_CLIENT_PROBE_STATE_RENEWING:
                 r = n_dhcp4_c_connection_rebind_new(&probe->connection, &request);
+                if (r)
+                        return r;
+
+                r = n_dhcp4_client_probe_outgoing_append_options(probe, request);
                 if (r)
                         return r;
 
@@ -756,6 +880,10 @@ int n_dhcp4_client_probe_transition_select(NDhcp4ClientProbe *probe, NDhcp4Incom
         switch (probe->state) {
         case N_DHCP4_CLIENT_PROBE_STATE_SELECTING:
                 r = n_dhcp4_c_connection_select_new(&probe->connection, &request, offer);
+                if (r)
+                        return r;
+
+                r = n_dhcp4_client_probe_outgoing_append_options(probe, request);
                 if (r)
                         return r;
 
