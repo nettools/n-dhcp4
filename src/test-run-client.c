@@ -10,6 +10,7 @@
 #include <errno.h>
 #include <getopt.h>
 #include <net/if.h>
+#include <netinet/ether.h>
 #include <poll.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -34,13 +35,13 @@ struct Manager {
 
 #define MANAGER_NULL(_x) {}
 
-static uint8_t*         main_arg_broadcast_mac = NULL;
-static size_t           main_arg_n_broadcast_mac = 0;
-static int              main_arg_ifindex = 0;
-static uint8_t*         main_arg_mac = NULL;
-static size_t           main_arg_n_mac = 0;
-static bool             main_arg_request_broadcast = false;
-static bool             main_arg_test = false;
+static struct ether_addr        main_arg_broadcast_mac = {};
+static bool                     main_arg_broadcast_mac_set = false;
+static int                      main_arg_ifindex = 0;
+static struct ether_addr        main_arg_mac = {};
+static bool                     main_arg_mac_set = false;
+static bool                     main_arg_request_broadcast = false;
+static bool                     main_arg_test = false;
 
 static Manager *manager_free(Manager *manager) {
         if (!manager)
@@ -73,13 +74,15 @@ static int manager_new(Manager **managerp) {
                 return r;
 
         n_dhcp4_client_config_set_broadcast_mac(config,
-                                                main_arg_broadcast_mac,
-                                                main_arg_n_broadcast_mac);
+                                                &main_arg_broadcast_mac.ether_addr_octet[0],
+                                                sizeof(main_arg_broadcast_mac.ether_addr_octet));
+        n_dhcp4_client_config_set_mac(config,
+                                      &main_arg_mac.ether_addr_octet[0],
+                                      sizeof(main_arg_mac.ether_addr_octet));
         n_dhcp4_client_config_set_client_id(config,
                                             (void *)"client-id",
                                             strlen("client-id"));
         n_dhcp4_client_config_set_ifindex(config, main_arg_ifindex);
-        n_dhcp4_client_config_set_mac(config, main_arg_mac, main_arg_n_mac);
         n_dhcp4_client_config_set_request_broadcast(config, main_arg_request_broadcast);
         n_dhcp4_client_config_set_transport(config, N_DHCP4_TRANSPORT_ETHERNET);
 
@@ -378,21 +381,11 @@ static void print_help(void) {
 }
 
 static int setup_test(void) {
-        uint8_t *b;
-        size_t n;
-
         test_setup();
 
         /* --broadcast-mac */
         {
-                n = 6;
-                b = malloc(n);
-                assert(b);
-                memcpy(b, (uint8_t[]) { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, n);
-
-                free(main_arg_broadcast_mac);
-                main_arg_broadcast_mac = b;
-                main_arg_n_broadcast_mac = n;
+                main_arg_broadcast_mac_set = true;
         }
 
         /* --ifindex */
@@ -402,56 +395,9 @@ static int setup_test(void) {
 
         /* --mac */
         {
-                n = 6;
-                b = malloc(n);
-                assert(b);
-                memcpy(b, (uint8_t[]) { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }, n);
-
-                free(main_arg_mac);
-                main_arg_mac = b;
-                main_arg_n_mac = n;
+                main_arg_mac_set = true;
         }
 
-        return 0;
-}
-
-static int parse_hexstr(const char *in, uint8_t **strp, size_t *n_strp) {
-        _cleanup_(n_dhcp4_freep) uint8_t *out = NULL;
-        size_t i, n_in, n_out;
-
-        n_in = strlen(in);
-        n_out = (n_in + 1) / 2;
-
-        out = malloc(n_out);
-        if (!out)
-                return -ENOMEM;
-
-        for (i = 0; i < n_in; ++i) {
-                uint8_t v = 0;
-
-                switch (in[i]) {
-                case '0'...'9':
-                        v = in[i] - '0';
-                        break;
-                case 'a'...'f':
-                        v = in[i] - 'a' + 0xa;
-                        break;
-                case 'A'...'F':
-                        v = in[i] - 'A' + 0xa;
-                        break;
-                }
-
-                if (i % 2) {
-                        out[i / 2] <<= 4;
-                        out[i / 2] |= v;
-                } else {
-                        out[i / 2] = v;
-                }
-        }
-
-        *strp = out;
-        *n_strp = n_out;
-        out = NULL;
         return 0;
 }
 
@@ -473,8 +419,7 @@ static int parse_argv(int argc, char **argv) {
                 { "test",               no_argument,            NULL,   ARG_TEST                },
                 {}
         };
-        size_t n;
-        void *t;
+        struct ether_addr *addr;
         int r, c;
 
         /*
@@ -490,13 +435,16 @@ static int parse_argv(int argc, char **argv) {
                         return MAIN_EXIT;
 
                 case ARG_BROADCAST_MAC:
-                        r = parse_hexstr(optarg, (uint8_t **)&t, &n);
-                        if (r)
-                                return r;
+                        addr = ether_aton_r(optarg, &main_arg_broadcast_mac);
+                        if (!addr) {
+                                fprintf(stderr,
+                                        "%s: invalid broadcast mac address -- '%s'\n",
+                                        program_invocation_name,
+                                        optarg);
+                                return MAIN_FAILED;
+                        }
 
-                        free(main_arg_broadcast_mac);
-                        main_arg_broadcast_mac = t;
-                        main_arg_n_broadcast_mac = n;
+                        main_arg_broadcast_mac_set = true;
                         break;
 
                 case ARG_IFINDEX:
@@ -504,13 +452,16 @@ static int parse_argv(int argc, char **argv) {
                         break;
 
                 case ARG_MAC:
-                        r = parse_hexstr(optarg, (uint8_t **)&t, &n);
-                        if (r)
-                                return r;
+                        addr = ether_aton_r(optarg, &main_arg_mac);
+                        if (!addr) {
+                                fprintf(stderr,
+                                        "%s: invalid mac address -- '%s'\n",
+                                        program_invocation_name,
+                                        optarg);
+                                return MAIN_FAILED;
+                        }
 
-                        free(main_arg_mac);
-                        main_arg_mac = t;
-                        main_arg_n_mac = n;
+                        main_arg_mac_set = true;
                         break;
 
                 case ARG_REQUEST_BROADCAST:
@@ -542,9 +493,9 @@ static int parse_argv(int argc, char **argv) {
                 return MAIN_FAILED;
         }
 
-        if (!main_arg_broadcast_mac ||
+        if (!main_arg_broadcast_mac_set ||
             !main_arg_ifindex ||
-            !main_arg_mac) {
+            !main_arg_mac_set) {
                 fprintf(stderr,
                         "%s: required arguments: broadcast-mac, ifindex, mac\n",
                         program_invocation_name);
@@ -573,9 +524,6 @@ exit:
         } else if (r > 0) {
                 fprintf(stderr, "Failed with internal error %d\n", r);
         }
-
-        free(main_arg_broadcast_mac);
-        free(main_arg_mac);
 
         return r;
 }
