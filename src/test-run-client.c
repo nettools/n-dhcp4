@@ -38,6 +38,8 @@ struct Manager {
 
 static struct ether_addr        main_arg_broadcast_mac = {};
 static bool                     main_arg_broadcast_mac_set = false;
+static uint8_t*                 main_arg_client_id = NULL;
+static size_t                   main_arg_n_client_id = 0;
 static int                      main_arg_ifindex = 0;
 static struct in_addr           main_arg_requested_ip = { INADDR_ANY };
 static struct ether_addr        main_arg_mac = {};
@@ -82,8 +84,8 @@ static int manager_new(Manager **managerp) {
                                       &main_arg_mac.ether_addr_octet[0],
                                       sizeof(main_arg_mac.ether_addr_octet));
         n_dhcp4_client_config_set_client_id(config,
-                                            (void *)"client-id",
-                                            strlen("client-id"));
+                                            main_arg_client_id,
+                                            main_arg_n_client_id);
         n_dhcp4_client_config_set_ifindex(config, main_arg_ifindex);
         n_dhcp4_client_config_set_request_broadcast(config, main_arg_request_broadcast);
         n_dhcp4_client_config_set_transport(config, N_DHCP4_TRANSPORT_ETHERNET);
@@ -381,6 +383,7 @@ static void print_help(void) {
                "     --mac HEX                  Hardware address to use\n"
                "     --broadcast-mac HEX        Broadcast hardware address to use\n"
                "     --requested-ip IP          Requested IP adress\n"
+               "     --client-id HEX            Client Identifier to use\n"
                , program_invocation_short_name);
 }
 
@@ -405,10 +408,51 @@ static int setup_test(void) {
         return 0;
 }
 
+static int parse_hexstr(const char *in, uint8_t **outp, size_t *n_outp) {
+        _cleanup_(n_dhcp4_freep) uint8_t *out = NULL;
+        size_t i, n_in, n_out;
+
+        n_in = strlen(in);
+        n_out = (n_in + 1) / 2;
+
+        out = malloc(n_out);
+        if (!out)
+                return -ENOMEM;
+
+        for (i = 0; i < n_in; ++i) {
+                uint8_t v = 0;
+
+                switch (in[i]) {
+                case '0'...'9':
+                        v = in[i] - '0';
+                        break;
+                case 'a'...'f':
+                        v = in[i] - 'a' + 0xa;
+                        break;
+                case 'A'...'F':
+                        v = in[i] - 'A' + 0xa;
+                        break;
+                }
+
+                if (i % 2) {
+                        out[i / 2] <<= 4;
+                        out[i / 2] |= v;
+                } else {
+                        out[i / 2] = v;
+                }
+        }
+
+        *outp = out;
+        out = NULL;
+        *n_outp = n_out;
+        return 0;
+}
+
 static int parse_argv(int argc, char **argv) {
         enum {
                 _ARG_0 = 0x100,
                 ARG_BROADCAST_MAC,
+                ARG_CLIENT_ID,
                 ARG_IFINDEX,
                 ARG_MAC,
                 ARG_REQUEST_BROADCAST,
@@ -418,6 +462,7 @@ static int parse_argv(int argc, char **argv) {
         static const struct option options[] = {
                 { "help",               no_argument,            NULL,   'h'                     },
                 { "broadcast-mac",      required_argument,      NULL,   ARG_BROADCAST_MAC       },
+                { "client-id",          required_argument,      NULL,   ARG_CLIENT_ID           },
                 { "ifindex",            required_argument,      NULL,   ARG_IFINDEX             },
                 { "mac",                required_argument,      NULL,   ARG_MAC                 },
                 { "request-broadcast",  no_argument,            NULL,   ARG_REQUEST_BROADCAST   },
@@ -426,6 +471,8 @@ static int parse_argv(int argc, char **argv) {
                 {}
         };
         struct ether_addr *addr;
+        size_t n;
+        void *t;
         int r, c;
 
         /*
@@ -451,6 +498,16 @@ static int parse_argv(int argc, char **argv) {
                         }
 
                         main_arg_broadcast_mac_set = true;
+                        break;
+
+                case ARG_CLIENT_ID:
+                        r = parse_hexstr(optarg, (uint8_t **)&t, &n);
+                        if (r)
+                                return r;
+
+                        free(main_arg_client_id);
+                        main_arg_client_id = t;
+                        main_arg_n_client_id = n;
                         break;
 
                 case ARG_IFINDEX:
@@ -525,6 +582,21 @@ static int parse_argv(int argc, char **argv) {
 int main(int argc, char **argv) {
         int r;
 
+        /* --client-id */
+        {
+                uint8_t *b;
+                size_t n;
+
+                n = strlen("client-id");
+                b = malloc(n);
+                assert(b);
+                memcpy(b, "client-id", n);
+
+                free(main_arg_client_id);
+                main_arg_client_id = b;
+                main_arg_n_client_id = n;
+        }
+
         r = parse_argv(argc, argv);
         if (r)
                 goto exit;
@@ -541,6 +613,8 @@ exit:
         } else if (r > 0) {
                 fprintf(stderr, "Failed with internal error %d\n", r);
         }
+
+        free(main_arg_client_id);
 
         return r;
 }
