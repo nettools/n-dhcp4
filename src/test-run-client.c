@@ -42,6 +42,7 @@ static uint8_t*                 main_arg_client_id = NULL;
 static size_t                   main_arg_n_client_id = 0;
 static int                      main_arg_ifindex = 0;
 static struct in_addr           main_arg_requested_ip = { INADDR_ANY };
+static long long int            main_arg_requested_lifetime = -1;
 static struct ether_addr        main_arg_mac = {};
 static bool                     main_arg_mac_set = false;
 static bool                     main_arg_request_broadcast = false;
@@ -322,6 +323,14 @@ static int manager_run(Manager *manager) {
         n_dhcp4_client_probe_config_set_start_delay(config, 10);
         n_dhcp4_client_probe_config_set_requested_ip(config, main_arg_requested_ip);
 
+        if (main_arg_requested_lifetime >= 0) {
+                uint32_t lifetime = ntohl(main_arg_requested_lifetime);
+
+                r = n_dhcp4_client_probe_config_append_option(config, N_DHCP4_OPTION_IP_ADDRESS_LEASE_TIME, &lifetime, sizeof(lifetime));
+                if (r)
+                        return r;
+        }
+
         r = n_dhcp4_client_probe(manager->client, &manager->probe, config);
         if (r)
                 return r;
@@ -383,6 +392,7 @@ static void print_help(void) {
                "     --mac HEX                  Hardware address to use\n"
                "     --broadcast-mac HEX        Broadcast hardware address to use\n"
                "     --requested-ip IP          Requested IP adress\n"
+               "     --requested-lifetime SECS  Requested lease lifetime in seconds\n"
                "     --client-id HEX            Client Identifier to use\n"
                , program_invocation_short_name);
 }
@@ -457,6 +467,7 @@ static int parse_argv(int argc, char **argv) {
                 ARG_MAC,
                 ARG_REQUEST_BROADCAST,
                 ARG_REQUESTED_IP,
+                ARG_REQUESTED_LIFETIME,
                 ARG_TEST,
         };
         static const struct option options[] = {
@@ -467,10 +478,12 @@ static int parse_argv(int argc, char **argv) {
                 { "mac",                required_argument,      NULL,   ARG_MAC                 },
                 { "request-broadcast",  no_argument,            NULL,   ARG_REQUEST_BROADCAST   },
                 { "requested-ip",       required_argument,      NULL,   ARG_REQUESTED_IP        },
+                { "requested-lifetime", required_argument,      NULL,   ARG_REQUESTED_LIFETIME  },
                 { "test",               no_argument,            NULL,   ARG_TEST                },
                 {}
         };
         struct ether_addr *addr;
+        long long int lli;
         size_t n;
         void *t;
         int r, c;
@@ -540,6 +553,18 @@ static int parse_argv(int argc, char **argv) {
                                         optarg);
                                 return MAIN_FAILED;
                         }
+                        break;
+
+                case ARG_REQUESTED_LIFETIME:
+                        lli = atoll(optarg);
+                        if (lli < 0 || lli > UINT32_MAX) {
+                                fprintf(stderr,
+                                        "%s: invalid requested lifetime -- '%s'\n",
+                                        program_invocation_name,
+                                        optarg);
+                                return MAIN_FAILED;
+                        }
+                        main_arg_requested_lifetime = lli;
                         break;
 
                 case ARG_TEST:
