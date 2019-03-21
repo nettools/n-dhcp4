@@ -402,11 +402,9 @@ static int n_dhcp4_c_connection_udp_send(NDhcp4CConnection *connection,
 
 static void n_dhcp4_c_connection_init_header(NDhcp4CConnection *connection,
                                              NDhcp4Header *header) {
-        header->op = N_DHCP4_OP_BOOTREQUEST;
-        header->ciaddr = connection->client_ip;
+        bool broadcast = connection->client_config->request_broadcast;
 
-        if (connection->client_config->request_broadcast)
-                header->flags |= N_DHCP4_MESSAGE_FLAG_BROADCAST;
+        header->op = N_DHCP4_OP_BOOTREQUEST;
 
         switch (connection->client_config->transport) {
         case N_DHCP4_TRANSPORT_ETHERNET:
@@ -421,11 +419,28 @@ static void n_dhcp4_c_connection_init_header(NDhcp4CConnection *connection,
                 header->hlen = 0;
 
                 /* infiniband mandates to request broadcasts */
-                header->flags |= N_DHCP4_MESSAGE_FLAG_BROADCAST;
+                broadcast = true;
                 break;
         default:
                 abort();
                 break;
+        }
+
+        if (connection->client_ip != INADDR_ANY) {
+                header->ciaddr = connection->client_ip;
+        } else {
+                /*
+                 * When the IP stack has not been configured, we may
+                 * not be able to receive unicast packets, depending
+                 * on the hardware. If that is the case we must request
+                 * replies from the server to be broadcast.
+                 *
+                 * Once the IP stack has been configured, receiving
+                 * unicast packets is never a problem, so the broadcast
+                 * flag should not be set.
+                 */
+                if (broadcast)
+                        header->flags |= N_DHCP4_MESSAGE_FLAG_BROADCAST;
         }
 }
 
