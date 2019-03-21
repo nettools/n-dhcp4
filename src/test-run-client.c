@@ -323,18 +323,16 @@ static int manager_run(Manager *manager) {
          * for the deferrment is actually tested (so don't set it to zero).
          */
         n_dhcp4_client_probe_config_set_start_delay(config, 10);
+
         n_dhcp4_client_probe_config_set_requested_ip(config, main_arg_requested_ip);
+
+        for (unsigned int i = 0; i < main_arg_n_requested_parameters; ++i)
+                n_dhcp4_client_probe_config_request_option(config, main_arg_requested_parameters[i]);
 
         if (main_arg_requested_lifetime >= 0) {
                 uint32_t lifetime = ntohl(main_arg_requested_lifetime);
 
                 r = n_dhcp4_client_probe_config_append_option(config, N_DHCP4_OPTION_IP_ADDRESS_LEASE_TIME, &lifetime, sizeof(lifetime));
-                if (r)
-                        return r;
-        }
-
-        if (main_arg_n_requested_parameters > 0) {
-                r = n_dhcp4_client_probe_config_append_option(config, N_DHCP4_OPTION_PARAMETER_REQUEST_LIST, main_arg_requested_parameters, main_arg_n_requested_parameters);
                 if (r)
                         return r;
         }

@@ -70,6 +70,7 @@ static void test_api_functions(void) {
                 (void *)n_dhcp4_client_probe_config_set_init_reboot,
                 (void *)n_dhcp4_client_probe_config_set_requested_ip,
                 (void *)n_dhcp4_client_probe_config_set_start_delay,
+                (void *)n_dhcp4_client_probe_config_request_option,
                 (void *)n_dhcp4_client_probe_config_append_option,
 
                 (void *)n_dhcp4_client_new,

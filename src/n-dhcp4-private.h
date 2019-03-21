@@ -271,6 +271,8 @@ struct NDhcp4ClientProbeConfig {
         struct drand48_data entropy;    /* entropy pool */
         uint64_t ms_start_delay;        /* max ms to wait before starting probe */
         NDhcp4ClientProbeOption *options[UINT8_MAX + 1];
+        int8_t request_parameters[UINT8_MAX + 1];
+        size_t n_request_parameters;
 };
 
 #define N_DHCP4_CLIENT_PROBE_CONFIG_NULL(_x) {                                  \

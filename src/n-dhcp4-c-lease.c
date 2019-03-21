@@ -190,6 +190,8 @@ _public_ int n_dhcp4_client_lease_query(NDhcp4ClientLease *lease, uint8_t option
                 return N_DHCP4_E_INTERNAL;
         }
 
+        /* XXX: refuse to return options that were not requested */
+
         return n_dhcp4_incoming_query(lease->message, option, datap, n_datap);
 }
 

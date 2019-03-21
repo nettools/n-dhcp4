@@ -517,6 +517,15 @@ static int n_dhcp4_c_connection_new_message(NDhcp4CConnection *connection,
         case N_DHCP4_MESSAGE_INFORM: {
                 uint16_t mtu;
 
+                if (connection->probe_config->n_request_parameters > 0) {
+                        r = n_dhcp4_outgoing_append(message,
+                                                    N_DHCP4_OPTION_PARAMETER_REQUEST_LIST,
+                                                    connection->probe_config->request_parameters,
+                                                    connection->probe_config->n_request_parameters);
+                        if (r)
+                                return r;
+                }
+
                 if (via_packet_socket) {
                         /*
                          * In case of packet sockets, we do not support

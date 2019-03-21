@@ -118,6 +118,9 @@ int n_dhcp4_client_probe_config_dup(NDhcp4ClientProbeConfig *config,
         dup->requested_ip = config->requested_ip;
         dup->ms_start_delay = config->ms_start_delay;
 
+        for (unsigned int i = 0; i <= config->n_request_parameters; ++i)
+                dup->request_parameters[dup->n_request_parameters++] = config->request_parameters[i];
+
         for (unsigned int i = 0; i <= UINT8_MAX; ++i) {
                 if (!config->options[i])
                         break;
@@ -220,6 +223,34 @@ _public_ void n_dhcp4_client_probe_config_set_requested_ip(NDhcp4ClientProbeConf
  */
 _public_ void n_dhcp4_client_probe_config_set_start_delay(NDhcp4ClientProbeConfig *config, uint64_t msecs) {
         config->ms_start_delay = msecs;
+}
+
+/**
+ * n_dhpc4_client_probe_config_request_option() - append option to request from the server
+ * @config:                     configuration to operate on
+ * @option:                     option to request
+ *
+ * This adds an option to the list of options to request from the server.
+ *
+ * A server may send options that we do not requst, and it may ommit options
+ * that we do request. However, to increase the likelyhood of uniform behavior
+ * between server implementations, we do not expose options that were not
+ * explicitly requested.
+ *
+ * When called multiple times, the order matters. Earlier requests are an
+ * indication of higher priority than later requests, in case the server
+ * must omit some, due to a lack of space. If the same option is requested
+ * more than once, only the first call has an effect.
+ */
+_public_ void n_dhcp4_client_probe_config_request_option(NDhcp4ClientProbeConfig *config, uint8_t option) {
+        for (unsigned int i = 0; i < config->n_request_parameters; ++i) {
+                if (config->request_parameters[i] == option)
+                        return;
+        }
+
+        assert(config->n_request_parameters <= UINT8_MAX);
+
+        config->request_parameters[config->n_request_parameters++] = option;
 }
 
 /**

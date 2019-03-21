@@ -120,6 +120,7 @@ void n_dhcp4_client_probe_config_set_inform_only(NDhcp4ClientProbeConfig *config
 void n_dhcp4_client_probe_config_set_init_reboot(NDhcp4ClientProbeConfig *config, bool init_reboot);
 void n_dhcp4_client_probe_config_set_requested_ip(NDhcp4ClientProbeConfig *config, struct in_addr ip);
 void n_dhcp4_client_probe_config_set_start_delay(NDhcp4ClientProbeConfig *config, uint64_t msecs);
+void n_dhcp4_client_probe_config_request_option(NDhcp4ClientProbeConfig *config, uint8_t option);
 int n_dhcp4_client_probe_config_append_option(NDhcp4ClientProbeConfig *config,
                                               uint8_t option,
                                               const void *data,
