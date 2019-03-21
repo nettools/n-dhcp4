@@ -43,6 +43,8 @@ static size_t                   main_arg_n_client_id = 0;
 static int                      main_arg_ifindex = 0;
 static struct in_addr           main_arg_requested_ip = { INADDR_ANY };
 static long long int            main_arg_requested_lifetime = -1;
+static uint8_t                  main_arg_requested_parameters[UINT8_MAX] = {};
+static size_t                   main_arg_n_requested_parameters = 0;
 static struct ether_addr        main_arg_mac = {};
 static bool                     main_arg_mac_set = false;
 static bool                     main_arg_request_broadcast = false;
@@ -331,6 +333,12 @@ static int manager_run(Manager *manager) {
                         return r;
         }
 
+        if (main_arg_n_requested_parameters > 0) {
+                r = n_dhcp4_client_probe_config_append_option(config, N_DHCP4_OPTION_PARAMETER_REQUEST_LIST, main_arg_requested_parameters, main_arg_n_requested_parameters);
+                if (r)
+                        return r;
+        }
+
         r = n_dhcp4_client_probe(manager->client, &manager->probe, config);
         if (r)
                 return r;
@@ -386,14 +394,15 @@ static int run(void) {
 static void print_help(void) {
         printf("%s [GLOBALS...] ...\n\n"
                "DHCP Test Client\n\n"
-               "  -h --help                     Show this help\n"
-               "     --test                     Run as part of the test suite\n"
-               "     --ifindex IDX              Index of interface to run on\n"
-               "     --mac HEX                  Hardware address to use\n"
-               "     --broadcast-mac HEX        Broadcast hardware address to use\n"
-               "     --requested-ip IP          Requested IP adress\n"
-               "     --requested-lifetime SECS  Requested lease lifetime in seconds\n"
-               "     --client-id HEX            Client Identifier to use\n"
+               "  -h --help                            Show this help\n"
+               "     --test                            Run as part of the test suite\n"
+               "     --ifindex IDX                     Index of interface to run on\n"
+               "     --mac HEX                         Hardware address to use\n"
+               "     --broadcast-mac HEX               Broadcast hardware address to use\n"
+               "     --requested-ip IP                 Requested IP adress\n"
+               "     --requested-lifetime SECS         Requested lease lifetime in seconds\n"
+               "     --requested-parameters P1,P2,...  Requested parameters\n"
+               "     --client-id HEX                   Client Identifier to use\n"
                , program_invocation_short_name);
 }
 
@@ -468,18 +477,20 @@ static int parse_argv(int argc, char **argv) {
                 ARG_REQUEST_BROADCAST,
                 ARG_REQUESTED_IP,
                 ARG_REQUESTED_LIFETIME,
+                ARG_REQUESTED_PARAMETERS,
                 ARG_TEST,
         };
         static const struct option options[] = {
-                { "help",               no_argument,            NULL,   'h'                     },
-                { "broadcast-mac",      required_argument,      NULL,   ARG_BROADCAST_MAC       },
-                { "client-id",          required_argument,      NULL,   ARG_CLIENT_ID           },
-                { "ifindex",            required_argument,      NULL,   ARG_IFINDEX             },
-                { "mac",                required_argument,      NULL,   ARG_MAC                 },
-                { "request-broadcast",  no_argument,            NULL,   ARG_REQUEST_BROADCAST   },
-                { "requested-ip",       required_argument,      NULL,   ARG_REQUESTED_IP        },
-                { "requested-lifetime", required_argument,      NULL,   ARG_REQUESTED_LIFETIME  },
-                { "test",               no_argument,            NULL,   ARG_TEST                },
+                { "help",                       no_argument,            NULL,   'h'                             },
+                { "broadcast-mac",              required_argument,      NULL,   ARG_BROADCAST_MAC               },
+                { "client-id",                  required_argument,      NULL,   ARG_CLIENT_ID                   },
+                { "ifindex",                    required_argument,      NULL,   ARG_IFINDEX                     },
+                { "mac",                        required_argument,      NULL,   ARG_MAC                         },
+                { "request-broadcast",          no_argument,            NULL,   ARG_REQUEST_BROADCAST           },
+                { "requested-ip",               required_argument,      NULL,   ARG_REQUESTED_IP                },
+                { "requested-lifetime",         required_argument,      NULL,   ARG_REQUESTED_LIFETIME          },
+                { "requested-parameters",       required_argument,      NULL,   ARG_REQUESTED_PARAMETERS        },
+                { "test",                       no_argument,            NULL,   ARG_TEST                        },
                 {}
         };
         struct ether_addr *addr;
@@ -565,6 +576,22 @@ static int parse_argv(int argc, char **argv) {
                                 return MAIN_FAILED;
                         }
                         main_arg_requested_lifetime = lli;
+                        break;
+
+                case ARG_REQUESTED_PARAMETERS:
+                        for (const char *param = optarg; param; param = strchr(param, ',') ? strchr(param, ',')  + 1 : NULL) {
+                                assert(main_arg_n_requested_parameters <= UINT8_MAX);
+
+                                lli = atoll(param);
+                                if (lli < 0 || lli > UINT8_MAX) {
+                                        fprintf(stderr,
+                                                "%s: invalid requested parameters -- '%s'\n",
+                                                program_invocation_name,
+                                                optarg);
+                                        return MAIN_FAILED;
+                                }
+                                main_arg_requested_parameters[main_arg_n_requested_parameters++] = lli;
+                        }
                         break;
 
                 case ARG_TEST:
