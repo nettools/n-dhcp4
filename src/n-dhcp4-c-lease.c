@@ -1,5 +1,17 @@
 /*
- * XXX
+ * DHCP4 Client Leases
+ *
+ * This implements the public API wrapping DHCP4 client leases. A lease object
+ * conists of the information given to us from the server, together with the
+ * timestamp recording the start of the validity of the lease.
+ *
+ * A probe may yield many OFFERS, each of which contains a lease object. One of
+ * these offers may be SELECTED, which implicitly rejects all the others.
+ * The server may then ACK or NAK the lease which tells us whether or not we
+ * are permitted to start using it. Once an ACK has been received, we can
+ * configure the address, and only then can we SELECT the lease. If we
+ * determine that the offered lease was not appropriate after all we
+ * may DECLINE it instead.
  */
 
 #include <assert.h>
@@ -87,7 +99,14 @@ static int n_dhcp4_incoming_get_timeouts(NDhcp4Incoming *message, uint64_t *t1p,
 }
 
 /**
- * n_dhcp4_client_lease_new() - XXX
+ * n_dhcp4_client_lease_new() - allocate new client lease object
+ * @leasep:                     output argumnet for new client lease object
+ * @message:                    incoming message representing the lease
+ *
+ * This creates a new client lease object. Client lease objects are simple
+ * wrappers around an incoming message representing a lease.
+ *
+ * Return: 0 on success, negative error code on failure.
  */
 int n_dhcp4_client_lease_new(NDhcp4ClientLease **leasep, NDhcp4Incoming *message) {
         _cleanup_(n_dhcp4_client_lease_unrefp) NDhcp4ClientLease *lease = NULL;
@@ -118,7 +137,12 @@ static void n_dhcp4_client_lease_free(NDhcp4ClientLease *lease) {
 }
 
 /**
- * n_dhcp4_client_lease_ref() - XXX
+ * n_dhcp4_client_lease_ref() - reference client lease
+ * @lease:                      the client lease object to reference
+ *
+ * Take a new reference to a client lease.
+ *
+ * Return: the lease.
  */
 _public_ NDhcp4ClientLease *n_dhcp4_client_lease_ref(NDhcp4ClientLease *lease) {
         if (lease)
@@ -127,7 +151,12 @@ _public_ NDhcp4ClientLease *n_dhcp4_client_lease_ref(NDhcp4ClientLease *lease) {
 }
 
 /**
- * n_dhcp4_client_lease_unref() - XXX
+ * n_dhcp4_client_lease_unref() - dereference client lease
+ * @lease:                      the client lease object to dereference
+ *
+ * Relase a reference to a client lease.
+ *
+ * Return: NULL.
  */
 _public_ NDhcp4ClientLease *n_dhcp4_client_lease_unref(NDhcp4ClientLease *lease) {
         if (lease && !--lease->n_refs)
@@ -136,7 +165,11 @@ _public_ NDhcp4ClientLease *n_dhcp4_client_lease_unref(NDhcp4ClientLease *lease)
 }
 
 /**
- * n_dhcp4_client_lease_link() - XXX
+ * n_dhcp4_client_lease_link() - link lease into probe
+ * @lease:                      the lease to operate on
+ * @probe:                      the probe to link the lease into
+ *
+ * Associate a lease with a probe. The lease may not already be linked.
  */
 void n_dhcp4_client_lease_link(NDhcp4ClientLease *lease, NDhcp4ClientProbe *probe) {
         assert(!lease->probe);
@@ -147,7 +180,11 @@ void n_dhcp4_client_lease_link(NDhcp4ClientLease *lease, NDhcp4ClientProbe *prob
 }
 
 /**
- * n_dhcp4_client_lease_unlink() - XXX
+ * n_dhcp4_client_lease_unlink() - unlinke lease from its probe
+ * @lease:                      the lease to operate on
+ *
+ * Dissassociate a lease from a probe if it is associated with one. Otherwise,
+ * this is a noop.
  */
 void n_dhcp4_client_lease_unlink(NDhcp4ClientLease *lease) {
         lease->probe = NULL;
@@ -155,7 +192,11 @@ void n_dhcp4_client_lease_unlink(NDhcp4ClientLease *lease) {
 }
 
 /**
- * n_dhcp4_client_lease_get_yiaddr() - XXX
+ * n_dhcp4_client_lease_get_yiaddr() - get the IP address
+ * @lease:                      the lease to operate on
+ * @yiaddr:                     return argument for the IP address
+ *
+ * Gets the IP address cotained in the lease.
  */
 _public_ void n_dhcp4_client_lease_get_yiaddr(NDhcp4ClientLease *lease, struct in_addr *yiaddr) {
         NDhcp4Header *header = n_dhcp4_incoming_get_header(lease->message);
@@ -164,14 +205,31 @@ _public_ void n_dhcp4_client_lease_get_yiaddr(NDhcp4ClientLease *lease, struct i
 }
 
 /**
- * n_dhcp4_client_lease_get_lifetime() - XXX
+ * n_dhcp4_client_lease_get_lifetime() - get the lifetime
+ * @lease:                      the lease to operate on
+ * @ns_lifetimep:               return argument for the lifetime in nano seconds
+ *
+ * Gets the end of the lease's lifetime in nanoseconds according to CLOCK_BOOTTIME.
  */
 _public_ void n_dhcp4_client_lease_get_lifetime(NDhcp4ClientLease *lease, uint64_t *ns_lifetimep) {
         *ns_lifetimep = lease->lifetime;
 }
 
 /**
- * n_dhcp4_client_lease_query() - XXX
+ * n_dhcp4_client_lease_query() - query the lease for an option
+ * @lease:                      the lease to operate on
+ * @option:                     the DHCP4 option code
+ * @datap:                      return argument of the data pointer
+ * @n_datap:                    return argument of data length in bytes
+ *
+ * Query the lease for a given option. Options internal to the DHCP protocol cannot
+ * be queried, and only options that were explicitly requested can be queried.
+ *
+ * Return: 0 on success,
+ *         N_DCHP4_E_INTERNAL if an invalid option is queried,
+ *         N_DHCP4_E_NOT_REQUESTED if the option was not requested,
+ *         N_DHCP4_E_UNSET if the lease did not contain the option, or
+ *         a negative error code on failure.
  */
 _public_ int n_dhcp4_client_lease_query(NDhcp4ClientLease *lease, uint8_t option, uint8_t **datap, size_t *n_datap) {
         switch (option) {
@@ -195,6 +253,16 @@ _public_ int n_dhcp4_client_lease_query(NDhcp4ClientLease *lease, uint8_t option
         return n_dhcp4_incoming_query(lease->message, option, datap, n_datap);
 }
 
+/**
+ * n_dhcp4_client_lease_select() - select an offered lease
+ * @lease:                      lease to operate on
+ *
+ * Select a lease. This must be a lease that was offered, once
+ * one of the leases that were offered in response to a probe was
+ * selected none of the others can be.
+ *
+ * Return: 0 on success, or a negative error code on failure.
+ */
 _public_ int n_dhcp4_client_lease_select(NDhcp4ClientLease *lease) {
         NDhcp4ClientLease *l, *t_l;
         NDhcp4ClientProbe *probe;
@@ -212,8 +280,8 @@ _public_ int n_dhcp4_client_lease_select(NDhcp4ClientLease *lease) {
                 return r;
 
         /*
-         * Only one of the offered leases can be select, so flush the list. All
-         * offered lease, including this one are now dead.
+         * Only one of the offered leases can be selected, so flush the list.
+         * All offered lease, including this one are now dead.
          */
         probe = lease->probe;
         c_list_for_each_entry_safe(l, t_l, &probe->lease_list, probe_link)
@@ -222,6 +290,18 @@ _public_ int n_dhcp4_client_lease_select(NDhcp4ClientLease *lease) {
         return 0;
 }
 
+/**
+ * n_dhcp4_client_lease_accept() - accept an ack'ed lease
+ * @lease:                      lease to operate on
+ *
+ * Accept a lease. This must be a lease that was ack'ed by the
+ * server.
+ *
+ * The offered IP address must be fully configured before the lease
+ * can be accepted.
+ *
+ * Return: 0 on success, or a negative error code on failure.
+ */
 _public_ int n_dhcp4_client_lease_accept(NDhcp4ClientLease *lease) {
         int r;
 
@@ -241,6 +321,18 @@ _public_ int n_dhcp4_client_lease_accept(NDhcp4ClientLease *lease) {
         return 0;
 }
 
+/**
+ * n_dhcp4_client_lease_decline() - decline an ack'ed lease
+ * @lease:                      lease to operate on
+ *
+ * Decline a lease. This must be a lease that was ack'ed by the
+ * server.
+ *
+ * The offered IP address must not be used once the lease has been
+ * decline.
+ *
+ * Return: 0 on success, or a negative error code on failure.
+ */
 _public_ int n_dhcp4_client_lease_decline(NDhcp4ClientLease *lease, const char *error) {
         int r;
 

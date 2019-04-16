@@ -160,7 +160,8 @@ _public_ void n_dhcp4_client_probe_config_set_inform_only(NDhcp4ClientProbeConfi
  * @config:                     configuration to operate on
  * @init_reboot:                value to set
  *
- * This sets the init-reboot property of the given configuration object.
+ * This sets the init-reboot property of the given configuration object. If this
+ * is enabled, a requested IP address must also be set.
  *
  * The default is false. If set to true, a probe will make use of the
  * INIT-REBOOT path, as described by the DHCP specification. In most cases, you
@@ -232,15 +233,15 @@ _public_ void n_dhcp4_client_probe_config_set_start_delay(NDhcp4ClientProbeConfi
  *
  * This adds an option to the list of options to request from the server.
  *
- * A server may send options that we do not requst, and it may ommit options
+ * A server may send options that we do not requst, and it may omit options
  * that we do request. However, to increase the likelyhood of uniform behavior
  * between server implementations, we do not expose options that were not
  * explicitly requested.
  *
- * When called multiple times, the order matters. Earlier requests are an
- * indication of higher priority than later requests, in case the server
- * must omit some, due to a lack of space. If the same option is requested
- * more than once, only the first call has an effect.
+ * When called multiple times, the order matters. Earlier requests are
+ * considered higher priority than later requests, in case the server must omit
+ * some, due to a lack of space. If the same option is requested more than once,
+ * only the first call has an effect.
  */
 _public_ void n_dhcp4_client_probe_config_request_option(NDhcp4ClientProbeConfig *config, uint8_t option) {
         for (unsigned int i = 0; i < config->n_request_parameters; ++i) {
@@ -260,7 +261,7 @@ _public_ void n_dhcp4_client_probe_config_request_option(NDhcp4ClientProbeConfig
  * @data:                       payload
  * @n_data:                     number of bytes in payload
  *
- * This sets sthe options on a given configuration object.
+ * This sets extra options on a given configuration object.
  *
  * These options are appended verbatim to outgoing messages where
  * that is supported by the specification. The same options are
@@ -361,17 +362,17 @@ static void n_dhcp4_client_probe_config_initialize_random_seed(NDhcp4ClientProbe
 }
 
 /**
- * n_dhcp4_client_probe_config_get_random() - XXX
+ * n_dhcp4_client_probe_config_get_random() - get random data
+ * @config:                     config object to operate on
+ *
+ * Fetch the next 32bit random number from the entropy pool in @config.
+ * Note that this is in no way suitable for security purposes.
+ *
+ * Return: the random data.
  */
 uint32_t n_dhcp4_client_probe_config_get_random(NDhcp4ClientProbeConfig *config) {
         long int result;
         int r;
-
-        /*
-         * This simply fetches the next 32bit random number from the entropy
-         * pool in @config. Note that this is in no way suitable for security
-         * purposes.
-         */
 
         r = mrand48_r(&config->entropy, &result);
         assert(!r);
@@ -380,7 +381,18 @@ uint32_t n_dhcp4_client_probe_config_get_random(NDhcp4ClientProbeConfig *config)
 };
 
 /**
- * n_dhcp4_client_probe_new() - XXX
+ * n_dhcp4_client_probe_new() - create new client probe
+ * @probep:                     output argument for new client probe
+ * @config:                     probe configuration
+ * @client:                     client to probe on behalf of
+ * @ns_now:                     the current time
+ *
+ * This creates a new client probe object.
+ *
+ * If one is already running, the new one will be immediately (but asynchronously)
+ * cancelled. Otherwise, a DISCOVER event is scheduled after a randomized delay.
+ *
+ * Return: 0 on success, or a negative error code on failure.
  */
 int n_dhcp4_client_probe_new(NDhcp4ClientProbe **probep,
                              NDhcp4ClientProbeConfig *config,
