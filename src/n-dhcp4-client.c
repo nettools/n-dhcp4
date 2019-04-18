@@ -665,6 +665,47 @@ _public_ int n_dhcp4_client_dispatch(NDhcp4Client *client) {
  * That is, the caller should not pin the returned event object, but copy
  * required information into their own state tracking contexts.
  *
+ * The possible events are:
+ * * N_DHCP4_CLIENT_EVENT_OFFER:     A lease offered from a server in response
+ *                                   to a probe. Several such offers may be
+ *                                   received until one of them is selected by
+ *                                   the caller. Only one lease may be selected.
+ *                                   The attached lease object may be queried
+ *                                   for information in order to decide which
+ *                                   lease to select, though the information is
+ *                                   not guaranteed to stay the same in the
+ *                                   final lease.
+ * * N_DHCP4_CLIENT_EVENT_GRANTED:   A selected lease was granted by the server.
+ *                                   The information in the attached lease
+ *                                   object should be used to configure the
+ *                                   client. Once the client has been
+ *                                   configured, the lease should be accepted.
+ * * N_DHCP4_CLIENT_EVENT_RETRACTED: A selected lease offer was retracted by the
+ *                                   server. This can happen in case the server
+ *                                   offers the same lease to several clients,
+ *                                   or the server discovers that the IP address
+ *                                   in the lease is already in use.
+ * * N_DHCP4_CLIENT_EVENT_EXTENDED:  An active lease is extended, if applicable
+ *                                   the kernel should be updated with the new
+ *                                   lifetime information for addresses and/or
+ *                                   routes.
+ * * N_DHCP4_CLIENT_EVENT_EXPIRED:   An active lease failed to be extended by
+ *                                   the end of its lifetime. The client should
+ *                                   immediately stop using the information
+ *                                   contained in the lease.
+ * * N_DHCP4_CLIENT_EVENT_DOWN:      The network interface was put down down.
+ *                                   The user is recommended to reestablish the
+ *                                   lease at the first opportunity when the
+ *                                   network comes back up. Note that this is
+ *                                   purely informational, the probe will keep
+ *                                   running, and if the network topology does
+ *                                   not change any lease we have will still be
+ *                                   valid.
+ * * N_DHCP4_CLIENT_EVENT_CANCELLED: The probe was cancelled. This can happen if
+ *                                   the client attempted several incompatible
+ *                                   probes in parallel, then the most recent
+ *                                   ones will be cancelled asynchronously.
+ *
  * Return: 0 on success, negative error code on failure.
  */
 _public_ int n_dhcp4_client_pop_event(NDhcp4Client *client, NDhcp4ClientEvent **eventp) {

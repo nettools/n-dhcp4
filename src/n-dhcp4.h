@@ -42,6 +42,7 @@ enum {
         N_DHCP4_E_INVALID_ADDRESS,
         N_DHCP4_E_INVALID_CLIENT_ID,
         N_DHCP4_E_DUPLICATE_OPTION,
+        N_DHCP4_E_UNSET,
 
         _N_DHCP4_E_N,
 };

@@ -196,7 +196,8 @@ void n_dhcp4_client_lease_unlink(NDhcp4ClientLease *lease) {
  * @lease:                      the lease to operate on
  * @yiaddr:                     return argument for the IP address
  *
- * Gets the IP address cotained in the lease.
+ * Gets the IP address cotained in the lease. Or INADDR_ANY if the lease
+ * does not contain an IP address.
  */
 _public_ void n_dhcp4_client_lease_get_yiaddr(NDhcp4ClientLease *lease, struct in_addr *yiaddr) {
         NDhcp4Header *header = n_dhcp4_incoming_get_header(lease->message);
@@ -209,7 +210,8 @@ _public_ void n_dhcp4_client_lease_get_yiaddr(NDhcp4ClientLease *lease, struct i
  * @lease:                      the lease to operate on
  * @ns_lifetimep:               return argument for the lifetime in nano seconds
  *
- * Gets the end of the lease's lifetime in nanoseconds according to CLOCK_BOOTTIME.
+ * Gets the end of the lease's lifetime in nanoseconds according to CLOCK_BOOTTIME,
+ * or (uint64_t)-1 for permanent leases.
  */
 _public_ void n_dhcp4_client_lease_get_lifetime(NDhcp4ClientLease *lease, uint64_t *ns_lifetimep) {
         *ns_lifetimep = lease->lifetime;
@@ -227,7 +229,6 @@ _public_ void n_dhcp4_client_lease_get_lifetime(NDhcp4ClientLease *lease, uint64
  *
  * Return: 0 on success,
  *         N_DCHP4_E_INTERNAL if an invalid option is queried,
- *         N_DHCP4_E_NOT_REQUESTED if the option was not requested,
  *         N_DHCP4_E_UNSET if the lease did not contain the option, or
  *         a negative error code on failure.
  */

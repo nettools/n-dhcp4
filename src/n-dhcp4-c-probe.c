@@ -150,6 +150,8 @@ int n_dhcp4_client_probe_config_dup(NDhcp4ClientProbeConfig *config,
  *
  * The default is to request a full lease and address. If inform-only is set to
  * true, only auxiliary information will be requested.
+ *
+ * XXX: This is currently not implemented, and setting the property has no effect.
  */
 _public_ void n_dhcp4_client_probe_config_set_inform_only(NDhcp4ClientProbeConfig *config, bool inform_only) {
         config->inform_only = inform_only;
@@ -166,6 +168,8 @@ _public_ void n_dhcp4_client_probe_config_set_inform_only(NDhcp4ClientProbeConfi
  * The default is false. If set to true, a probe will make use of the
  * INIT-REBOOT path, as described by the DHCP specification. In most cases, you
  * do not want this.
+ *
+ * XXX: This is currently not implemented, and setting the property has no effect.
  *
  * Background: The INIT-REBOOT path allows a DHCP client to skip
  *             server-discovery when rebooting/resuming their machine. The DHCP
@@ -453,7 +457,14 @@ int n_dhcp4_client_probe_new(NDhcp4ClientProbe **probep,
 }
 
 /**
- * n_dhcp4_client_probe_free() - XXX
+ * n_dhcp4_client_probe_free() - destroy a probe
+ * @probe:                      probe to operate on, or NULL
+ *
+ * This destroys a probe object and deallocates all its resources.
+ *
+ * If @probe is NULL, this is a no-op.
+ *
+ * Return: NULL is returned.
  */
 _public_ NDhcp4ClientProbe *n_dhcp4_client_probe_free(NDhcp4ClientProbe *probe) {
         NDhcp4CEventNode *node, *t_node;
@@ -483,14 +494,24 @@ _public_ NDhcp4ClientProbe *n_dhcp4_client_probe_free(NDhcp4ClientProbe *probe) 
 }
 
 /**
- * n_dhcp4_client_probe_set_userdata() - XXX
+ * n_dhcp4_client_probe_set_userdata() - set userdata pointer
+ * @probe:                      the probe to operate on
+ * @userdata:                   pointer to userdata
+ *
+ * Set a userdata pointer. The pointed to data is still owned by the caller, and
+ * is completely opaque to the probe.
  */
 _public_ void n_dhcp4_client_probe_set_userdata(NDhcp4ClientProbe *probe, void *userdata) {
         probe->userdata = userdata;
 }
 
 /**
- * n_dhcp4_client_probe_get_userdata() - XXX
+ * n_dhcp4_client_probe_get_userdata() - get userdata pointer
+ * @probe:                      the probe to operate on
+ * @userdatap:                  return pointer for userdata pointer
+ *
+ * Get the userdata pointer. The lifetime of the userdata and making sure it is
+ * still valid when accessed via the probe is the responsibility of the caller.
  */
 _public_ void n_dhcp4_client_probe_get_userdata(NDhcp4ClientProbe *probe, void **userdatap) {
         *userdatap = probe->userdata;
