@@ -15,9 +15,33 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/mount.h>
+#include <sys/resource.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+
+static inline void test_raise_memlock(void) {
+        const size_t wanted = 64 * 1024 * 1024;
+        struct rlimit get, set;
+        int r;
+
+        r = getrlimit(RLIMIT_MEMLOCK, &get);
+        c_assert(!r);
+
+        /* try raising limit to @wanted */
+        set.rlim_cur = wanted;
+        set.rlim_max = (wanted > get.rlim_max) ? wanted : get.rlim_max;
+        r = setrlimit(RLIMIT_MEMLOCK, &set);
+        if (r) {
+                c_assert(errno == EPERM);
+
+                /* not privileged to raise limit, so maximize soft limit */
+                set.rlim_cur = get.rlim_max;
+                set.rlim_max = get.rlim_max;
+                r = setrlimit(RLIMIT_MEMLOCK, &set);
+                c_assert(!r);
+        }
+}
 
 static inline void test_unshare_user_namespace(void) {
         uid_t euid;
@@ -64,6 +88,7 @@ static inline void test_setup(void) {
          * the test process.
          */
 
+        test_raise_memlock();
         test_unshare_user_namespace();
 
         r = unshare(CLONE_NEWNET | CLONE_NEWNS);
