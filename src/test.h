@@ -6,7 +6,9 @@
  * includes net-namespace setups, veth setups, and more.
  */
 
+#undef NDEBUG
 #include <assert.h>
+#include <c-stdaux.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <net/ethernet.h>
@@ -56,24 +58,24 @@ static inline void test_unshare_user_namespace(void) {
         egid = getegid();
 
         r = unshare(CLONE_NEWUSER);
-        assert(r >= 0);
+        c_assert(r >= 0);
 
         fd = open("/proc/self/uid_map", O_WRONLY);
-        assert(fd >= 0);
+        c_assert(fd >= 0);
         r = dprintf(fd, "0 %d 1\n", euid);
-        assert(r >= 0);
+        c_assert(r >= 0);
         close(fd);
 
         fd = open("/proc/self/setgroups", O_WRONLY);
-        assert(fd >= 0);
+        c_assert(fd >= 0);
         r = dprintf(fd, "deny");
-        assert(r >= 0);
+        c_assert(r >= 0);
         close(fd);
 
         fd = open("/proc/self/gid_map", O_WRONLY);
-        assert(fd >= 0);
+        c_assert(fd >= 0);
         r = dprintf(fd, "0 %d 1\n", egid);
-        assert(r >= 0);
+        c_assert(r >= 0);
         close(fd);
 }
 
@@ -92,14 +94,14 @@ static inline void test_setup(void) {
         test_unshare_user_namespace();
 
         r = unshare(CLONE_NEWNET | CLONE_NEWNS);
-        assert(r >= 0);
+        c_assert(r >= 0);
 
         r = mount(NULL, "/", NULL, MS_PRIVATE | MS_REC, NULL);
-        assert(r >= 0);
+        c_assert(r >= 0);
 
         r = mount(NULL, "/run", "tmpfs", 0, NULL);
-        assert(r >= 0);
+        c_assert(r >= 0);
 
         r = mkdir("/run/netns", 0755);
-        assert(r >= 0);
+        c_assert(r >= 0);
 }
