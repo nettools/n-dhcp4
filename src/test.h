@@ -19,18 +19,6 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-void test_socket_new(int netns, int *sockfdp, int family, int ifindex);
-
-void test_add_ip(int netns, int ifindex, const struct in_addr *addr, unsigned int prefix);
-void test_del_ip(int netns, int ifindex, const struct in_addr *addr, unsigned int prefix);
-
-void test_veth_new(int parent_ns,
-                   int *parent_indexp,
-                   struct ether_addr *parent_macp,
-                   int child_ns,
-                   int *child_indexp,
-                   struct ether_addr *child_macp);
-
 static inline void test_unshare_user_namespace(void) {
         uid_t euid;
         gid_t egid;

@@ -75,7 +75,7 @@ endif
 test_api = executable('test-api', ['test-api.c'], link_with: libndhcp4_shared)
 test('API Symbol Visibility', test_api)
 
-test_connection = executable('test-connection', ['test.c', 'test-connection.c'], dependencies: libndhcp4_dep)
+test_connection = executable('test-connection', ['test-connection.c'], dependencies: libndhcp4_dep)
 test('Connection Handling', test_connection)
 
 test_message = executable('test-message', ['test-message.c'], dependencies: libndhcp4_dep)
@@ -84,8 +84,8 @@ test('Message Handling', test_message)
 test_run_client = executable('test-run-client', ['test-run-client.c'], dependencies: libndhcp4_dep)
 test('Client Runner', test_run_client, args: ['--test'])
 
-test_socket = executable('test-socket', ['test.c', 'test-socket.c'], dependencies: libndhcp4_dep)
+test_socket = executable('test-socket', ['test-socket.c'], dependencies: libndhcp4_dep)
 test('Socket Handling', test_socket)
 
-test_util_packet = executable('test-util-packet', ['test.c', 'util/test-packet.c'], dependencies: libndhcp4_dep)
+test_util_packet = executable('test-util-packet', ['util/test-packet.c'], dependencies: libndhcp4_dep)
 test('Packet Utility Library', test_util_packet)

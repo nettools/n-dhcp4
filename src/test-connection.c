@@ -15,6 +15,7 @@
 #include <sys/epoll.h>
 #include "n-dhcp4-private.h"
 #include "test.h"
+#include "util/link.h"
 #include "util/netns.h"
 #include "util/packet.h"
 
@@ -291,84 +292,96 @@ static void test_release(NDhcp4SConnection *connection_server,
         test_server_receive(connection_server, N_DHCP4_MESSAGE_RELEASE, NULL);
 }
 
-int main(int argc, char **argv) {
+static void test_connection(void) {
+        const struct in_addr addr_server = (struct in_addr){ htonl(10 << 24 | 1) };
+        const struct in_addr addr_client = (struct in_addr){ htonl(10 << 24 | 2) };
+        _cleanup_(netns_closep) int ns_server = -1, ns_client = -1;
+        _cleanup_(link_deinit) Link link_server = LINK_NULL(link_server);
+        _cleanup_(link_deinit) Link link_client = LINK_NULL(link_client);
         _cleanup_(n_dhcp4_closep) int efd_client = -1;
-        _cleanup_(n_dhcp4_client_config_freep) NDhcp4ClientConfig *client_config = NULL;
-        _cleanup_(n_dhcp4_client_probe_config_freep) NDhcp4ClientProbeConfig *probe_config = NULL;
-        NDhcp4SConnection connection_server = N_DHCP4_S_CONNECTION_NULL(connection_server);
-        NDhcp4SConnectionIp connection_server_ip = N_DHCP4_S_CONNECTION_IP_NULL(connection_server_ip);
-        NDhcp4CConnection connection_client = N_DHCP4_C_CONNECTION_NULL(connection_client);
-        _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *offer = NULL;
-        _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *ack = NULL;
-        struct in_addr addr_server = (struct in_addr){ htonl(10 << 24 | 1) };
-        struct in_addr addr_client = (struct in_addr){ htonl(10 << 24 | 2) };
-        int r, ns_server, ns_client, ifindex_server, ifindex_client;
-        struct ether_addr mac_client;
+        int r;
 
-        efd_client = epoll_create1(EPOLL_CLOEXEC);
-        assert(efd_client >= 0);
-
-        test_setup();
+        /* setup */
 
         netns_new(&ns_server);
         netns_new(&ns_client);
 
-        test_veth_new(ns_server, &ifindex_server, NULL, ns_client, &ifindex_client, &mac_client);
-        test_add_ip(ns_server, ifindex_server, &addr_server, 8);
+        link_new_veth(&link_server, &link_client, ns_server, ns_client);
+        link_add_ip4(&link_server, &addr_server, 8);
 
-        test_s_connection_init(ns_server, &connection_server, ifindex_server);
-        n_dhcp4_s_connection_ip_init(&connection_server_ip, addr_server);
-        n_dhcp4_s_connection_ip_link(&connection_server_ip, &connection_server);
+        efd_client = epoll_create1(EPOLL_CLOEXEC);
+        assert(efd_client >= 0);
 
-        r = n_dhcp4_client_config_new(&client_config);
-        assert(!r);
+        /* test connections */
+        {
+                _cleanup_(n_dhcp4_client_config_freep) NDhcp4ClientConfig *client_config = NULL;
+                _cleanup_(n_dhcp4_client_probe_config_freep) NDhcp4ClientProbeConfig *probe_config = NULL;
+                NDhcp4SConnection connection_server = N_DHCP4_S_CONNECTION_NULL(connection_server);
+                NDhcp4SConnectionIp connection_server_ip = N_DHCP4_S_CONNECTION_IP_NULL(connection_server_ip);
+                NDhcp4CConnection connection_client = N_DHCP4_C_CONNECTION_NULL(connection_client);
+                _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *offer = NULL;
+                _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *ack = NULL;
 
-        n_dhcp4_client_config_set_ifindex(client_config, ifindex_client);
-        n_dhcp4_client_config_set_transport(client_config, N_DHCP4_TRANSPORT_ETHERNET);
-        n_dhcp4_client_config_set_request_broadcast(client_config, false);
-        n_dhcp4_client_config_set_mac(client_config, mac_client.ether_addr_octet, ETH_ALEN);
-        n_dhcp4_client_config_set_broadcast_mac(client_config,
-                                                (const uint8_t[]){
-                                                        0xff, 0xff, 0xff,
-                                                        0xff, 0xff, 0xff,
-                                                },
-                                                ETH_ALEN);
-        r = n_dhcp4_client_config_set_client_id(client_config,
-                                                (void *)"client-id",
-                                                strlen("client-id"));
-        assert(!r);
+                test_s_connection_init(ns_server, &connection_server, link_server.ifindex);
+                n_dhcp4_s_connection_ip_init(&connection_server_ip, addr_server);
+                n_dhcp4_s_connection_ip_link(&connection_server_ip, &connection_server);
 
-        r = n_dhcp4_client_probe_config_new(&probe_config);
-        assert(!r);
+                r = n_dhcp4_client_config_new(&client_config);
+                assert(!r);
 
-        r = n_dhcp4_c_connection_init(&connection_client,
-                                      client_config,
-                                      probe_config,
-                                      efd_client);
-        assert(!r);
-        test_c_connection_listen(ns_client, &connection_client);
+                n_dhcp4_client_config_set_ifindex(client_config, link_client.ifindex);
+                n_dhcp4_client_config_set_transport(client_config, N_DHCP4_TRANSPORT_ETHERNET);
+                n_dhcp4_client_config_set_request_broadcast(client_config, false);
+                n_dhcp4_client_config_set_mac(client_config, link_client.mac.ether_addr_octet, ETH_ALEN);
+                n_dhcp4_client_config_set_broadcast_mac(client_config,
+                                                        (const uint8_t[]){
+                                                                0xff, 0xff, 0xff,
+                                                                0xff, 0xff, 0xff,
+                                                        },
+                                                        ETH_ALEN);
+                r = n_dhcp4_client_config_set_client_id(client_config,
+                                                        (void *)"client-id",
+                                                        strlen("client-id"));
+                assert(!r);
 
-        test_discover(&connection_server, &connection_client, &addr_server, &addr_client, &offer);
-        test_select(&connection_server, &connection_client, offer, &addr_server, &addr_client);
-        test_reboot(&connection_server, &connection_client, &addr_server, &addr_client, &ack);
-        test_decline(&connection_server, &connection_client, ack);
+                r = n_dhcp4_client_probe_config_new(&probe_config);
+                assert(!r);
 
-        test_add_ip(ns_client, ifindex_client, &addr_client, 8);
-        test_c_connection_connect(ns_client, &connection_client, &addr_client, &addr_server);
+                r = n_dhcp4_c_connection_init(&connection_client,
+                                              client_config,
+                                              probe_config,
+                                              efd_client);
+                assert(!r);
+                test_c_connection_listen(ns_client, &connection_client);
 
-        test_renew(&connection_server, &connection_client, &addr_server, &addr_client);
-        test_rebind(&connection_server, &connection_client, &addr_server, &addr_client);
-        test_release(&connection_server, &connection_client, &addr_server, &addr_client);
+                test_discover(&connection_server, &connection_client, &addr_server, &addr_client, &offer);
+                test_select(&connection_server, &connection_client, offer, &addr_server, &addr_client);
+                test_reboot(&connection_server, &connection_client, &addr_server, &addr_client, &ack);
+                test_decline(&connection_server, &connection_client, ack);
 
-        n_dhcp4_c_connection_deinit(&connection_client);
-        n_dhcp4_s_connection_ip_unlink(&connection_server_ip);
-        n_dhcp4_s_connection_ip_deinit(&connection_server_ip);
-        n_dhcp4_s_connection_deinit(&connection_server);
+                link_add_ip4(&link_client, &addr_client, 8);
+                test_c_connection_connect(ns_client, &connection_client, &addr_client, &addr_server);
 
-        test_del_ip(ns_client, ifindex_client, &addr_client, 8);
-        test_del_ip(ns_server, ifindex_server, &addr_server, 8);
-        close(ns_client);
-        close(ns_server);
+                test_renew(&connection_server, &connection_client, &addr_server, &addr_client);
+                test_rebind(&connection_server, &connection_client, &addr_server, &addr_client);
+                test_release(&connection_server, &connection_client, &addr_server, &addr_client);
+
+                n_dhcp4_c_connection_deinit(&connection_client);
+                n_dhcp4_s_connection_ip_unlink(&connection_server_ip);
+                n_dhcp4_s_connection_ip_deinit(&connection_server_ip);
+                n_dhcp4_s_connection_deinit(&connection_server);
+        }
+
+        /* teardown */
+
+        link_del_ip4(&link_client, &addr_client, 8);
+        link_del_ip4(&link_server, &addr_server, 8);
+}
+
+int main(int argc, char **argv) {
+        test_setup();
+
+        test_connection();
 
         return 0;
 }
