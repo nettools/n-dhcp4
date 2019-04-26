@@ -33,7 +33,7 @@
  * Return: 0 on success, or a negative error code on failure.
  */
 int n_dhcp4_c_socket_packet_new(int *sockfdp, int ifindex) {
-        _cleanup_(c_closep) int sockfd = -1;
+        _c_cleanup_(c_closep) int sockfd = -1;
         struct sock_filter filter[] = {
                 /*
                  * IP
@@ -145,7 +145,7 @@ int n_dhcp4_c_socket_udp_new(int *sockfdp,
                              int ifindex,
                              const struct in_addr *client_addr,
                              const struct in_addr *server_addr) {
-        _cleanup_(c_closep) int sockfd = -1;
+        _c_cleanup_(c_closep) int sockfd = -1;
         struct sock_filter filter[] = {
                 /*
                  * IP/UDP
@@ -233,7 +233,7 @@ int n_dhcp4_c_socket_udp_new(int *sockfdp,
  * Return: 0 on success, or a negative error code on failure.
  */
 int n_dhcp4_s_socket_packet_new(int *sockfdp) {
-        _cleanup_(c_closep) int sockfd = -1;
+        _c_cleanup_(c_closep) int sockfd = -1;
 
         sockfd = socket(AF_PACKET, SOCK_DGRAM | SOCK_CLOEXEC | SOCK_NONBLOCK, 0);
         if (sockfd < 0)
@@ -255,7 +255,7 @@ int n_dhcp4_s_socket_packet_new(int *sockfdp) {
  * Return: 0 on success, or a negative error code on failure.
  */
 int n_dhcp4_s_socket_udp_new(int *sockfdp, int ifindex) {
-        _cleanup_(c_closep) int sockfd = -1;
+        _c_cleanup_(c_closep) int sockfd = -1;
         struct sock_filter filter[] = {
                 /*
                  * IP/UDP
@@ -549,7 +549,7 @@ int n_dhcp4_c_socket_packet_recv(int sockfd,
                                  uint8_t *buf,
                                  size_t n_buf,
                                  NDhcp4Incoming **messagep) {
-        _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *message = NULL;
+        _c_cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *message = NULL;
         size_t len;
         int r;
 
@@ -579,7 +579,7 @@ static int n_dhcp4_socket_udp_recv(int sockfd,
                                    size_t n_buf,
                                    NDhcp4Incoming **messagep,
                                    struct in_pktinfo *pktinfo) {
-        _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *message = NULL;
+        _c_cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *message = NULL;
         struct iovec iov = {
                 .iov_base = buf,
                 .iov_len = n_buf,

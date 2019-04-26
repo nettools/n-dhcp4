@@ -133,7 +133,7 @@ static void n_dhcp4_c_connection_outgoing_set_secs(NDhcp4Outgoing *message) {
 }
 
 int n_dhcp4_c_connection_listen(NDhcp4CConnection *connection) {
-        _cleanup_(c_closep) int fd_packet = -1;
+        _c_cleanup_(c_closep) int fd_packet = -1;
         int r;
 
         c_assert(connection->state == N_DHCP4_C_CONNECTION_STATE_INIT);
@@ -448,7 +448,7 @@ static void n_dhcp4_c_connection_init_header(NDhcp4CConnection *connection,
 static int n_dhcp4_c_connection_new_message(NDhcp4CConnection *connection,
                                             NDhcp4Outgoing **messagep,
                                             uint8_t type) {
-        _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *message = NULL;
+        _c_cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *message = NULL;
         NDhcp4Header *header;
         uint8_t message_type;
         bool via_packet_socket = false;
@@ -628,7 +628,7 @@ static int n_dhcp4_c_connection_new_message(NDhcp4CConnection *connection,
  */
 int n_dhcp4_c_connection_discover_new(NDhcp4CConnection *connection,
                                       NDhcp4Outgoing **requestp) {
-        _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *message = NULL;
+        _c_cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *message = NULL;
         int r;
 
         r = n_dhcp4_c_connection_new_message(connection, &message, N_DHCP4_C_MESSAGE_DISCOVER);
@@ -656,7 +656,7 @@ int n_dhcp4_c_connection_discover_new(NDhcp4CConnection *connection,
 int n_dhcp4_c_connection_select_new(NDhcp4CConnection *connection,
                                     NDhcp4Outgoing **requestp,
                                     NDhcp4Incoming *offer) {
-        _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *message = NULL;
+        _c_cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *message = NULL;
         struct in_addr client;
         struct in_addr server;
         uint32_t xid;
@@ -708,7 +708,7 @@ int n_dhcp4_c_connection_select_new(NDhcp4CConnection *connection,
 int n_dhcp4_c_connection_reboot_new(NDhcp4CConnection *connection,
                                     NDhcp4Outgoing **requestp,
                                     const struct in_addr *client) {
-        _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *message = NULL;
+        _c_cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *message = NULL;
         int r;
 
         r = n_dhcp4_c_connection_new_message(connection, &message, N_DHCP4_C_MESSAGE_REBOOT);
@@ -753,7 +753,7 @@ int n_dhcp4_c_connection_reboot_new(NDhcp4CConnection *connection,
  */
 int n_dhcp4_c_connection_renew_new(NDhcp4CConnection *connection,
                                    NDhcp4Outgoing **requestp) {
-        _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *message = NULL;
+        _c_cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *message = NULL;
         int r;
 
         r = n_dhcp4_c_connection_new_message(connection, &message, N_DHCP4_C_MESSAGE_RENEW);
@@ -786,7 +786,7 @@ int n_dhcp4_c_connection_renew_new(NDhcp4CConnection *connection,
  */
 int n_dhcp4_c_connection_rebind_new(NDhcp4CConnection *connection,
                                     NDhcp4Outgoing **requestp) {
-        _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *message = NULL;
+        _c_cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *message = NULL;
         int r;
 
         r = n_dhcp4_c_connection_new_message(connection, &message, N_DHCP4_C_MESSAGE_REBIND);
@@ -815,7 +815,7 @@ int n_dhcp4_c_connection_decline_new(NDhcp4CConnection *connection,
                                      NDhcp4Outgoing **requestp,
                                      NDhcp4Incoming *ack,
                                      const char *error) {
-        _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *message = NULL;
+        _c_cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *message = NULL;
         struct in_addr client;
         struct in_addr server;
         int r;
@@ -879,7 +879,7 @@ int n_dhcp4_c_connection_decline_new(NDhcp4CConnection *connection,
  */
 int n_dhcp4_c_connection_inform_new(NDhcp4CConnection *connection,
                                     NDhcp4Outgoing **requestp) {
-        _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *message = NULL;
+        _c_cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *message = NULL;
         int r;
 
         r = n_dhcp4_c_connection_new_message(connection, &message, N_DHCP4_C_MESSAGE_INFORM);
@@ -930,7 +930,7 @@ int n_dhcp4_c_connection_inform_new(NDhcp4CConnection *connection,
 int n_dhcp4_c_connection_release_new(NDhcp4CConnection *connection,
                                      NDhcp4Outgoing **requestp,
                                      const char *error) {
-        _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *message = NULL;
+        _c_cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *message = NULL;
         int r;
 
         r = n_dhcp4_c_connection_new_message(connection, &message, N_DHCP4_C_MESSAGE_RELEASE);
@@ -1062,7 +1062,7 @@ int n_dhcp4_c_connection_dispatch_timer(NDhcp4CConnection *connection,
 
 int n_dhcp4_c_connection_dispatch_io(NDhcp4CConnection *connection,
                                      NDhcp4Incoming **messagep) {
-        _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *message = NULL;
+        _c_cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *message = NULL;
         uint8_t type;
         int r;
 

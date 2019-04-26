@@ -67,8 +67,8 @@ static void manager_freep(Manager **manager) {
 }
 
 static int manager_new(Manager **managerp) {
-        _cleanup_(n_dhcp4_client_config_freep) NDhcp4ClientConfig *config = NULL;
-        _cleanup_(manager_freep) Manager *manager = NULL;
+        _c_cleanup_(n_dhcp4_client_config_freep) NDhcp4ClientConfig *config = NULL;
+        _c_cleanup_(manager_freep) Manager *manager = NULL;
         int r;
 
         manager = malloc(sizeof(*manager));
@@ -312,7 +312,7 @@ static int manager_dispatch(Manager *manager) {
 }
 
 static int manager_run(Manager *manager) {
-        _cleanup_(n_dhcp4_client_probe_config_freep) NDhcp4ClientProbeConfig *config = NULL;
+        _c_cleanup_(n_dhcp4_client_probe_config_freep) NDhcp4ClientProbeConfig *config = NULL;
         int r;
 
         r = n_dhcp4_client_probe_config_new(&config);
@@ -380,7 +380,7 @@ static int manager_run(Manager *manager) {
 }
 
 static int run(void) {
-        _cleanup_(manager_freep) Manager *manager = NULL;
+        _c_cleanup_(manager_freep) Manager *manager = NULL;
         int r;
 
         r = manager_new(&manager);
@@ -427,7 +427,7 @@ static int setup_test(void) {
 }
 
 static int parse_hexstr(const char *in, uint8_t **outp, size_t *n_outp) {
-        _cleanup_(c_freep) uint8_t *out = NULL;
+        _c_cleanup_(c_freep) uint8_t *out = NULL;
         size_t i, n_in, n_out;
 
         n_in = strlen(in);

@@ -79,7 +79,7 @@ static void test_c_connection_connect(int netns,
 }
 
 static void test_server_receive(NDhcp4SConnection *connection, uint8_t expected_type, NDhcp4Incoming **messagep) {
-        _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *message = NULL;
+        _c_cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *message = NULL;
         uint8_t received_type;
         int r, fd;
 
@@ -101,7 +101,7 @@ static void test_server_receive(NDhcp4SConnection *connection, uint8_t expected_
 }
 
 static void test_client_receive(NDhcp4CConnection *connection, uint8_t expected_type, NDhcp4Incoming **messagep) {
-        _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *message = NULL;
+        _c_cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *message = NULL;
         uint8_t received_type;
         int r;
 
@@ -126,9 +126,9 @@ static void test_discover(NDhcp4SConnection *connection_server,
                           const struct in_addr *addr_server,
                           const struct in_addr *addr_client,
                           NDhcp4Incoming **offerp) {
-        _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *request_out = NULL;
-        _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *request_in = NULL;
-        _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *reply_out = NULL;
+        _c_cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *request_out = NULL;
+        _c_cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *request_in = NULL;
+        _c_cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *reply_out = NULL;
         int r;
 
         r = n_dhcp4_c_connection_discover_new(connection_client, &request_out);
@@ -154,9 +154,9 @@ static void test_select(NDhcp4SConnection *connection_server,
                         NDhcp4Incoming *offer,
                         const struct in_addr *addr_server,
                         const struct in_addr *addr_client) {
-        _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *request_out = NULL;
-        _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *request_in = NULL;
-        _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *reply = NULL;
+        _c_cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *request_out = NULL;
+        _c_cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *request_in = NULL;
+        _c_cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *reply = NULL;
         int r;
 
         r = n_dhcp4_c_connection_select_new(connection_client, &request_out, offer);
@@ -182,9 +182,9 @@ static void test_reboot(NDhcp4SConnection *connection_server,
                         const struct in_addr *addr_server,
                         const struct in_addr *addr_client,
                         NDhcp4Incoming **ackp) {
-        _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *request_out = NULL;
-        _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *request_in = NULL;
-        _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *reply = NULL;
+        _c_cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *request_out = NULL;
+        _c_cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *request_in = NULL;
+        _c_cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *reply = NULL;
         int r;
 
         r = n_dhcp4_c_connection_reboot_new(connection_client, &request_out, addr_server);
@@ -208,7 +208,7 @@ static void test_reboot(NDhcp4SConnection *connection_server,
 static void test_decline(NDhcp4SConnection *connection_server,
                          NDhcp4CConnection *connection_client,
                          NDhcp4Incoming *ack) {
-        _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *request_out = NULL;
+        _c_cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *request_out = NULL;
         int r;
 
         r = n_dhcp4_c_connection_decline_new(connection_client, &request_out, ack, "No thanks.");
@@ -226,9 +226,9 @@ static void test_renew(NDhcp4SConnection *connection_server,
                        NDhcp4CConnection *connection_client,
                        const struct in_addr *addr_server,
                        const struct in_addr *addr_client) {
-        _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *request_out = NULL;
-        _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *request_in = NULL;
-        _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *reply = NULL;
+        _c_cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *request_out = NULL;
+        _c_cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *request_in = NULL;
+        _c_cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *reply = NULL;
         int r;
 
         r = n_dhcp4_c_connection_renew_new(connection_client, &request_out);
@@ -253,9 +253,9 @@ static void test_rebind(NDhcp4SConnection *connection_server,
                         NDhcp4CConnection *connection_client,
                         const struct in_addr *addr_server,
                         const struct in_addr *addr_client) {
-        _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *request_out = NULL;
-        _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *request_in = NULL;
-        _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *reply = NULL;
+        _c_cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *request_out = NULL;
+        _c_cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *request_in = NULL;
+        _c_cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *reply = NULL;
         int r;
 
         r = n_dhcp4_c_connection_rebind_new(connection_client, &request_out);
@@ -280,7 +280,7 @@ static void test_release(NDhcp4SConnection *connection_server,
                          NDhcp4CConnection *connection_client,
                          const struct in_addr *addr_server,
                          const struct in_addr *addr_client) {
-        _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *request_out = NULL;
+        _c_cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *request_out = NULL;
         int r;
 
         r = n_dhcp4_c_connection_release_new(connection_client, &request_out, "Shutting down!");
@@ -296,10 +296,10 @@ static void test_release(NDhcp4SConnection *connection_server,
 static void test_connection(void) {
         const struct in_addr addr_server = (struct in_addr){ htonl(10 << 24 | 1) };
         const struct in_addr addr_client = (struct in_addr){ htonl(10 << 24 | 2) };
-        _cleanup_(netns_closep) int ns_server = -1, ns_client = -1;
-        _cleanup_(link_deinit) Link link_server = LINK_NULL(link_server);
-        _cleanup_(link_deinit) Link link_client = LINK_NULL(link_client);
-        _cleanup_(c_closep) int efd_client = -1;
+        _c_cleanup_(netns_closep) int ns_server = -1, ns_client = -1;
+        _c_cleanup_(link_deinit) Link link_server = LINK_NULL(link_server);
+        _c_cleanup_(link_deinit) Link link_client = LINK_NULL(link_client);
+        _c_cleanup_(c_closep) int efd_client = -1;
         int r;
 
         /* setup */
@@ -315,13 +315,13 @@ static void test_connection(void) {
 
         /* test connections */
         {
-                _cleanup_(n_dhcp4_client_config_freep) NDhcp4ClientConfig *client_config = NULL;
-                _cleanup_(n_dhcp4_client_probe_config_freep) NDhcp4ClientProbeConfig *probe_config = NULL;
+                _c_cleanup_(n_dhcp4_client_config_freep) NDhcp4ClientConfig *client_config = NULL;
+                _c_cleanup_(n_dhcp4_client_probe_config_freep) NDhcp4ClientProbeConfig *probe_config = NULL;
                 NDhcp4SConnection connection_server = N_DHCP4_S_CONNECTION_NULL(connection_server);
                 NDhcp4SConnectionIp connection_server_ip = N_DHCP4_S_CONNECTION_IP_NULL(connection_server_ip);
                 NDhcp4CConnection connection_client = N_DHCP4_C_CONNECTION_NULL(connection_client);
-                _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *offer = NULL;
-                _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *ack = NULL;
+                _c_cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *offer = NULL;
+                _c_cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *ack = NULL;
 
                 test_s_connection_init(ns_server, &connection_server, link_server.ifindex);
                 n_dhcp4_s_connection_ip_init(&connection_server_ip, addr_server);

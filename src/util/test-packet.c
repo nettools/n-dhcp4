@@ -151,7 +151,7 @@ static void test_packet_packet(Link *link_src,
                                Link *link_dst,
                                const struct sockaddr_in *paddr_src,
                                const struct sockaddr_in *paddr_dst) {
-        _cleanup_(c_closep) int sk_src = -1, sk_dst = -1;
+        _c_cleanup_(c_closep) int sk_src = -1, sk_dst = -1;
         uint8_t buf[1024];
         size_t len;
         int r;
@@ -175,7 +175,7 @@ static void test_packet_udp(Link *link_src,
                             Link *link_dst,
                             const struct sockaddr_in *paddr_src,
                             const struct sockaddr_in *paddr_dst) {
-        _cleanup_(c_closep) int sk_src = -1, sk_dst = -1;
+        _c_cleanup_(c_closep) int sk_src = -1, sk_dst = -1;
         uint8_t buf[1024];
         ssize_t len;
         int r;
@@ -203,7 +203,7 @@ static void test_udp_packet(Link *link_src,
                             Link *link_dst,
                             const struct sockaddr_in *paddr_src,
                             const struct sockaddr_in *paddr_dst) {
-        _cleanup_(c_closep) int sk_src = -1, sk_dst = -1;
+        _c_cleanup_(c_closep) int sk_src = -1, sk_dst = -1;
         uint8_t buf[1024];
         ssize_t slen;
         size_t len;
@@ -230,7 +230,7 @@ static void test_udp_udp(Link *link_src,
                          Link *link_dst,
                          const struct sockaddr_in *paddr_src,
                          const struct sockaddr_in *paddr_dst) {
-        _cleanup_(c_closep) int sk_src = -1, sk_dst = -1;
+        _c_cleanup_(c_closep) int sk_src = -1, sk_dst = -1;
         uint8_t buf[1024];
         ssize_t len;
         int r;
@@ -258,7 +258,7 @@ static void test_shutdown(Link *link_src,
                           Link *link_dst,
                           const struct sockaddr_in *paddr_src,
                           const struct sockaddr_in *paddr_dst) {
-        _cleanup_(c_closep) int sk_src = -1, sk_dst1 = -1, sk_dst2 = -1;
+        _c_cleanup_(c_closep) int sk_src = -1, sk_dst1 = -1, sk_dst2 = -1;
         uint8_t buf[1024];
         ssize_t slen;
         size_t len;
@@ -326,7 +326,7 @@ static void test_ip_hdr(Link *link_src,
                         Link *link_dst,
                         const struct sockaddr_in *paddr_src,
                         const struct sockaddr_in *paddr_dst) {
-        _cleanup_(c_closep) int sk_src = -1, sk_dst = -1;
+        _c_cleanup_(c_closep) int sk_src = -1, sk_dst = -1;
         uint8_t ipopts[5] = { 1, 1, 1, 1, 1 };
         uint8_t buf[1024];
         ssize_t slen;
@@ -368,9 +368,9 @@ static void test_ip_hdr(Link *link_src,
  * packet socket helpers.
  */
 static void test_packet(void) {
-        _cleanup_(netns_closep) int ns_src = -1, ns_dst = -1;
-        _cleanup_(link_deinit) Link link_src = LINK_NULL(link_src);
-        _cleanup_(link_deinit) Link link_dst = LINK_NULL(link_dst);
+        _c_cleanup_(netns_closep) int ns_src = -1, ns_dst = -1;
+        _c_cleanup_(link_deinit) Link link_src = LINK_NULL(link_src);
+        _c_cleanup_(link_deinit) Link link_dst = LINK_NULL(link_dst);
         struct sockaddr_in paddr_src = {
                 .sin_family = AF_INET,
                 .sin_addr = (struct in_addr){ htonl(10<<24 | 1) },

@@ -186,7 +186,7 @@ static void n_dhcp4_incoming_linearize(NDhcp4Incoming *incoming) {
  *         the message is not a valid DHCP4 message.
  */
 int n_dhcp4_incoming_new(NDhcp4Incoming **incomingp, const void *raw, size_t n_raw) {
-        _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *incoming = NULL;
+        _c_cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *incoming = NULL;
         size_t size;
 
         if (n_raw < sizeof(NDhcp4Message) || n_raw > UINT16_MAX)

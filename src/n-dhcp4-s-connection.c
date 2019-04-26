@@ -5,6 +5,7 @@
  */
 
 #include <assert.h>
+#include <c-stdaux.h>
 #include <errno.h>
 #include <net/if_arp.h>
 #include <stdbool.h>
@@ -33,7 +34,7 @@ int n_dhcp4_s_connection_init(NDhcp4SConnection *connection, int ifindex) {
 }
 
 void n_dhcp4_s_connection_deinit(NDhcp4SConnection *connection) {
-        assert(!connection->ip);
+        c_assert(!connection->ip);
 
         if (connection->fd_udp >= 0) {
                 close(connection->fd_udp);
@@ -121,7 +122,7 @@ static int n_dhcp4_s_connection_verify_incoming(NDhcp4SConnection *connection,
 }
 
 int n_dhcp4_s_connection_dispatch_io(NDhcp4SConnection *connection, NDhcp4Incoming **messagep) {
-        _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *message = NULL;
+        _c_cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *message = NULL;
         struct sockaddr_in dest = {};
         int r;
 
@@ -253,7 +254,7 @@ static int n_dhcp4_s_connection_new_reply(NDhcp4SConnection *connection,
                                           NDhcp4Incoming *request,
                                           uint8_t type,
                                           const struct in_addr *server_address) {
-        _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *message = NULL;
+        _c_cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *message = NULL;
         uint16_t max_message_size;
         uint8_t *client_identifier;
         size_t n_client_identifier;
@@ -307,7 +308,7 @@ int n_dhcp4_s_connection_offer_new(NDhcp4SConnection *connection,
                                    const struct in_addr *server_address,
                                    const struct in_addr *client_address,
                                    uint32_t lifetime) {
-        _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *reply = NULL;
+        _c_cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *reply = NULL;
         int r;
 
         r = n_dhcp4_s_connection_new_reply(connection,
@@ -335,7 +336,7 @@ int n_dhcp4_s_connection_ack_new(NDhcp4SConnection *connection,
                                  const struct in_addr *server_address,
                                  const struct in_addr *client_address,
                                  uint32_t lifetime) {
-        _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *reply = NULL;
+        _c_cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *reply = NULL;
         int r;
 
         r = n_dhcp4_s_connection_new_reply(connection,
@@ -361,7 +362,7 @@ int n_dhcp4_s_connection_nak_new(NDhcp4SConnection *connection,
                                  NDhcp4Outgoing **replyp,
                                  NDhcp4Incoming *request,
                                  const struct in_addr *server_address) {
-        _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *reply = NULL;
+        _c_cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *reply = NULL;
         int r;
 
         r = n_dhcp4_s_connection_new_reply(connection,
@@ -392,13 +393,13 @@ void n_dhcp4_s_connection_ip_init(NDhcp4SConnectionIp *ip, struct in_addr addr) 
 }
 
 void n_dhcp4_s_connection_ip_deinit(NDhcp4SConnectionIp *ip) {
-        assert(!ip->connection);
+        c_assert(!ip->connection);
         *ip = (NDhcp4SConnectionIp)N_DHCP4_S_CONNECTION_IP_NULL(*ip);
 }
 
 void n_dhcp4_s_connection_ip_link(NDhcp4SConnectionIp *ip, NDhcp4SConnection *connection) {
-        assert(!connection->ip);
-        assert(!ip->connection);
+        c_assert(!connection->ip);
+        c_assert(!ip->connection);
 
         connection->ip = ip;
         ip->connection = connection;

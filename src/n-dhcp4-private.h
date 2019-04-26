@@ -25,14 +25,6 @@ typedef struct NDhcp4SConnection NDhcp4SConnection;
 typedef struct NDhcp4SConnectionIp NDhcp4SConnectionIp;
 typedef struct NDhcp4SEventNode NDhcp4SEventNode;
 
-/* macros */
-
-#define _cleanup_(_x) __attribute__((__cleanup__(_x)))
-#define _packed_ __attribute__((__packed__))
-#define _public_ __attribute__((__visibility__("default")))
-
-#define MIN(_x, _y) ((_x) < (_y) ? (_x) : (_y))
-
 /* specs */
 
 #define N_DHCP4_NETWORK_IP_MAXIMUM_HEADER_SIZE (60) /* See RFC791 */
@@ -120,7 +112,7 @@ struct NDhcp4Header {
         uint32_t siaddr;
         uint32_t giaddr;
         uint8_t chaddr[16];
-} _packed_;
+} _c_packed_;
 
 struct NDhcp4Message {
         NDhcp4Header header;
@@ -128,7 +120,7 @@ struct NDhcp4Message {
         uint8_t file[128];
         uint32_t magic;
         uint8_t options[];
-} _packed_;
+} _c_packed_;
 
 /* objects */
 

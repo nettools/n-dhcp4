@@ -95,7 +95,7 @@ uint16_t packet_internet_checksum_udp(const struct in_addr *src_addr,
                 uint8_t protocol;
                 uint16_t length;
                 struct udphdr udp;
-        } __attribute__((__packed__)) udp_phdr = {
+        } _c_packed_ udp_phdr = {
                 .src = src_addr->s_addr,
                 .dst = dst_addr->s_addr,
                 .protocol = IPPROTO_UDP,

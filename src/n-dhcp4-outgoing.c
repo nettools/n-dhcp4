@@ -52,7 +52,7 @@
  * Return: 0 on success, error code on failure.
  */
 int n_dhcp4_outgoing_new(NDhcp4Outgoing **outgoingp, size_t max_size, uint8_t overload) {
-        _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *outgoing = NULL;
+        _c_cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *outgoing = NULL;
 
         c_assert(!(overload & ~(N_DHCP4_OVERLOAD_FILE | N_DHCP4_OVERLOAD_SNAME)));
 
@@ -220,8 +220,8 @@ int n_dhcp4_outgoing_append(NDhcp4Outgoing *outgoing,
                 /* try fitting into allowed OPTIONs space */
                 if (outgoing->max_size - outgoing->i_message >= n_data + 2U + 3U + 1U) {
                         /* try over-allocation to reduce allocation pressure */
-                        n = MIN(outgoing->max_size,
-                                outgoing->n_message + n_data + 128);
+                        n = c_min(outgoing->max_size,
+                                  outgoing->n_message + n_data + 128);
                         m = realloc(outgoing->message, n);
                         if (!m)
                                 return -ENOMEM;

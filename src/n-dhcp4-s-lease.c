@@ -4,6 +4,7 @@
 
 #include <assert.h>
 #include <c-list.h>
+#include <c-stdaux.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,9 +15,9 @@
  * n_dhcp4_server_lease_new() - XXX
  */
 int n_dhcp4_server_lease_new(NDhcp4ServerLease **leasep, NDhcp4Incoming *message) {
-        _cleanup_(n_dhcp4_server_lease_unrefp) NDhcp4ServerLease *lease = NULL;
+        _c_cleanup_(n_dhcp4_server_lease_unrefp) NDhcp4ServerLease *lease = NULL;
 
-        assert(leasep);
+        c_assert(leasep);
 
         lease = malloc(sizeof(*lease));
         if (!lease)
@@ -32,7 +33,7 @@ int n_dhcp4_server_lease_new(NDhcp4ServerLease **leasep, NDhcp4Incoming *message
 }
 
 static void n_dhcp4_server_lease_free(NDhcp4ServerLease *lease) {
-        assert(!lease->server);
+        c_assert(!lease->server);
 
         c_list_unlink(&lease->server_link);
 
@@ -43,7 +44,7 @@ static void n_dhcp4_server_lease_free(NDhcp4ServerLease *lease) {
 /**
  * n_dhcp4_server_lease_ref() - XXX
  */
-_public_ NDhcp4ServerLease *n_dhcp4_server_lease_ref(NDhcp4ServerLease *lease) {
+_c_public_ NDhcp4ServerLease *n_dhcp4_server_lease_ref(NDhcp4ServerLease *lease) {
         if (lease)
                 ++lease->n_refs;
         return lease;
@@ -52,7 +53,7 @@ _public_ NDhcp4ServerLease *n_dhcp4_server_lease_ref(NDhcp4ServerLease *lease) {
 /**
  * n_dhcp4_server_lease_unref() - XXX
  */
-_public_ NDhcp4ServerLease *n_dhcp4_server_lease_unref(NDhcp4ServerLease *lease) {
+_c_public_ NDhcp4ServerLease *n_dhcp4_server_lease_unref(NDhcp4ServerLease *lease) {
         if (lease && !--lease->n_refs)
                 n_dhcp4_server_lease_free(lease);
         return NULL;
@@ -61,7 +62,7 @@ _public_ NDhcp4ServerLease *n_dhcp4_server_lease_unref(NDhcp4ServerLease *lease)
 /**
  * n_dhcp4_server_lease_query() - XXX
  */
-_public_ int n_dhcp4_server_lease_query(NDhcp4ServerLease *lease, uint8_t option, uint8_t **datap, size_t *n_datap) {
+_c_public_ int n_dhcp4_server_lease_query(NDhcp4ServerLease *lease, uint8_t option, uint8_t **datap, size_t *n_datap) {
         switch (option) {
         case N_DHCP4_OPTION_PAD:
         case N_DHCP4_OPTION_REQUESTED_IP_ADDRESS:
@@ -81,22 +82,22 @@ _public_ int n_dhcp4_server_lease_query(NDhcp4ServerLease *lease, uint8_t option
         return n_dhcp4_incoming_query(lease->request, option, datap, n_datap);
 }
 
-_public_ int n_dhcp4_server_lease_append(NDhcp4ServerLease *lease, uint8_t option, uint8_t *data, size_t n_data) {
+_c_public_ int n_dhcp4_server_lease_append(NDhcp4ServerLease *lease, uint8_t option, uint8_t *data, size_t n_data) {
         /* XXX */
         return -ENOTRECOVERABLE;
 }
 
-_public_ int n_dhcp4_server_lease_offer(NDhcp4ServerLease *lease) {
+_c_public_ int n_dhcp4_server_lease_offer(NDhcp4ServerLease *lease) {
         /* XXX */
         return -ENOTRECOVERABLE;
 }
 
-_public_ int n_dhcp4_server_lease_ack(NDhcp4ServerLease *lease) {
+_c_public_ int n_dhcp4_server_lease_ack(NDhcp4ServerLease *lease) {
         /* XXX */
         return -ENOTRECOVERABLE;
 }
 
-_public_ int n_dhcp4_server_lease_nack(NDhcp4ServerLease *lease) {
+_c_public_ int n_dhcp4_server_lease_nack(NDhcp4ServerLease *lease) {
         /* XXX */
         return -ENOTRECOVERABLE;
 }

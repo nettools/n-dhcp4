@@ -36,8 +36,8 @@
  *
  * Return: 0 on success, negative error code on failure.
  */
-_public_ int n_dhcp4_client_config_new(NDhcp4ClientConfig **configp) {
-        _cleanup_(n_dhcp4_client_config_freep) NDhcp4ClientConfig *config = NULL;
+_c_public_ int n_dhcp4_client_config_new(NDhcp4ClientConfig **configp) {
+        _c_cleanup_(n_dhcp4_client_config_freep) NDhcp4ClientConfig *config = NULL;
 
         config = calloc(1, sizeof(*config));
         if (!config)
@@ -59,7 +59,7 @@ _public_ int n_dhcp4_client_config_new(NDhcp4ClientConfig **configp) {
  *
  * Return: NULL is returned.
  */
-_public_ NDhcp4ClientConfig *n_dhcp4_client_config_free(NDhcp4ClientConfig *config) {
+_c_public_ NDhcp4ClientConfig *n_dhcp4_client_config_free(NDhcp4ClientConfig *config) {
         if (!config)
                 return NULL;
 
@@ -80,7 +80,7 @@ _public_ NDhcp4ClientConfig *n_dhcp4_client_config_free(NDhcp4ClientConfig *conf
  * Return: 0 on success, negative error code on failure.
  */
 int n_dhcp4_client_config_dup(NDhcp4ClientConfig *config, NDhcp4ClientConfig **dupp) {
-        _cleanup_(n_dhcp4_client_config_freep) NDhcp4ClientConfig *dup = NULL;
+        _c_cleanup_(n_dhcp4_client_config_freep) NDhcp4ClientConfig *dup = NULL;
         int r;
 
         r = n_dhcp4_client_config_new(&dup);
@@ -114,7 +114,7 @@ int n_dhcp4_client_config_dup(NDhcp4ClientConfig *config, NDhcp4ClientConfig **d
  * This sets the ifindex property of the client configuration. The ifindex
  * specifies the network device that a DHCP client will run on.
  */
-_public_ void n_dhcp4_client_config_set_ifindex(NDhcp4ClientConfig *config, int ifindex) {
+_c_public_ void n_dhcp4_client_config_set_ifindex(NDhcp4ClientConfig *config, int ifindex) {
         config->ifindex = ifindex;
 }
 
@@ -129,7 +129,7 @@ _public_ void n_dhcp4_client_config_set_ifindex(NDhcp4ClientConfig *config, int 
  *
  * This takes one of the N_DHCP4_TRANSPORT_* identifiers as argument.
  */
-_public_ void n_dhcp4_client_config_set_transport(NDhcp4ClientConfig *config, unsigned int transport) {
+_c_public_ void n_dhcp4_client_config_set_transport(NDhcp4ClientConfig *config, unsigned int transport) {
         config->transport = transport;
 }
 
@@ -157,7 +157,7 @@ _public_ void n_dhcp4_client_config_set_transport(NDhcp4ClientConfig *config, un
  *             avoid, and some networks will not deliver broadcasts to the
  *             client at all, in which case this flag must not be set.
  */
-_public_ void n_dhcp4_client_config_set_request_broadcast(NDhcp4ClientConfig *config, bool request_broadcast) {
+_c_public_ void n_dhcp4_client_config_set_request_broadcast(NDhcp4ClientConfig *config, bool request_broadcast) {
         config->request_broadcast = request_broadcast;
 }
 
@@ -181,9 +181,9 @@ _public_ void n_dhcp4_client_config_set_request_broadcast(NDhcp4ClientConfig *co
  *       supported transports. Thus, truncation only happens if you use
  *       unsupported transports, and those will be rejected, anyway.
  */
-_public_ void n_dhcp4_client_config_set_mac(NDhcp4ClientConfig *config, const uint8_t *mac, size_t n_mac) {
+_c_public_ void n_dhcp4_client_config_set_mac(NDhcp4ClientConfig *config, const uint8_t *mac, size_t n_mac) {
         config->n_mac = n_mac;
-        memcpy(config->mac, mac, MIN(n_mac, sizeof(config->mac)));
+        memcpy(config->mac, mac, c_min(n_mac, sizeof(config->mac)));
 }
 
 /**
@@ -207,9 +207,9 @@ _public_ void n_dhcp4_client_config_set_mac(NDhcp4ClientConfig *config, const ui
  *       supported transports. Thus, truncation only happens if you use
  *       unsupported transports, and those will be rejected, anyway.
  */
-_public_ void n_dhcp4_client_config_set_broadcast_mac(NDhcp4ClientConfig *config, const uint8_t *mac, size_t n_mac) {
+_c_public_ void n_dhcp4_client_config_set_broadcast_mac(NDhcp4ClientConfig *config, const uint8_t *mac, size_t n_mac) {
         config->n_broadcast_mac = n_mac;
-        memcpy(config->broadcast_mac, mac, MIN(n_mac, sizeof(config->broadcast_mac)));
+        memcpy(config->broadcast_mac, mac, c_min(n_mac, sizeof(config->broadcast_mac)));
 }
 
 /**
@@ -223,7 +223,7 @@ _public_ void n_dhcp4_client_config_set_broadcast_mac(NDhcp4ClientConfig *config
  *
  * Return: 0 on success, negative error code on failure.
  */
-_public_ int n_dhcp4_client_config_set_client_id(NDhcp4ClientConfig *config, const uint8_t *id, size_t n_id) {
+_c_public_ int n_dhcp4_client_config_set_client_id(NDhcp4ClientConfig *config, const uint8_t *id, size_t n_id) {
         uint8_t *t;
 
         t = malloc(n_id + 1);
@@ -318,8 +318,8 @@ NDhcp4CEventNode *n_dhcp4_c_event_node_free(NDhcp4CEventNode *node) {
  *
  * Return: 0 on success, negative error code on failure.
  */
-_public_ int n_dhcp4_client_new(NDhcp4Client **clientp, NDhcp4ClientConfig *config) {
-        _cleanup_(n_dhcp4_client_unrefp) NDhcp4Client *client = NULL;
+_c_public_ int n_dhcp4_client_new(NDhcp4Client **clientp, NDhcp4ClientConfig *config) {
+        _c_cleanup_(n_dhcp4_client_unrefp) NDhcp4Client *client = NULL;
         struct epoll_event ev = {
                 .events = EPOLLIN,
         };
@@ -410,7 +410,7 @@ static void n_dhcp4_client_free(NDhcp4Client *client) {
  *
  * Return: @client is returned.
  */
-_public_ NDhcp4Client *n_dhcp4_client_ref(NDhcp4Client *client) {
+_c_public_ NDhcp4Client *n_dhcp4_client_ref(NDhcp4Client *client) {
         if (client)
                 ++client->n_refs;
         return client;
@@ -428,7 +428,7 @@ _public_ NDhcp4Client *n_dhcp4_client_ref(NDhcp4Client *client) {
  *
  * Return: NULL is returned.
  */
-_public_ NDhcp4Client *n_dhcp4_client_unref(NDhcp4Client *client) {
+_c_public_ NDhcp4Client *n_dhcp4_client_unref(NDhcp4Client *client) {
         if (client && !--client->n_refs)
                 n_dhcp4_client_free(client);
         return NULL;
@@ -505,7 +505,7 @@ void n_dhcp4_client_arm_timer(NDhcp4Client *client) {
  * The caller is expected to poll this FD for readable events and call
  * n_dhcp4_client_dispatch() whenever the FD is readable.
  */
-_public_ void n_dhcp4_client_get_fd(NDhcp4Client *client, int *fdp) {
+_c_public_ void n_dhcp4_client_get_fd(NDhcp4Client *client, int *fdp) {
         *fdp = client->fd_epoll;
 }
 
@@ -603,7 +603,7 @@ static int n_dhcp4_client_dispatch_io(NDhcp4Client *client, struct epoll_event *
  * Return: 0 on success, negative error code on failure, N_DHCP4_E_PREEMPTED if
  *         there is more data to dispatch.
  */
-_public_ int n_dhcp4_client_dispatch(NDhcp4Client *client) {
+_c_public_ int n_dhcp4_client_dispatch(NDhcp4Client *client) {
         struct epoll_event events[2];
         int n, i, r = 0;
 
@@ -709,7 +709,7 @@ _public_ int n_dhcp4_client_dispatch(NDhcp4Client *client) {
  *
  * Return: 0 on success, negative error code on failure.
  */
-_public_ int n_dhcp4_client_pop_event(NDhcp4Client *client, NDhcp4ClientEvent **eventp) {
+_c_public_ int n_dhcp4_client_pop_event(NDhcp4Client *client, NDhcp4ClientEvent **eventp) {
         NDhcp4CEventNode *node, *t_node;
 
         c_list_for_each_entry_safe(node, t_node, &client->event_list, client_link) {
@@ -769,7 +769,7 @@ _public_ int n_dhcp4_client_pop_event(NDhcp4Client *client, NDhcp4ClientEvent **
  *
  * Return: 0 on success, negative error code on failure.
  */
-_public_ int n_dhcp4_client_update_mtu(NDhcp4Client *client, uint16_t mtu) {
+_c_public_ int n_dhcp4_client_update_mtu(NDhcp4Client *client, uint16_t mtu) {
         int r;
 
         if (mtu == client->mtu)
@@ -810,10 +810,10 @@ _public_ int n_dhcp4_client_update_mtu(NDhcp4Client *client, uint16_t mtu) {
  *
  * Return: 0 on success, negative error code on failure.
  */
-_public_ int n_dhcp4_client_probe(NDhcp4Client *client,
+_c_public_ int n_dhcp4_client_probe(NDhcp4Client *client,
                                   NDhcp4ClientProbe **probep,
                                   NDhcp4ClientProbeConfig *config) {
-        _cleanup_(n_dhcp4_client_probe_freep) NDhcp4ClientProbe *probe = NULL;
+        _c_cleanup_(n_dhcp4_client_probe_freep) NDhcp4ClientProbe *probe = NULL;
         uint64_t ns_now;
         int r;
 

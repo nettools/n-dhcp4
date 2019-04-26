@@ -110,7 +110,7 @@ static int n_dhcp4_incoming_get_timeouts(NDhcp4Incoming *message, uint64_t *t1p,
  * Return: 0 on success, negative error code on failure.
  */
 int n_dhcp4_client_lease_new(NDhcp4ClientLease **leasep, NDhcp4Incoming *message) {
-        _cleanup_(n_dhcp4_client_lease_unrefp) NDhcp4ClientLease *lease = NULL;
+        _c_cleanup_(n_dhcp4_client_lease_unrefp) NDhcp4ClientLease *lease = NULL;
         int r;
 
         c_assert(leasep);
@@ -145,7 +145,7 @@ static void n_dhcp4_client_lease_free(NDhcp4ClientLease *lease) {
  *
  * Return: the lease.
  */
-_public_ NDhcp4ClientLease *n_dhcp4_client_lease_ref(NDhcp4ClientLease *lease) {
+_c_public_ NDhcp4ClientLease *n_dhcp4_client_lease_ref(NDhcp4ClientLease *lease) {
         if (lease)
                 ++lease->n_refs;
         return lease;
@@ -159,7 +159,7 @@ _public_ NDhcp4ClientLease *n_dhcp4_client_lease_ref(NDhcp4ClientLease *lease) {
  *
  * Return: NULL.
  */
-_public_ NDhcp4ClientLease *n_dhcp4_client_lease_unref(NDhcp4ClientLease *lease) {
+_c_public_ NDhcp4ClientLease *n_dhcp4_client_lease_unref(NDhcp4ClientLease *lease) {
         if (lease && !--lease->n_refs)
                 n_dhcp4_client_lease_free(lease);
         return NULL;
@@ -200,7 +200,7 @@ void n_dhcp4_client_lease_unlink(NDhcp4ClientLease *lease) {
  * Gets the IP address cotained in the lease. Or INADDR_ANY if the lease
  * does not contain an IP address.
  */
-_public_ void n_dhcp4_client_lease_get_yiaddr(NDhcp4ClientLease *lease, struct in_addr *yiaddr) {
+_c_public_ void n_dhcp4_client_lease_get_yiaddr(NDhcp4ClientLease *lease, struct in_addr *yiaddr) {
         NDhcp4Header *header = n_dhcp4_incoming_get_header(lease->message);
 
         yiaddr->s_addr = header->yiaddr;
@@ -214,7 +214,7 @@ _public_ void n_dhcp4_client_lease_get_yiaddr(NDhcp4ClientLease *lease, struct i
  * Gets the end of the lease's lifetime in nanoseconds according to CLOCK_BOOTTIME,
  * or (uint64_t)-1 for permanent leases.
  */
-_public_ void n_dhcp4_client_lease_get_lifetime(NDhcp4ClientLease *lease, uint64_t *ns_lifetimep) {
+_c_public_ void n_dhcp4_client_lease_get_lifetime(NDhcp4ClientLease *lease, uint64_t *ns_lifetimep) {
         *ns_lifetimep = lease->lifetime;
 }
 
@@ -233,7 +233,7 @@ _public_ void n_dhcp4_client_lease_get_lifetime(NDhcp4ClientLease *lease, uint64
  *         N_DHCP4_E_UNSET if the lease did not contain the option, or
  *         a negative error code on failure.
  */
-_public_ int n_dhcp4_client_lease_query(NDhcp4ClientLease *lease, uint8_t option, uint8_t **datap, size_t *n_datap) {
+_c_public_ int n_dhcp4_client_lease_query(NDhcp4ClientLease *lease, uint8_t option, uint8_t **datap, size_t *n_datap) {
         switch (option) {
         case N_DHCP4_OPTION_PAD:
         case N_DHCP4_OPTION_REQUESTED_IP_ADDRESS:
@@ -265,7 +265,7 @@ _public_ int n_dhcp4_client_lease_query(NDhcp4ClientLease *lease, uint8_t option
  *
  * Return: 0 on success, or a negative error code on failure.
  */
-_public_ int n_dhcp4_client_lease_select(NDhcp4ClientLease *lease) {
+_c_public_ int n_dhcp4_client_lease_select(NDhcp4ClientLease *lease) {
         NDhcp4ClientLease *l, *t_l;
         NDhcp4ClientProbe *probe;
         int r;
@@ -304,7 +304,7 @@ _public_ int n_dhcp4_client_lease_select(NDhcp4ClientLease *lease) {
  *
  * Return: 0 on success, or a negative error code on failure.
  */
-_public_ int n_dhcp4_client_lease_accept(NDhcp4ClientLease *lease) {
+_c_public_ int n_dhcp4_client_lease_accept(NDhcp4ClientLease *lease) {
         int r;
 
         /* XXX error handling, this must be an ACK */
@@ -335,7 +335,7 @@ _public_ int n_dhcp4_client_lease_accept(NDhcp4ClientLease *lease) {
  *
  * Return: 0 on success, or a negative error code on failure.
  */
-_public_ int n_dhcp4_client_lease_decline(NDhcp4ClientLease *lease, const char *error) {
+_c_public_ int n_dhcp4_client_lease_decline(NDhcp4ClientLease *lease, const char *error) {
         int r;
 
         /* XXX: error handling, this must be an ACK */

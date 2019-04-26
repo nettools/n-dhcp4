@@ -58,8 +58,8 @@ static void n_dhcp4_client_probe_option_free(NDhcp4ClientProbeOption *option) {
  *
  * Return: 0 on success, negative error code on failure.
  */
-_public_ int n_dhcp4_client_probe_config_new(NDhcp4ClientProbeConfig **configp) {
-        _cleanup_(n_dhcp4_client_probe_config_freep) NDhcp4ClientProbeConfig *config = NULL;
+_c_public_ int n_dhcp4_client_probe_config_new(NDhcp4ClientProbeConfig **configp) {
+        _c_cleanup_(n_dhcp4_client_probe_config_freep) NDhcp4ClientProbeConfig *config = NULL;
 
         config = calloc(1, sizeof(*config));
         if (!config)
@@ -83,7 +83,7 @@ _public_ int n_dhcp4_client_probe_config_new(NDhcp4ClientProbeConfig **configp) 
  *
  * Return: NULL is returned.
  */
-_public_ NDhcp4ClientProbeConfig *n_dhcp4_client_probe_config_free(NDhcp4ClientProbeConfig *config) {
+_c_public_ NDhcp4ClientProbeConfig *n_dhcp4_client_probe_config_free(NDhcp4ClientProbeConfig *config) {
         if (!config)
                 return NULL;
 
@@ -107,7 +107,7 @@ _public_ NDhcp4ClientProbeConfig *n_dhcp4_client_probe_config_free(NDhcp4ClientP
  */
 int n_dhcp4_client_probe_config_dup(NDhcp4ClientProbeConfig *config,
                                     NDhcp4ClientProbeConfig **dupp) {
-        _cleanup_(n_dhcp4_client_probe_config_freep) NDhcp4ClientProbeConfig *dup = NULL;
+        _c_cleanup_(n_dhcp4_client_probe_config_freep) NDhcp4ClientProbeConfig *dup = NULL;
         int r;
 
         r = n_dhcp4_client_probe_config_new(&dup);
@@ -154,7 +154,7 @@ int n_dhcp4_client_probe_config_dup(NDhcp4ClientProbeConfig *config,
  *
  * XXX: This is currently not implemented, and setting the property has no effect.
  */
-_public_ void n_dhcp4_client_probe_config_set_inform_only(NDhcp4ClientProbeConfig *config, bool inform_only) {
+_c_public_ void n_dhcp4_client_probe_config_set_inform_only(NDhcp4ClientProbeConfig *config, bool inform_only) {
         config->inform_only = inform_only;
 }
 
@@ -188,7 +188,7 @@ _public_ void n_dhcp4_client_probe_config_set_inform_only(NDhcp4ClientProbeConfi
  *             However, on modern networks with improved timeout values we
  *             recommend against using it.
  */
-_public_ void n_dhcp4_client_probe_config_set_init_reboot(NDhcp4ClientProbeConfig *config, bool init_reboot) {
+_c_public_ void n_dhcp4_client_probe_config_set_init_reboot(NDhcp4ClientProbeConfig *config, bool init_reboot) {
         config->init_reboot = init_reboot;
 }
 
@@ -208,7 +208,7 @@ _public_ void n_dhcp4_client_probe_config_set_init_reboot(NDhcp4ClientProbeConfi
  * previously acquired on this network. It serves as hint to servers and will
  * allow them to provide the same address again.
  */
-_public_ void n_dhcp4_client_probe_config_set_requested_ip(NDhcp4ClientProbeConfig *config, struct in_addr ip) {
+_c_public_ void n_dhcp4_client_probe_config_set_requested_ip(NDhcp4ClientProbeConfig *config, struct in_addr ip) {
         config->requested_ip = ip;
 }
 
@@ -227,7 +227,7 @@ _public_ void n_dhcp4_client_probe_config_set_requested_ip(NDhcp4ClientProbeConf
  * events causing too much simultaneous network traffic. However, on modern
  * networks, a more reasonable value may be in the 10 ms range.
  */
-_public_ void n_dhcp4_client_probe_config_set_start_delay(NDhcp4ClientProbeConfig *config, uint64_t msecs) {
+_c_public_ void n_dhcp4_client_probe_config_set_start_delay(NDhcp4ClientProbeConfig *config, uint64_t msecs) {
         config->ms_start_delay = msecs;
 }
 
@@ -248,7 +248,7 @@ _public_ void n_dhcp4_client_probe_config_set_start_delay(NDhcp4ClientProbeConfi
  * some, due to a lack of space. If the same option is requested more than once,
  * only the first call has an effect.
  */
-_public_ void n_dhcp4_client_probe_config_request_option(NDhcp4ClientProbeConfig *config, uint8_t option) {
+_c_public_ void n_dhcp4_client_probe_config_request_option(NDhcp4ClientProbeConfig *config, uint8_t option) {
         for (unsigned int i = 0; i < config->n_request_parameters; ++i) {
                 if (config->request_parameters[i] == option)
                         return;
@@ -279,7 +279,7 @@ _public_ void n_dhcp4_client_probe_config_request_option(NDhcp4ClientProbeConfig
  *         appended, N_DHCP4_E_INTERNAL if the option is not configurable, or
  *         a negative error code on failure.
  */
-_public_ int n_dhcp4_client_probe_config_append_option(NDhcp4ClientProbeConfig *config,
+_c_public_ int n_dhcp4_client_probe_config_append_option(NDhcp4ClientProbeConfig *config,
                                                        uint8_t option,
                                                        const void *data,
                                                        uint8_t n_data) {
@@ -403,7 +403,7 @@ int n_dhcp4_client_probe_new(NDhcp4ClientProbe **probep,
                              NDhcp4ClientProbeConfig *config,
                              NDhcp4Client *client,
                              uint64_t ns_now) {
-        _cleanup_(n_dhcp4_client_probe_freep) NDhcp4ClientProbe *probe = NULL;
+        _c_cleanup_(n_dhcp4_client_probe_freep) NDhcp4ClientProbe *probe = NULL;
         bool active;
         int r;
 
@@ -467,7 +467,7 @@ int n_dhcp4_client_probe_new(NDhcp4ClientProbe **probep,
  *
  * Return: NULL is returned.
  */
-_public_ NDhcp4ClientProbe *n_dhcp4_client_probe_free(NDhcp4ClientProbe *probe) {
+_c_public_ NDhcp4ClientProbe *n_dhcp4_client_probe_free(NDhcp4ClientProbe *probe) {
         NDhcp4CEventNode *node, *t_node;
         NDhcp4ClientLease *lease, *t_lease;
 
@@ -502,7 +502,7 @@ _public_ NDhcp4ClientProbe *n_dhcp4_client_probe_free(NDhcp4ClientProbe *probe) 
  * Set a userdata pointer. The pointed to data is still owned by the caller, and
  * is completely opaque to the probe.
  */
-_public_ void n_dhcp4_client_probe_set_userdata(NDhcp4ClientProbe *probe, void *userdata) {
+_c_public_ void n_dhcp4_client_probe_set_userdata(NDhcp4ClientProbe *probe, void *userdata) {
         probe->userdata = userdata;
 }
 
@@ -514,7 +514,7 @@ _public_ void n_dhcp4_client_probe_set_userdata(NDhcp4ClientProbe *probe, void *
  * Get the userdata pointer. The lifetime of the userdata and making sure it is
  * still valid when accessed via the probe is the responsibility of the caller.
  */
-_public_ void n_dhcp4_client_probe_get_userdata(NDhcp4ClientProbe *probe, void **userdatap) {
+_c_public_ void n_dhcp4_client_probe_get_userdata(NDhcp4ClientProbe *probe, void **userdatap) {
         *userdatap = probe->userdata;
 }
 
@@ -626,7 +626,7 @@ static int n_dhcp4_client_probe_outgoing_append_options(NDhcp4ClientProbe *probe
 }
 
 static int n_dhcp4_client_probe_transition_deferred(NDhcp4ClientProbe *probe, uint64_t ns_now) {
-        _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *request = NULL;
+        _c_cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *request = NULL;
         int r;
 
         switch (probe->state) {
@@ -678,7 +678,7 @@ static int n_dhcp4_client_probe_transition_deferred(NDhcp4ClientProbe *probe, ui
 }
 
 static int n_dhcp4_client_probe_transition_t1(NDhcp4ClientProbe *probe, uint64_t ns_now) {
-        _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *request = NULL;
+        _c_cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *request = NULL;
         int r;
 
         switch (probe->state) {
@@ -719,7 +719,7 @@ static int n_dhcp4_client_probe_transition_t1(NDhcp4ClientProbe *probe, uint64_t
 }
 
 static int n_dhcp4_client_probe_transition_t2(NDhcp4ClientProbe *probe, uint64_t ns_now) {
-        _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *request = NULL;
+        _c_cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *request = NULL;
         int r;
 
         switch (probe->state) {
@@ -800,7 +800,7 @@ static int n_dhcp4_client_probe_transition_lifetime(NDhcp4ClientProbe *probe) {
 }
 
 static int n_dhcp4_client_probe_transition_offer(NDhcp4ClientProbe *probe, NDhcp4Incoming *message) {
-        _cleanup_(n_dhcp4_client_lease_unrefp) NDhcp4ClientLease *lease = NULL;
+        _c_cleanup_(n_dhcp4_client_lease_unrefp) NDhcp4ClientLease *lease = NULL;
         NDhcp4CEventNode *node;
         int r;
 
@@ -843,7 +843,7 @@ static int n_dhcp4_client_probe_transition_offer(NDhcp4ClientProbe *probe, NDhcp
 }
 
 static int n_dhcp4_client_probe_transition_ack(NDhcp4ClientProbe *probe, NDhcp4Incoming *message) {
-        _cleanup_(n_dhcp4_client_lease_unrefp) NDhcp4ClientLease *lease = NULL;
+        _c_cleanup_(n_dhcp4_client_lease_unrefp) NDhcp4ClientLease *lease = NULL;
         NDhcp4CEventNode *node;
         int r;
 
@@ -945,7 +945,7 @@ static int n_dhcp4_client_probe_transition_nak(NDhcp4ClientProbe *probe) {
 }
 
 int n_dhcp4_client_probe_transition_select(NDhcp4ClientProbe *probe, NDhcp4Incoming *offer, uint64_t ns_now) {
-        _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *request = NULL;
+        _c_cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *request = NULL;
         int r;
 
         switch (probe->state) {
@@ -1033,7 +1033,7 @@ int n_dhcp4_client_probe_transition_accept(NDhcp4ClientProbe *probe, NDhcp4Incom
  * n_dhc4_client_probe_transition_decline() - XXX
  */
 int n_dhcp4_client_probe_transition_decline(NDhcp4ClientProbe *probe, NDhcp4Incoming *offer, const char *error, uint64_t ns_now) {
-        _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *request = NULL;
+        _c_cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *request = NULL;
         int r;
 
         switch (probe->state) {
@@ -1126,7 +1126,7 @@ int n_dhcp4_client_probe_dispatch_timer(NDhcp4ClientProbe *probe, uint64_t ns_no
  * n_dhcp4_client_probe_dispatch_connection() - XXX
  */
 int n_dhcp4_client_probe_dispatch_io(NDhcp4ClientProbe *probe, uint32_t events) {
-        _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *message = NULL;
+        _c_cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *message = NULL;
         uint8_t type;
         int r;
 
