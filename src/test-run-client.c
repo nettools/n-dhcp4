@@ -363,8 +363,14 @@ static int manager_run(Manager *manager) {
 
         n_dhcp4_client_probe_config_set_requested_ip(config, main_arg_requested_ip);
 
-        for (unsigned int i = 0; i < main_arg_n_requested_parameters; ++i)
-                n_dhcp4_client_probe_config_request_option(config, main_arg_requested_parameters[i]);
+        if (main_arg_n_requested_parameters > 0) {
+                for (unsigned int i = 0; i < main_arg_n_requested_parameters; ++i)
+                        n_dhcp4_client_probe_config_request_option(config, main_arg_requested_parameters[i]);
+        } else {
+                n_dhcp4_client_probe_config_request_option(config, N_DHCP4_OPTION_ROUTER);
+                n_dhcp4_client_probe_config_request_option(config, N_DHCP4_OPTION_SUBNET_MASK);
+                n_dhcp4_client_probe_config_request_option(config, N_DHCP4_OPTION_DOMAIN_NAME_SERVER);
+        }
 
         if (main_arg_requested_lifetime >= 0) {
                 uint32_t lifetime = ntohl(main_arg_requested_lifetime);
