@@ -119,7 +119,7 @@ int n_dhcp4_client_probe_config_dup(NDhcp4ClientProbeConfig *config,
         dup->requested_ip = config->requested_ip;
         dup->ms_start_delay = config->ms_start_delay;
 
-        for (unsigned int i = 0; i <= config->n_request_parameters; ++i)
+        for (unsigned int i = 0; i < config->n_request_parameters; ++i)
                 dup->request_parameters[dup->n_request_parameters++] = config->request_parameters[i];
 
         for (unsigned int i = 0; i <= UINT8_MAX; ++i) {
