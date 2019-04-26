@@ -3,6 +3,7 @@
  */
 
 #include <assert.h>
+#include <c-stdaux.h>
 #include <errno.h>
 #include <net/if_arp.h>
 #include <stdlib.h>
@@ -33,7 +34,7 @@ static void test_checksum_one(Blob *blob, size_t size) {
         blob->checksum = packet_internet_checksum((uint8_t*)blob, size);
 
         checksum = packet_internet_checksum((uint8_t*)blob, size);
-        assert(!checksum);
+        c_assert(!checksum);
 }
 
 static void test_checksum_udp_one(Blob *blob, size_t size) {
@@ -63,7 +64,7 @@ static void test_checksum_udp_one(Blob *blob, size_t size) {
                                                 blob->data,
                                                 sizeof(blob->data),
                                                 checksum);
-        assert(!checksum);
+        c_assert(!checksum);
 }
 
 /*
@@ -100,10 +101,10 @@ static void test_new_packet_socket(Link *link, int *skp) {
         link_socket(link, skp, AF_PACKET, SOCK_DGRAM | SOCK_CLOEXEC);
 
         r = setsockopt(*skp, SOL_PACKET, PACKET_AUXDATA, &on, sizeof(on));
-        assert(r >= 0);
+        c_assert(r >= 0);
 
         r = bind(*skp, (struct sockaddr*)&addr, sizeof(addr));
-        assert(r >= 0);
+        c_assert(r >= 0);
 }
 
 static void test_packet_unicast(int ifindex, int sk, void *buf, size_t n_buf,
@@ -122,8 +123,8 @@ static void test_packet_unicast(int ifindex, int sk, void *buf, size_t n_buf,
         memcpy(addr.sll_addr, haddr_dst, ETH_ALEN);
 
         r = packet_sendto_udp(sk, buf, n_buf, &len, paddr_src, &addr, paddr_dst);
-        assert(!r);
-        assert(len == n_buf);
+        c_assert(!r);
+        c_assert(len == n_buf);
 }
 
 static void test_packet_broadcast(int ifindex, int sk, void *buf, size_t n_buf,
@@ -141,8 +142,8 @@ static void test_packet_broadcast(int ifindex, int sk, void *buf, size_t n_buf,
         memcpy(addr.sll_addr, (unsigned char[]){ 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, }, ETH_ALEN);
 
         r = packet_sendto_udp(sk, buf, n_buf, &len, paddr_src, &addr, paddr_dst);
-        assert(!r);
-        assert(len == n_buf);
+        c_assert(!r);
+        c_assert(len == n_buf);
 }
 
 static void test_packet_packet(Link *link_src,
@@ -161,12 +162,12 @@ static void test_packet_packet(Link *link_src,
         test_packet_broadcast(link_src->ifindex, sk_src, buf, sizeof(buf) - 1, paddr_src, paddr_dst);
 
         r = packet_recv_udp(sk_dst, buf, sizeof(buf), &len);
-        assert(!r);
-        assert(len == (ssize_t)sizeof(buf) - 1);
+        c_assert(!r);
+        c_assert(len == (ssize_t)sizeof(buf) - 1);
 
         r = packet_recv_udp(sk_dst, buf, sizeof(buf), &len);
-        assert(!r);
-        assert(len == (ssize_t)sizeof(buf) - 1);
+        c_assert(!r);
+        c_assert(len == (ssize_t)sizeof(buf) - 1);
 }
 
 static void test_packet_udp(Link *link_src,
@@ -183,16 +184,16 @@ static void test_packet_udp(Link *link_src,
         link_add_ip4(link_dst, &paddr_dst->sin_addr, 8);
 
         r = bind(sk_dst, (struct sockaddr*)paddr_dst, sizeof(*paddr_dst));
-        assert(r >= 0);
+        c_assert(r >= 0);
 
         test_packet_unicast(link_src->ifindex, sk_src, buf, sizeof(buf) - 1, paddr_src, paddr_dst, &link_dst->mac);
         test_packet_broadcast(link_src->ifindex, sk_src, buf, sizeof(buf) - 1, paddr_src, paddr_dst);
 
         len = recv(sk_dst, buf, sizeof(buf), 0);
-        assert(len == (ssize_t)sizeof(buf) - 1);
+        c_assert(len == (ssize_t)sizeof(buf) - 1);
 
         len = recv(sk_dst, buf, sizeof(buf), 0);
-        assert(len == (ssize_t)sizeof(buf) - 1);
+        c_assert(len == (ssize_t)sizeof(buf) - 1);
 
         link_del_ip4(link_dst, &paddr_dst->sin_addr, 8);
 }
@@ -214,11 +215,11 @@ static void test_udp_packet(Link *link_src,
 
         slen = sendto(sk_src, buf, sizeof(buf) - 1, 0,
                       (struct sockaddr*)paddr_dst, sizeof(*paddr_dst));
-        assert(slen == (ssize_t)sizeof(buf) - 1);
+        c_assert(slen == (ssize_t)sizeof(buf) - 1);
 
         r = packet_recv_udp(sk_dst, buf, sizeof(buf), &len);
-        assert(!r);
-        assert(len == (ssize_t)sizeof(buf) - 1);
+        c_assert(!r);
+        c_assert(len == (ssize_t)sizeof(buf) - 1);
 
         link_del_ip4(link_dst, &paddr_dst->sin_addr, 8);
         link_del_ip4(link_src, &paddr_src->sin_addr, 8);
@@ -239,14 +240,14 @@ static void test_udp_udp(Link *link_src,
         link_add_ip4(link_dst, &paddr_dst->sin_addr, 8);
 
         r = bind(sk_dst, (struct sockaddr*)paddr_dst, sizeof(*paddr_dst));
-        assert(r >= 0);
+        c_assert(r >= 0);
 
         len = sendto(sk_src, buf, sizeof(buf) - 1, 0,
                      (struct sockaddr*)paddr_dst, sizeof(*paddr_dst));
-        assert(len == (ssize_t)sizeof(buf) - 1);
+        c_assert(len == (ssize_t)sizeof(buf) - 1);
 
         len = recv(sk_dst, buf, sizeof(buf), 0);
-        assert(len == (ssize_t)sizeof(buf) - 1);
+        c_assert(len == (ssize_t)sizeof(buf) - 1);
 
         link_del_ip4(link_dst, &paddr_dst->sin_addr, 8);
         link_del_ip4(link_src, &paddr_src->sin_addr, 8);
@@ -270,51 +271,51 @@ static void test_shutdown(Link *link_src,
         /* 1 - send only to the packet socket */
         slen = sendto(sk_src, buf, sizeof(buf), 0,
                      (struct sockaddr*)paddr_dst, sizeof(*paddr_dst));
-        assert(slen == (ssize_t)sizeof(buf));
+        c_assert(slen == (ssize_t)sizeof(buf));
 
         /* create a UDP socket */
         link_socket(link_dst, &sk_dst2, AF_INET, SOCK_DGRAM | SOCK_CLOEXEC);
 
         r = bind(sk_dst2, (struct sockaddr*)paddr_dst, sizeof(*paddr_dst));
-        assert(r >= 0);
+        c_assert(r >= 0);
 
         /* 2 - send to both sockets */
         slen = sendto(sk_src, buf, sizeof(buf), 0,
                      (struct sockaddr*)paddr_dst, sizeof(*paddr_dst));
-        assert(slen == (ssize_t)sizeof(buf));
+        c_assert(slen == (ssize_t)sizeof(buf));
 
         /* shut down the packet socket */
         r = packet_shutdown(sk_dst1);
-        assert(r >= 0);
+        c_assert(r >= 0);
 
         /* 3 - send only to the UDP socket */
         slen = sendto(sk_src, buf, sizeof(buf), 0,
                      (struct sockaddr*)paddr_dst, sizeof(*paddr_dst));
-        assert(slen == (ssize_t)sizeof(buf));
+        c_assert(slen == (ssize_t)sizeof(buf));
 
         /* receive 1 and 2 on the packet socket */
         r = packet_recv_udp(sk_dst1, buf, sizeof(buf), &len);
-        assert(!r);
-        assert(len == (ssize_t)sizeof(buf));
+        c_assert(!r);
+        c_assert(len == (ssize_t)sizeof(buf));
         r = packet_recv_udp(sk_dst1, buf, sizeof(buf), &len);
-        assert(!r);
-        assert(len == (ssize_t)sizeof(buf));
+        c_assert(!r);
+        c_assert(len == (ssize_t)sizeof(buf));
 
         /* make sure there is nothing more pending on the packet socket */
         slen = recv(sk_dst1, buf, sizeof(buf), MSG_DONTWAIT);
-        assert(slen < 0);
-        assert(errno == EAGAIN);
+        c_assert(slen < 0);
+        c_assert(errno == EAGAIN);
 
         /* receive 2 and 3 on the UDP socket */
         slen = recv(sk_dst2, buf, sizeof(buf), 0);
-        assert(slen == (ssize_t)sizeof(buf));
+        c_assert(slen == (ssize_t)sizeof(buf));
         slen = recv(sk_dst2, buf, sizeof(buf), 0);
-        assert(slen == (ssize_t)sizeof(buf));
+        c_assert(slen == (ssize_t)sizeof(buf));
 
         /* make sure there is nothing more pending on the UDP socket */
         slen = recv(sk_dst1, buf, sizeof(buf), MSG_DONTWAIT);
-        assert(slen < 0);
-        assert(errno == EAGAIN);
+        c_assert(slen < 0);
+        c_assert(errno == EAGAIN);
 
         link_del_ip4(link_dst, &paddr_dst->sin_addr, 8);
         link_del_ip4(link_src, &paddr_src->sin_addr, 8);
@@ -344,15 +345,15 @@ static void test_ip_hdr(Link *link_src,
         link_add_ip4(link_dst, &paddr_dst->sin_addr, 8);
 
         r = setsockopt(sk_src, IPPROTO_IP, IP_OPTIONS, ipopts, sizeof(ipopts));
-        assert(r >= 0);
+        c_assert(r >= 0);
 
         slen = sendto(sk_src, buf, sizeof(buf) - 1, 0,
                       (struct sockaddr*)paddr_dst, sizeof(*paddr_dst));
-        assert(slen == (ssize_t)sizeof(buf) - 1);
+        c_assert(slen == (ssize_t)sizeof(buf) - 1);
 
         r = packet_recv_udp(sk_dst, buf, sizeof(buf), &len);
-        assert(!r);
-        assert(len == (ssize_t)sizeof(buf) - 1);
+        c_assert(!r);
+        c_assert(len == (ssize_t)sizeof(buf) - 1);
 
         link_del_ip4(link_dst, &paddr_dst->sin_addr, 8);
         link_del_ip4(link_src, &paddr_src->sin_addr, 8);

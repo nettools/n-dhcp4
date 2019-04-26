@@ -3,6 +3,7 @@
  */
 
 #include <assert.h>
+#include <c-stdaux.h>
 #include <endian.h>
 #include <errno.h>
 #include <linux/filter.h>
@@ -232,7 +233,7 @@ int packet_sendto_udp(int sockfd,
          * its own buffer that we sent (which is always exactly the requested
          * size).
          */
-        assert((size_t)pktlen >= sizeof(ip_hdr) + sizeof(udp_hdr) + n_buf);
+        c_assert((size_t)pktlen >= sizeof(ip_hdr) + sizeof(udp_hdr) + n_buf);
         *n_transmittedp = n_buf;
         return 0;
 }

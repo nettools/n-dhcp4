@@ -3,6 +3,7 @@
  */
 
 #include <assert.h>
+#include <c-stdaux.h>
 #include <errno.h>
 #include <net/if.h>
 #include <stdlib.h>
@@ -63,7 +64,7 @@ int socket_bind_if(int socket, int ifindex) {
         char ifname[IFNAMSIZ] = {};
         int r;
 
-        assert(ifindex >= 0);
+        c_assert(ifindex >= 0);
 
         /*
          * We first try the newer SO_BINDTOIFINDEX. If it is not available on

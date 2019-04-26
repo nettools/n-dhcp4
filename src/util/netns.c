@@ -1,8 +1,12 @@
 /*
  * Network Namespaces
+ *
+ * This is meant for testing-purposes only. It is not meant to be used outside
+ * of our unit-tests!
  */
 
 #include <assert.h>
+#include <c-stdaux.h>
 #include <fcntl.h>
 #include <sched.h>
 #include <stdio.h>
@@ -29,7 +33,7 @@ void netns_new(int *netnsp) {
         netns_get(&oldns);
 
         r = unshare(CLONE_NEWNET);
-        assert(r >= 0);
+        c_assert(r >= 0);
 
         netns_get(netnsp);
         netns_set(oldns);
@@ -45,7 +49,7 @@ void netns_new(int *netnsp) {
  */
 void netns_new_dup(int *newnsp, int netns) {
         *newnsp = fcntl(netns, F_DUPFD_CLOEXEC, 0);
-        assert(*newnsp >= 0);
+        c_assert(*newnsp >= 0);
 }
 
 /**
@@ -58,9 +62,7 @@ void netns_new_dup(int *newnsp, int netns) {
  * Return: -1 is returned.
  */
 int netns_close(int netns) {
-        if (netns >= 0)
-                close(netns);
-        return -1;
+        return c_close(netns);
 }
 
 /**
@@ -71,7 +73,7 @@ int netns_close(int netns) {
  */
 void netns_get(int *netnsp) {
         *netnsp = open("/proc/self/ns/net", O_RDONLY | O_CLOEXEC);
-        assert(*netnsp >= 0);
+        c_assert(*netnsp >= 0);
 }
 
 /**
@@ -85,7 +87,7 @@ void netns_set(int netns) {
         int r;
 
         r = setns(netns, CLONE_NEWNET);
-        assert(r >= 0);
+        c_assert(r >= 0);
 }
 
 /**
@@ -98,7 +100,7 @@ void netns_set_anonymous(void) {
         int r;
 
         r = unshare(CLONE_NEWNET);
-        assert(r >= 0);
+        c_assert(r >= 0);
 }
 
 /**
@@ -120,17 +122,17 @@ void netns_pin(int netns, const char *name) {
         int r, fd;
 
         r = asprintf(&fd_path, "/proc/self/fd/%d", netns);
-        assert(r >= 0);
+        c_assert(r >= 0);
 
         r = asprintf(&netns_path, "/run/netns/%s", name);
-        assert(r >= 0);
+        c_assert(r >= 0);
 
         fd = open(netns_path, O_RDONLY|O_CLOEXEC|O_CREAT|O_EXCL, 0);
-        assert(fd >= 0);
+        c_assert(fd >= 0);
         close(fd);
 
         r = mount(fd_path, netns_path, "none", MS_BIND, NULL);
-        assert(r >= 0);
+        c_assert(r >= 0);
 
         free(netns_path);
         free(fd_path);
@@ -151,13 +153,13 @@ void netns_unpin(const char *name) {
         int r;
 
         r = asprintf(&netns_path, "/run/netns/%s", name);
-        assert(r >= 0);
+        c_assert(r >= 0);
 
         r = umount2(netns_path, MNT_DETACH);
-        assert(r >= 0);
+        c_assert(r >= 0);
 
         r = unlink(netns_path);
-        assert(r >= 0);
+        c_assert(r >= 0);
 
         free(netns_path);
 }

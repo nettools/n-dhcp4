@@ -4,6 +4,7 @@
  * Socket Utilities
  */
 
+#include <c-stdaux.h>
 #include <stdlib.h>
 
 int socket_SIOCGIFNAME(int socket, int ifindex, char (*ifnamep)[IFNAMSIZ]);

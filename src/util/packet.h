@@ -4,6 +4,7 @@
  * Packet Sockets
  */
 
+#include <c-stdaux.h>
 #include <inttypes.h>
 #include <linux/if_packet.h>
 #include <linux/netdevice.h>

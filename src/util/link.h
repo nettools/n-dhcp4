@@ -10,6 +10,7 @@
  * Furthermore, for simplification this is limited to ethernet links.
  */
 
+#include <c-stdaux.h>
 #include <net/ethernet.h>
 #include <netinet/in.h>
 #include <stdlib.h>

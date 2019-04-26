@@ -1,9 +1,13 @@
 /*
  * Link Management
+ *
+ * This is for our test-infrastructure only! It is not meant to be used outside
+ * of unit-tests.
  */
 
 #include <arpa/inet.h>
 #include <assert.h>
+#include <c-stdaux.h>
 #include <net/ethernet.h>
 #include <net/if.h>
 #include <netinet/in.h>
@@ -44,20 +48,20 @@ static void link_query(int netns, const char *name, int *ifindexp, struct ether_
                 netns_set(netns);
 
                 n_name = strlen(name);
-                assert(n_name <= IF_NAMESIZE);
+                c_assert(n_name <= IF_NAMESIZE);
 
                 if (ifindexp) {
                         *ifindexp = if_nametoindex(name);
-                        assert(*ifindexp > 0);
+                        c_assert(*ifindexp > 0);
                 }
 
                 if (macp) {
                         s = socket(AF_INET, SOCK_DGRAM, 0);
-                        assert(s >= 0);
+                        c_assert(s >= 0);
 
                         strncpy(ifr.ifr_name, name, n_name);
                         r = ioctl(s, SIOCGIFHWADDR, &ifr);
-                        assert(r >= 0);
+                        c_assert(r >= 0);
 
                         memcpy(macp->ether_addr_octet, ifr.ifr_hwaddr.sa_data, ETH_ALEN);
 
@@ -72,11 +76,11 @@ static void link_move(const char *ifname, int netns) {
         int r;
 
         r = asprintf(&p, "ip link set %s up netns ns-test", ifname);
-        assert(r > 0);
+        c_assert(r > 0);
 
         netns_pin(netns, "ns-test");
         r = system(p);
-        assert(r == 0);
+        c_assert(r == 0);
         netns_unpin("ns-test");
 
         free(p);
@@ -105,11 +109,11 @@ void link_new_veth(Link *veth_parentp, Link *veth_childp, int netns_parent, int 
                 netns_set_anonymous();
 
                 r = system("ip link add veth-parent type veth peer name veth-child");
-                assert(r == 0);
+                c_assert(r == 0);
                 r = system("ip link set veth-parent up addrgenmode none");
-                assert(r == 0);
+                c_assert(r == 0);
                 r = system("ip link set veth-child up addrgenmode none");
-                assert(r == 0);
+                c_assert(r == 0);
 
                 link_move("veth-parent", netns_parent);
                 link_move("veth-child", netns_child);
@@ -150,9 +154,9 @@ void link_new_bridge(Link *bridgep, int netns) {
                 netns_set(netns);
 
                 r = system("ip link add test-bridge type bridge");
-                assert(r == 0);
+                c_assert(r == 0);
                 r = system("ip link set test-bridge up addrgenmode none");
-                assert(r == 0);
+                c_assert(r == 0);
         }
         netns_set(oldns);
 
@@ -179,11 +183,11 @@ void link_add_ip4(Link *link, const struct in_addr *addr, unsigned int prefix) {
                 netns_set(link->netns);
 
                 p = if_indextoname(link->ifindex, ifname);
-                assert(p);
+                c_assert(p);
                 r = asprintf(&p, "ip addr add %s/%u dev %s", inet_ntoa(*addr), prefix, ifname);
-                assert(r >= 0);
+                c_assert(r >= 0);
                 r = system(p);
-                assert(r == 0);
+                c_assert(r == 0);
                 free(p);
         }
         netns_set(oldns);
@@ -208,11 +212,11 @@ void link_del_ip4(Link *link, const struct in_addr *addr, unsigned int prefix) {
                 netns_set(link->netns);
 
                 p = if_indextoname(link->ifindex, ifname);
-                assert(p);
+                c_assert(p);
                 r = asprintf(&p, "ip addr del %s/%u dev %s", inet_ntoa(*addr), prefix, ifname);
-                assert(r >= 0);
+                c_assert(r >= 0);
                 r = system(p);
-                assert(r == 0);
+                c_assert(r == 0);
                 free(p);
         }
         netns_set(oldns);
@@ -237,13 +241,13 @@ void link_set_master(Link *link, int if_master) {
                 netns_set(link->netns);
 
                 p = if_indextoname(link->ifindex, ifname);
-                assert(p);
+                c_assert(p);
                 p = if_indextoname(if_master, ifname_master);
-                assert(p);
+                c_assert(p);
                 r = asprintf(&p, "ip link set %s master %s", ifname, ifname_master);
-                assert(r > 0);
+                c_assert(r > 0);
                 r = system(p);
-                assert(r == 0);
+                c_assert(r == 0);
                 free(p);
         }
         netns_set(oldns);
@@ -272,10 +276,10 @@ void link_socket(Link *link, int *socketp, int family, int type) {
                 netns_set(link->netns);
 
                 fd = socket(family, type, 0);
-                assert(fd >= 0);
+                c_assert(fd >= 0);
 
                 r = socket_bind_if(fd, link->ifindex);
-                assert(!r);
+                c_assert(!r);
 
                 *socketp = fd;
         }

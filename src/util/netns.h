@@ -7,6 +7,7 @@
  * meant for testing purposes only.
  */
 
+#include <c-stdaux.h>
 #include <stdlib.h>
 
 void netns_new(int *netnsp);
