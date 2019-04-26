@@ -4,6 +4,7 @@
 
 #undef NDEBUG
 #include <assert.h>
+#include <c-stdaux.h>
 #include <endian.h>
 #include <errno.h>
 #include <poll.h>
@@ -21,7 +22,7 @@ static void test_poll(int sk) {
         int r;
 
         r = poll(&(struct pollfd){ .fd = sk, .events = POLLIN }, 1, -1);
-        assert(r == 1);
+        c_assert(r == 1);
 }
 
 static void test_client_packet_socket_new(Link *link, int *skp) {
@@ -31,7 +32,7 @@ static void test_client_packet_socket_new(Link *link, int *skp) {
         netns_set(link->netns);
 
         r = n_dhcp4_c_socket_packet_new(skp, link->ifindex);
-        assert(r >= 0);
+        c_assert(r >= 0);
 
         netns_set(oldns);
 }
@@ -46,7 +47,7 @@ static void test_client_udp_socket_new(Link *link,
         netns_set(link->netns);
 
         r = n_dhcp4_c_socket_udp_new(skp, link->ifindex, addr_client, addr_server);
-        assert(r >= 0);
+        c_assert(r >= 0);
 
         netns_set(oldns);
 }
@@ -58,7 +59,7 @@ static void test_server_packet_socket_new(Link *link, int *skp) {
         netns_set(link->netns);
 
         r = n_dhcp4_s_socket_packet_new(skp);
-        assert(r >= 0);
+        c_assert(r >= 0);
 
         netns_set(oldns);
 }
@@ -70,7 +71,7 @@ static void test_server_udp_socket_new(Link *link, int *skp) {
         netns_set(link->netns);
 
         r = n_dhcp4_s_socket_udp_new(skp, link->ifindex);
-        assert(r >= 0);
+        c_assert(r >= 0);
 
         netns_set(oldns);
 }
@@ -87,7 +88,7 @@ static void test_client_server_packet(Link *link_server, Link *link_client) {
         test_client_packet_socket_new(link_client, &sk_client);
 
         r = n_dhcp4_outgoing_new(&outgoing, 0, 0);
-        assert(!r);
+        c_assert(!r);
         n_dhcp4_outgoing_get_header(outgoing)->op = N_DHCP4_OP_BOOTREQUEST;
 
         r = n_dhcp4_c_socket_packet_send(sk_client,
@@ -95,16 +96,16 @@ static void test_client_server_packet(Link *link_server, Link *link_client) {
                                          (const unsigned char[]){0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
                                          ETH_ALEN,
                                          outgoing);
-        assert(!r);
+        c_assert(!r);
 
         test_poll(sk_server);
 
         r = n_dhcp4_s_socket_udp_recv(sk_server, buf, sizeof(buf), &incoming, &dest);
-        assert(!r);
-        assert(incoming);
-        assert(dest.sin_family == AF_INET);
-        assert(dest.sin_port == htons(N_DHCP4_NETWORK_SERVER_PORT));
-        assert(dest.sin_addr.s_addr == INADDR_BROADCAST);
+        c_assert(!r);
+        c_assert(incoming);
+        c_assert(dest.sin_family == AF_INET);
+        c_assert(dest.sin_port == htons(N_DHCP4_NETWORK_SERVER_PORT));
+        c_assert(dest.sin_addr.s_addr == INADDR_BROADCAST);
 }
 
 static void test_client_server_udp(Link *link_server, Link *link_client) {
@@ -128,20 +129,20 @@ static void test_client_server_udp(Link *link_server, Link *link_client) {
         test_client_udp_socket_new(link_client, &sk_client, &addr_client, &addr_server);
 
         r = n_dhcp4_outgoing_new(&outgoing, 0, 0);
-        assert(!r);
+        c_assert(!r);
         n_dhcp4_outgoing_get_header(outgoing)->op = N_DHCP4_OP_BOOTREQUEST;
 
         r = n_dhcp4_c_socket_udp_send(sk_client, outgoing);
-        assert(!r);
+        c_assert(!r);
 
         test_poll(sk_server);
 
         r = n_dhcp4_s_socket_udp_recv(sk_server, buf, sizeof(buf), &incoming, &dest);
-        assert(!r);
-        assert(incoming);
-        assert(dest.sin_family == AF_INET);
-        assert(dest.sin_port == htons(N_DHCP4_NETWORK_SERVER_PORT));
-        assert(dest.sin_addr.s_addr == addr_server.s_addr);
+        c_assert(!r);
+        c_assert(incoming);
+        c_assert(dest.sin_family == AF_INET);
+        c_assert(dest.sin_port == htons(N_DHCP4_NETWORK_SERVER_PORT));
+        c_assert(dest.sin_addr.s_addr == addr_server.s_addr);
 
         /* teardown */
 
@@ -168,7 +169,7 @@ static void test_server_client_packet(Link *link_server, Link *link_client) {
         test_client_packet_socket_new(link_client, &sk_client);
 
         r = n_dhcp4_outgoing_new(&outgoing, 0, 0);
-        assert(!r);
+        c_assert(!r);
         n_dhcp4_outgoing_get_header(outgoing)->op = N_DHCP4_OP_BOOTREPLY;
 
         r = n_dhcp4_s_socket_packet_send(sk_server,
@@ -178,7 +179,7 @@ static void test_server_client_packet(Link *link_server, Link *link_client) {
                                          ETH_ALEN,
                                          &addr_client,
                                          outgoing);
-        assert(!r);
+        c_assert(!r);
         r = n_dhcp4_s_socket_packet_send(sk_server,
                                          link_server->ifindex,
                                          &addr_server,
@@ -188,19 +189,19 @@ static void test_server_client_packet(Link *link_server, Link *link_client) {
                                          ETH_ALEN,
                                          &addr_client,
                                          outgoing);
-        assert(!r);
+        c_assert(!r);
 
         test_poll(sk_client);
 
         r = n_dhcp4_c_socket_packet_recv(sk_client, buf, sizeof(buf), &incoming1);
-        assert(!r);
-        assert(incoming1);
+        c_assert(!r);
+        c_assert(incoming1);
 
         test_poll(sk_client);
 
         r = n_dhcp4_c_socket_packet_recv(sk_client, buf, sizeof(buf), &incoming2);
-        assert(!r);
-        assert(incoming2);
+        c_assert(!r);
+        c_assert(incoming2);
 
         /* teardown */
 
@@ -227,20 +228,20 @@ static void test_server_client_udp(Link *link_server, Link *link_client) {
         test_client_udp_socket_new(link_client, &sk_client, &addr_client, &addr_server);
 
         r = n_dhcp4_outgoing_new(&outgoing, 0, 0);
-        assert(!r);
+        c_assert(!r);
         n_dhcp4_outgoing_get_header(outgoing)->op = N_DHCP4_OP_BOOTREPLY;
 
         r = n_dhcp4_s_socket_udp_send(sk_server,
                                       &addr_server,
                                       &addr_client,
                                       outgoing);
-        assert(!r);
+        c_assert(!r);
 
         test_poll(sk_client);
 
         r = n_dhcp4_c_socket_udp_recv(sk_client, buf, sizeof(buf), &incoming);
-        assert(!r);
-        assert(incoming);
+        c_assert(!r);
+        c_assert(incoming);
 
         /* teardown */
 
@@ -292,13 +293,13 @@ static void test_multiple_servers(void) {
                  */
 
                 r = n_dhcp4_s_socket_udp_new(&sk1, link_server.ifindex);
-                assert(r >= 0);
+                c_assert(r >= 0);
 
                 r = n_dhcp4_s_socket_udp_new(&sk2, link_server.ifindex);
-                assert(r == -EADDRINUSE);
+                c_assert(r == -EADDRINUSE);
 
                 r = n_dhcp4_s_socket_udp_new(&sk2, link_client.ifindex);
-                assert(r >= 0);
+                c_assert(r >= 0);
         }
         netns_set(oldns);
 }

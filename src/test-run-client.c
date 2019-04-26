@@ -7,6 +7,7 @@
  */
 
 #include <assert.h>
+#include <c-stdaux.h>
 #include <errno.h>
 #include <getopt.h>
 #include <net/if.h>
@@ -163,7 +164,7 @@ static int manager_lease_get_prefix(NDhcp4ClientLease *lease, unsigned int *pref
                 return r;
 
         postfix =__builtin_ctz(ntohl(mask.s_addr));
-        assert(postfix <= 32);
+        c_assert(postfix <= 32);
 
         if (postfix < 32) {
                 if ((~ntohl(mask.s_addr)) >> postfix != 0)
@@ -193,29 +194,29 @@ static int manager_add(Manager *manager, NDhcp4ClientLease *lease) {
                 return r;
 
         p = if_indextoname(main_arg_ifindex, ifname);
-        assert(p);
+        c_assert(p);
 
         if (lifetime == UINT64_MAX) {
                 r = asprintf(&p, "ip addr add %s/%u dev %s preferred_lft forever valid_lft forever", inet_ntoa(yiaddr), prefix, ifname);
-                assert(r >= 0);
+                c_assert(r >= 0);
         } else {
                 r = asprintf(&p, "ip addr add %s/%u dev %s preferred_lft %llu valid_lft %llu", inet_ntoa(yiaddr), prefix, ifname, lifetime / 1000000000ULL, lifetime / 1000000000ULL);
-                assert(r >= 0);
+                c_assert(r >= 0);
         }
         r = system(p);
-        assert(r == 0);
+        c_assert(r == 0);
         free(p);
 
         r = asprintf(&p, "ip route add %s/32 dev %s", inet_ntoa(router), ifname);
-        assert(r >= 0);
+        c_assert(r >= 0);
         r = system(p);
-        assert(r == 0);
+        c_assert(r == 0);
         free(p);
 
         r = asprintf(&p, "ip route add default via %s dev %s", inet_ntoa(router), ifname);
-        assert(r >= 0);
+        c_assert(r >= 0);
         r = system(p);
-        assert(r == 0);
+        c_assert(r == 0);
         free(p);
 
         r = manager_lease_get_dns(lease, &dns);
@@ -426,7 +427,7 @@ static int setup_test(void) {
 }
 
 static int parse_hexstr(const char *in, uint8_t **outp, size_t *n_outp) {
-        _cleanup_(n_dhcp4_freep) uint8_t *out = NULL;
+        _cleanup_(c_freep) uint8_t *out = NULL;
         size_t i, n_in, n_out;
 
         n_in = strlen(in);
@@ -578,7 +579,7 @@ static int parse_argv(int argc, char **argv) {
 
                 case ARG_REQUESTED_PARAMETERS:
                         for (const char *param = optarg; param; param = strchr(param, ',') ? strchr(param, ',')  + 1 : NULL) {
-                                assert(main_arg_n_requested_parameters <= UINT8_MAX);
+                                c_assert(main_arg_n_requested_parameters <= UINT8_MAX);
 
                                 lli = atoll(param);
                                 if (lli < 0 || lli > UINT8_MAX) {
@@ -639,7 +640,7 @@ int main(int argc, char **argv) {
 
                 n = strlen("client-id");
                 b = malloc(n);
-                assert(b);
+                c_assert(b);
                 memcpy(b, "client-id", n);
 
                 free(main_arg_client_id);

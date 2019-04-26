@@ -2,6 +2,7 @@
  * Packet Socket Tests
  */
 
+#undef NDEBUG
 #include <assert.h>
 #include <c-stdaux.h>
 #include <errno.h>
