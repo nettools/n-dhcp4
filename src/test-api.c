@@ -3,14 +3,23 @@
  * This verifies the visibility and availability of the exported API.
  */
 
+#undef NDEBUG
 #include <assert.h>
 #include <stdlib.h>
 #include "n-dhcp4.h"
 
 static void test_api_constants(void) {
+        assert(1 + N_DHCP4_CLIENT_START_DELAY_RFC2131);
+
         assert(1 + _N_DHCP4_E_SUCCESS);
         assert(1 + N_DHCP4_E_PREEMPTED);
         assert(1 + N_DHCP4_E_INTERNAL);
+        assert(1 + N_DHCP4_E_INVALID_IFINDEX);
+        assert(1 + N_DHCP4_E_INVALID_TRANSPORT);
+        assert(1 + N_DHCP4_E_INVALID_ADDRESS);
+        assert(1 + N_DHCP4_E_INVALID_CLIENT_ID);
+        assert(1 + N_DHCP4_E_DUPLICATE_OPTION);
+        assert(1 + N_DHCP4_E_UNSET);
         assert(1 + _N_DHCP4_E_N);
 
         assert(1 + N_DHCP4_TRANSPORT_ETHERNET);
@@ -39,12 +48,12 @@ static void test_api_types(void) {
         assert(sizeof(NDhcp4ClientConfig*) > 0);
         assert(sizeof(NDhcp4ClientProbeConfig*) > 0);
         assert(sizeof(NDhcp4Client*) > 0);
-        assert(sizeof(NDhcp4ClientEvent*) > 0);
+        assert(sizeof(NDhcp4ClientEvent) > 0);
         assert(sizeof(NDhcp4ClientProbe*) > 0);
         assert(sizeof(NDhcp4ClientLease*) > 0);
         assert(sizeof(NDhcp4Server*) > 0);
         assert(sizeof(NDhcp4ServerConfig*) > 0);
-        assert(sizeof(NDhcp4ServerEvent*) > 0);
+        assert(sizeof(NDhcp4ServerEvent) > 0);
         assert(sizeof(NDhcp4ServerIp*) > 0);
         assert(sizeof(NDhcp4ServerLease*) > 0);
 }
@@ -118,6 +127,8 @@ static void test_api_functions(void) {
                 (void *)n_dhcp4_server_add_ip,
 
                 (void *)n_dhcp4_server_ip_free,
+                (void *)n_dhcp4_server_ip_freep,
+                (void *)n_dhcp4_server_ip_freev,
 
                 (void *)n_dhcp4_server_lease_ref,
                 (void *)n_dhcp4_server_lease_unref,
