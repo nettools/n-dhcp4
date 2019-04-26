@@ -175,6 +175,24 @@ static int manager_lease_get_prefix(NDhcp4ClientLease *lease, unsigned int *pref
         return 0;
 }
 
+static int manager_check(Manager *manager, NDhcp4ClientLease *lease) {
+        int r;
+
+        r = n_dhcp4_client_lease_query(lease, N_DHCP4_OPTION_ROUTER, NULL, NULL);
+        if (r) {
+                fprintf(stderr, "No router\n");
+                return r;
+        }
+
+        r = n_dhcp4_client_lease_query(lease, N_DHCP4_OPTION_SUBNET_MASK, NULL, NULL);
+        if (r) {
+                fprintf(stderr, "No subnet mask\n");
+                return r;
+        }
+
+        return r;
+}
+
 static int manager_add(Manager *manager, NDhcp4ClientLease *lease) {
         char *p, ifname[IF_NAMESIZE + 1] = {};
         struct in_addr router = {}, yiaddr = {}, dns = {};
@@ -262,9 +280,18 @@ static int manager_dispatch(Manager *manager) {
                 case N_DHCP4_CLIENT_EVENT_OFFER:
                         fprintf(stderr, "OFFER\n");
 
-                        r = n_dhcp4_client_lease_select(event->offer.lease);
-                        if (r)
-                                return r;
+                        r = manager_check(manager, event->granted.lease);
+                        if (r) {
+                                if (r == N_DHCP4_E_UNSET) {
+                                        fprintf(stderr, "Missing mandatory option, ignoring lease.\n");
+                                } else {
+                                        return r;
+                                }
+                        } else {
+                                r = n_dhcp4_client_lease_select(event->offer.lease);
+                                if (r)
+                                        return r;
+                        }
 
                         break;
 
@@ -272,12 +299,21 @@ static int manager_dispatch(Manager *manager) {
                         fprintf(stderr, "GRANTED\n");
 
                         r = manager_add(manager, event->granted.lease);
-                        if (r)
-                                return r;
+                        if (r) {
+                                if (r == N_DHCP4_E_UNSET) {
+                                        fprintf(stderr, "Missing mandatory option, declining lease.\n");
 
-                        r = n_dhcp4_client_lease_accept(event->granted.lease);
-                        if (r)
-                                return r;
+                                        r = n_dhcp4_client_lease_decline(event->granted.lease, "Missing mandatory option.");
+                                        if (r)
+                                                return r;
+                                } else {
+                                        return r;
+                                }
+                        } else {
+                                r = n_dhcp4_client_lease_accept(event->granted.lease);
+                                if (r)
+                                        return r;
+                        }
 
                         break;
 
