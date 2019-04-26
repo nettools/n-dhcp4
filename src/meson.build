@@ -8,6 +8,7 @@ libndhcp4_deps = [
         dep_clist,
         dep_crbtree,
         dep_csiphash,
+        dep_cstdaux,
 ]
 
 libndhcp4_private = static_library(
