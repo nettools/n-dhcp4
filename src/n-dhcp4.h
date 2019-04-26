@@ -183,6 +183,7 @@ int n_dhcp4_server_pop_event(NDhcp4Server *server, NDhcp4ServerEvent **eventp);
 int n_dhcp4_server_add_ip(NDhcp4Server *server, NDhcp4ServerIp **ipp, struct in_addr ip);
 
 /* server ip addresses */
+
 NDhcp4ServerIp *n_dhcp4_server_ip_free(NDhcp4ServerIp *ip);
 
 /* server leases */
@@ -262,15 +263,6 @@ static inline void n_dhcp4_server_unrefv(NDhcp4Server *p) {
         n_dhcp4_server_unref(p);
 }
 
-static inline void n_dhcp4_server_lease_unrefp(NDhcp4ServerLease **p) {
-        if (*p)
-                n_dhcp4_server_lease_unref(*p);
-}
-
-static inline void n_dhcp4_server_lease_unrefv(NDhcp4ServerLease *p) {
-        n_dhcp4_server_lease_unref(p);
-}
-
 static inline void n_dhcp4_server_ip_freep(NDhcp4ServerIp **p) {
         if (*p)
                 n_dhcp4_server_ip_free(*p);
@@ -278,6 +270,15 @@ static inline void n_dhcp4_server_ip_freep(NDhcp4ServerIp **p) {
 
 static inline void n_dhcp4_server_ip_freev(NDhcp4ServerIp *p) {
         n_dhcp4_server_ip_free(p);
+}
+
+static inline void n_dhcp4_server_lease_unrefp(NDhcp4ServerLease **p) {
+        if (*p)
+                n_dhcp4_server_lease_unref(*p);
+}
+
+static inline void n_dhcp4_server_lease_unrefv(NDhcp4ServerLease *p) {
+        n_dhcp4_server_lease_unref(p);
 }
 
 #ifdef __cplusplus
