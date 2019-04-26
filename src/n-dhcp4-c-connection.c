@@ -5,6 +5,7 @@
  */
 
 #include <assert.h>
+#include <c-stdaux.h>
 #include <errno.h>
 #include <limits.h>
 #include <net/if_arp.h>
@@ -132,10 +133,10 @@ static void n_dhcp4_c_connection_outgoing_set_secs(NDhcp4Outgoing *message) {
 }
 
 int n_dhcp4_c_connection_listen(NDhcp4CConnection *connection) {
-        _cleanup_(n_dhcp4_closep) int fd_packet = -1;
+        _cleanup_(c_closep) int fd_packet = -1;
         int r;
 
-        assert(connection->state == N_DHCP4_C_CONNECTION_STATE_INIT);
+        c_assert(connection->state == N_DHCP4_C_CONNECTION_STATE_INIT);
 
         r = n_dhcp4_c_socket_packet_new(&fd_packet, connection->client_config->ifindex);
         if (r)
@@ -162,7 +163,7 @@ int n_dhcp4_c_connection_connect(NDhcp4CConnection *connection,
                                  const struct in_addr *server) {
         int r, fd_udp;
 
-        assert(connection->state == N_DHCP4_C_CONNECTION_STATE_PACKET);
+        c_assert(connection->state == N_DHCP4_C_CONNECTION_STATE_PACKET);
 
         r = n_dhcp4_c_socket_udp_new(&fd_udp,
                                      connection->client_config->ifindex,
@@ -204,12 +205,12 @@ exit_fd:
 void n_dhcp4_c_connection_close(NDhcp4CConnection *connection) {
         if (connection->fd_udp >= 0) {
                 epoll_ctl(connection->fd_epoll, EPOLL_CTL_DEL, connection->fd_udp, NULL);
-                connection->fd_udp = n_dhcp4_close(connection->fd_udp);
+                connection->fd_udp = c_close(connection->fd_udp);
         }
 
         if (connection->fd_packet >= 0) {
                 epoll_ctl(connection->fd_epoll, EPOLL_CTL_DEL, connection->fd_packet, NULL);
-                connection->fd_packet = n_dhcp4_close(connection->fd_packet);
+                connection->fd_packet = c_close(connection->fd_packet);
         }
 
         connection->fd_epoll = -1;
@@ -266,7 +267,7 @@ static int n_dhcp4_c_connection_verify_incoming(NDhcp4CConnection *connection,
          */
         switch (connection->client_config->transport) {
         case N_DHCP4_TRANSPORT_ETHERNET:
-                assert(connection->client_config->n_mac == ETH_ALEN);
+                c_assert(connection->client_config->n_mac == ETH_ALEN);
 
                 if (header->hlen != ETH_ALEN)
                         return N_DHCP4_E_UNEXPECTED;
@@ -349,7 +350,7 @@ void n_dhcp4_c_connection_get_timeout(NDhcp4CConnection *connection,
                 timeout = 0;
                 break;
         default:
-                assert(0);
+                c_assert(0);
         }
 
         *timeoutp = timeout;
@@ -359,7 +360,7 @@ static int n_dhcp4_c_connection_packet_broadcast(NDhcp4CConnection *connection,
                                                  NDhcp4Outgoing *message) {
         int r;
 
-        assert(connection->state == N_DHCP4_C_CONNECTION_STATE_PACKET);
+        c_assert(connection->state == N_DHCP4_C_CONNECTION_STATE_PACKET);
 
         r = n_dhcp4_c_socket_packet_send(connection->fd_packet,
                                          connection->client_config->ifindex,
@@ -376,7 +377,7 @@ static int n_dhcp4_c_connection_udp_broadcast(NDhcp4CConnection *connection,
                                               NDhcp4Outgoing *message) {
         int r;
 
-        assert(connection->state == N_DHCP4_C_CONNECTION_STATE_DRAINING ||
+        c_assert(connection->state == N_DHCP4_C_CONNECTION_STATE_DRAINING ||
                connection->state == N_DHCP4_C_CONNECTION_STATE_UDP);
 
         r = n_dhcp4_c_socket_udp_broadcast(connection->fd_udp, message);
@@ -390,7 +391,7 @@ static int n_dhcp4_c_connection_udp_send(NDhcp4CConnection *connection,
                                          NDhcp4Outgoing *message) {
         int r;
 
-        assert(connection->state == N_DHCP4_C_CONNECTION_STATE_DRAINING ||
+        c_assert(connection->state == N_DHCP4_C_CONNECTION_STATE_DRAINING ||
                connection->state == N_DHCP4_C_CONNECTION_STATE_UDP);
 
         r = n_dhcp4_c_socket_udp_send(connection->fd_udp, message);
@@ -408,7 +409,7 @@ static void n_dhcp4_c_connection_init_header(NDhcp4CConnection *connection,
 
         switch (connection->client_config->transport) {
         case N_DHCP4_TRANSPORT_ETHERNET:
-                assert(connection->client_config->n_mac == ETH_ALEN);
+                c_assert(connection->client_config->n_mac == ETH_ALEN);
 
                 header->htype = ARPHRD_ETHER;
                 header->hlen = ETH_ALEN;
@@ -977,7 +978,7 @@ static int n_dhcp4_c_connection_send_request(NDhcp4CConnection *connection,
         case N_DHCP4_C_MESSAGE_RELEASE:
                 break;
         default:
-                assert(0);
+                c_assert(0);
         }
 
         request->userdata.send_time = timestamp;
@@ -1008,7 +1009,7 @@ static int n_dhcp4_c_connection_send_request(NDhcp4CConnection *connection,
 
                 break;
         default:
-                assert(0);
+                c_assert(0);
         }
 
         ++request->userdata.n_send;
@@ -1091,8 +1092,8 @@ int n_dhcp4_c_connection_dispatch_io(NDhcp4CConnection *connection,
                  * dispatching the UDP socket.
                  */
                 r = epoll_ctl(connection->fd_epoll, EPOLL_CTL_DEL, connection->fd_packet, NULL);
-                assert(!r);
-                connection->fd_packet = n_dhcp4_close(connection->fd_packet);
+                c_assert(!r);
+                connection->fd_packet = c_close(connection->fd_packet);
                 connection->state = N_DHCP4_C_CONNECTION_STATE_UDP;
 
                 /* fall-through */

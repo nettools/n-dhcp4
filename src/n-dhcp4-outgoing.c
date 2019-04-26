@@ -5,6 +5,7 @@
  */
 
 #include <assert.h>
+#include <c-stdaux.h>
 #include <endian.h>
 #include <errno.h>
 #include <inttypes.h>
@@ -53,7 +54,7 @@
 int n_dhcp4_outgoing_new(NDhcp4Outgoing **outgoingp, size_t max_size, uint8_t overload) {
         _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *outgoing = NULL;
 
-        assert(!(overload & ~(N_DHCP4_OVERLOAD_FILE | N_DHCP4_OVERLOAD_SNAME)));
+        c_assert(!(overload & ~(N_DHCP4_OVERLOAD_FILE | N_DHCP4_OVERLOAD_SNAME)));
 
         /*
          * Make sure the minimum limit is bigger than the maximum protocol
@@ -197,9 +198,9 @@ int n_dhcp4_outgoing_append(NDhcp4Outgoing *outgoing,
         uint8_t overload;
         size_t rem, n;
 
-        assert(option != N_DHCP4_OPTION_PAD);
-        assert(option != N_DHCP4_OPTION_END);
-        assert(option != N_DHCP4_OPTION_OVERLOAD);
+        c_assert(option != N_DHCP4_OPTION_PAD);
+        c_assert(option != N_DHCP4_OPTION_END);
+        c_assert(option != N_DHCP4_OPTION_OVERLOAD);
 
         /*
          * If the iterator is on the OPTIONs field, try appending the new blob.
@@ -346,7 +347,7 @@ void n_dhcp4_outgoing_set_secs(NDhcp4Outgoing *message, uint32_t secs) {
          * Some DHCP servers will reject DISCOVER or REQUEST messages if 'secs'
          * is not set (i.e., set to 0), even though the spec allows it.
          */
-        assert(secs);
+        c_assert(secs);
 
         header->secs = htonl(secs);
 }

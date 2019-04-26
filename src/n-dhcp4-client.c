@@ -9,6 +9,7 @@
 
 #include <assert.h>
 #include <c-list.h>
+#include <c-stdaux.h>
 #include <errno.h>
 #include <linux/if_ether.h>
 #include <linux/if_infiniband.h>
@@ -324,7 +325,7 @@ _public_ int n_dhcp4_client_new(NDhcp4Client **clientp, NDhcp4ClientConfig *conf
         };
         int r;
 
-        assert(clientp);
+        c_assert(clientp);
 
         /* verify configuration */
         {
@@ -383,7 +384,7 @@ _public_ int n_dhcp4_client_new(NDhcp4Client **clientp, NDhcp4ClientConfig *conf
 static void n_dhcp4_client_free(NDhcp4Client *client) {
         NDhcp4CEventNode *node, *t_node;
 
-        assert(!client->current_probe);
+        c_assert(!client->current_probe);
 
         c_list_for_each_entry_safe(node, t_node, &client->event_list, client_link)
                 n_dhcp4_c_event_node_free(node);
@@ -487,7 +488,7 @@ void n_dhcp4_client_arm_timer(NDhcp4Client *client) {
                                         },
                                     },
                                     NULL);
-                assert(r >= 0);
+                c_assert(r >= 0);
 
                 client->scheduled_timeout = timeout;
         }
@@ -623,7 +624,7 @@ _public_ int n_dhcp4_client_dispatch(NDhcp4Client *client) {
                         r = n_dhcp4_client_dispatch_io(client, events + i);
                         break;
                 default:
-                        assert(0);
+                        c_assert(0);
                         r = 0;
                         break;
                 }
@@ -638,7 +639,7 @@ _public_ int n_dhcp4_client_dispatch(NDhcp4Client *client) {
 
                                 /* continue normally */
                         } else if (r) {
-                                assert(r < _N_DHCP4_E_INTERNAL);
+                                c_assert(r < _N_DHCP4_E_INTERNAL);
                                 return r;
                         }
                 }

@@ -79,7 +79,7 @@ static void test_server_udp_socket_new(Link *link, int *skp) {
 static void test_client_server_packet(Link *link_server, Link *link_client) {
         _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *outgoing = NULL;
         _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *incoming = NULL;
-        _cleanup_(n_dhcp4_closep) int sk_server = -1, sk_client = -1;
+        _cleanup_(c_closep) int sk_server = -1, sk_client = -1;
         uint8_t buf[UINT16_MAX];
         struct sockaddr_in dest = {};
         int r;
@@ -111,7 +111,7 @@ static void test_client_server_packet(Link *link_server, Link *link_client) {
 static void test_client_server_udp(Link *link_server, Link *link_client) {
         _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *outgoing = NULL;
         _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *incoming = NULL;
-        _cleanup_(n_dhcp4_closep) int sk_server = -1, sk_client = -1;
+        _cleanup_(c_closep) int sk_server = -1, sk_client = -1;
         struct in_addr addr_server = (struct in_addr){ htonl(10 << 24 | 1) };
         struct in_addr addr_client = (struct in_addr){ htonl(10 << 24 | 2) };
         uint8_t buf[UINT16_MAX];
@@ -153,7 +153,7 @@ static void test_client_server_udp(Link *link_server, Link *link_client) {
 static void test_server_client_packet(Link *link_server, Link *link_client) {
         _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *outgoing = NULL;
         _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *incoming1 = NULL, *incoming2 = NULL;
-        _cleanup_(n_dhcp4_closep) int sk_server = -1, sk_client = -1;
+        _cleanup_(c_closep) int sk_server = -1, sk_client = -1;
         struct in_addr addr_client = (struct in_addr){ htonl(10 << 24 | 2) };
         struct in_addr addr_server = (struct in_addr){ htonl(10 << 24 | 1) };
         uint8_t buf[UINT16_MAX];
@@ -211,7 +211,7 @@ static void test_server_client_packet(Link *link_server, Link *link_client) {
 static void test_server_client_udp(Link *link_server, Link *link_client) {
         _cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *outgoing = NULL;
         _cleanup_(n_dhcp4_incoming_freep) NDhcp4Incoming *incoming = NULL;
-        _cleanup_(n_dhcp4_closep) int sk_server = -1, sk_client = -1;
+        _cleanup_(c_closep) int sk_server = -1, sk_client = -1;
         struct in_addr addr_client = (struct in_addr){ htonl(10 << 24 | 2) };
         struct in_addr addr_server = (struct in_addr){ htonl(10 << 24 | 1) };
         uint8_t buf[UINT16_MAX];
@@ -284,7 +284,7 @@ static void test_multiple_servers(void) {
         netns_get(&oldns);
         netns_set(netns);
         {
-                _cleanup_(n_dhcp4_closep) int sk1 = -1, sk2 = -1;
+                _cleanup_(c_closep) int sk1 = -1, sk2 = -1;
 
                 /*
                  * DHCP servers have to bind to a fixed port, so you cannot run

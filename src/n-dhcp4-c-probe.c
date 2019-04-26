@@ -9,6 +9,7 @@
 #include <assert.h>
 #include <c-list.h>
 #include <c-siphash.h>
+#include <c-stdaux.h>
 #include <errno.h>
 #include <inttypes.h>
 #include <stdbool.h>
@@ -253,7 +254,7 @@ _public_ void n_dhcp4_client_probe_config_request_option(NDhcp4ClientProbeConfig
                         return;
         }
 
-        assert(config->n_request_parameters <= UINT8_MAX);
+        c_assert(config->n_request_parameters <= UINT8_MAX);
 
         config->request_parameters[config->n_request_parameters++] = option;
 }
@@ -304,7 +305,7 @@ _public_ int n_dhcp4_client_probe_config_append_option(NDhcp4ClientProbeConfig *
                 return 0;
         }
 
-        assert(0);
+        c_assert(0);
         return -ENOTRECOVERABLE;
 }
 
@@ -362,7 +363,7 @@ static void n_dhcp4_client_probe_config_initialize_random_seed(NDhcp4ClientProbe
         seed16v[2] = (u64 >> 32) ^ (u64 >> 16);
 
         r = seed48_r(seed16v, &config->entropy);
-        assert(!r);
+        c_assert(!r);
 }
 
 /**
@@ -379,7 +380,7 @@ uint32_t n_dhcp4_client_probe_config_get_random(NDhcp4ClientProbeConfig *config)
         int r;
 
         r = mrand48_r(&config->entropy, &result);
-        assert(!r);
+        c_assert(!r);
 
         return result;
 };
@@ -486,8 +487,8 @@ _public_ NDhcp4ClientProbe *n_dhcp4_client_probe_free(NDhcp4ClientProbe *probe) 
         n_dhcp4_client_unref(probe->client);
         n_dhcp4_client_probe_config_free(probe->config);
 
-        assert(c_list_is_empty(&probe->lease_list));
-        assert(c_list_is_empty(&probe->event_list));
+        c_assert(c_list_is_empty(&probe->lease_list));
+        c_assert(c_list_is_empty(&probe->event_list));
         free(probe);
 
         return NULL;
@@ -548,7 +549,7 @@ int n_dhcp4_client_probe_raise(NDhcp4ClientProbe *probe, NDhcp4CEventNode **node
                 node->event.cancelled.probe = probe;
                 break;
         default:
-                assert(0);
+                c_assert(0);
                 n_dhcp4_c_event_node_free(node);
                 return -ENOTRECOVERABLE;
         }
@@ -775,7 +776,7 @@ static int n_dhcp4_client_probe_transition_lifetime(NDhcp4ClientProbe *probe) {
                 if (r)
                         return r;
 
-                assert(probe->client->current_probe == probe);
+                c_assert(probe->client->current_probe == probe);
                 probe->client->current_probe = NULL;
 
                 n_dhcp4_c_connection_close(&probe->connection);

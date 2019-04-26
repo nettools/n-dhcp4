@@ -16,6 +16,7 @@
 
 #include <assert.h>
 #include <c-list.h>
+#include <c-stdaux.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
@@ -112,7 +113,7 @@ int n_dhcp4_client_lease_new(NDhcp4ClientLease **leasep, NDhcp4Incoming *message
         _cleanup_(n_dhcp4_client_lease_unrefp) NDhcp4ClientLease *lease = NULL;
         int r;
 
-        assert(leasep);
+        c_assert(leasep);
 
         lease = malloc(sizeof(*lease));
         if (!lease)
@@ -172,8 +173,8 @@ _public_ NDhcp4ClientLease *n_dhcp4_client_lease_unref(NDhcp4ClientLease *lease)
  * Associate a lease with a probe. The lease may not already be linked.
  */
 void n_dhcp4_client_lease_link(NDhcp4ClientLease *lease, NDhcp4ClientProbe *probe) {
-        assert(!lease->probe);
-        assert(!c_list_is_linked(&lease->probe_link));
+        c_assert(!lease->probe);
+        c_assert(!c_list_is_linked(&lease->probe_link));
 
         lease->probe = probe;
         c_list_link_tail(&probe->lease_list, &lease->probe_link);
