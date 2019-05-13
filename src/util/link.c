@@ -17,9 +17,9 @@
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <unistd.h>
-#include "util/link.h"
-#include "util/netns.h"
-#include "util/socket.h"
+#include "link.h"
+#include "netns.h"
+#include "socket.h"
 
 /**
  * link_deinit() - deinitialize link

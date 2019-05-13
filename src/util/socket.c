@@ -10,7 +10,7 @@
 #include <string.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
-#include "util/socket.h"
+#include "socket.h"
 
 /**
  * socket_SIOCGIFNAME() - resolve an ifindex to an ifname

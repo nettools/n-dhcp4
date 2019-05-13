@@ -10,9 +10,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include "n-dhcp4-private.h"
-#include "util/link.h"
-#include "util/netns.h"
-#include "util/packet.h"
+#include "link.h"
+#include "netns.h"
+#include "packet.h"
 #include "test.h"
 
 typedef struct Blob {

@@ -14,7 +14,7 @@
 #include <string.h>
 #include <sys/mount.h>
 #include <unistd.h>
-#include "util/netns.h"
+#include "netns.h"
 
 /**
  * netns_new() - create a new network namespace
