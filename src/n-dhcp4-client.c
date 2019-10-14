@@ -216,7 +216,8 @@ _c_public_ void n_dhcp4_client_config_set_broadcast_mac(NDhcp4ClientConfig *conf
  * n_dhcp4_client_config_set_client_id() - set client-id property
  * @config:                     client configuration to operate on
  * @id:                         client id
- * @n_id:                       length of the client id in bytes
+ * @n_id:                       length of the client id in bytes. The length
+ *                              must not be longer than 133 bytes.
  *
  * This sets the client-id property of @config. It copies the entire client-id
  * buffer into the configuration.
@@ -225,6 +226,19 @@ _c_public_ void n_dhcp4_client_config_set_broadcast_mac(NDhcp4ClientConfig *conf
  */
 _c_public_ int n_dhcp4_client_config_set_client_id(NDhcp4ClientConfig *config, const uint8_t *id, size_t n_id) {
         uint8_t *t;
+
+        if (n_id > 1 + 4 + 128) {
+                /* RFC does not specify the maximum length of the client-id, but it is limited
+                 * in practice because:
+                 *   - we need to encode the length of the option with 8 bits.
+                 *   - the UDP package size.
+                 * Also, n-dhcp4 expects that the server replies with the requested client-id.
+                 *
+                 * Limit the length somewhat arbitrarily to 133 bytes. This gives room for a RFC4361-complient
+                 * client-id with a DUID of length 128 (which is the maxium allowed length according to
+                 * RFC 3315 section 9.1. */
+                return -EINVAL;
+        }
 
         t = malloc(n_id + 1);
         if (!t)
