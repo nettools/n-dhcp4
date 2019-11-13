@@ -240,6 +240,11 @@ struct NDhcp4ClientConfig {
         size_t n_broadcast_mac;
         uint8_t *client_id;
         size_t n_client_id;
+        struct {
+                int level;
+                NDhcp4LogFunc func;
+                void *data;
+        } log;
 };
 
 #define N_DHCP4_CLIENT_CONFIG_NULL(_x) {                                        \
@@ -687,3 +692,14 @@ static inline uint64_t n_dhcp4_gettime(clockid_t clock) {
 
         return ts.tv_sec * 1000ULL * 1000ULL * 1000ULL + ts.tv_nsec;
 }
+
+#define n_dhcp4_c_log(_config, _level, _fmt, ...)                              \
+        do {                                                                   \
+                const NDhcp4ClientConfig *__config = _config;                  \
+                                                                               \
+                if (_level <= __config->log.level && __config->log.func) {     \
+                        _config->log.func(_level,                              \
+                                          __config->log.data,                  \
+                                          _fmt, __VA_ARGS__);                  \
+                }                                                              \
+        } while (0)
