@@ -373,8 +373,11 @@ _c_public_ int n_dhcp4_client_new(NDhcp4Client **clientp, NDhcp4ClientConfig *co
 
         ev.data.u32 = N_DHCP4_CLIENT_EPOLL_TIMER;
         r = epoll_ctl(client->fd_epoll, EPOLL_CTL_ADD, client->fd_timer, &ev);
-        if (r < 0)
+        if (r < 0) {
+                close(client->fd_timer);
+                client->fd_timer = -1;
                 return -errno;
+        }
 
         *clientp = client;
         client = NULL;
