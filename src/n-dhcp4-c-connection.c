@@ -137,6 +137,9 @@ int n_dhcp4_c_connection_listen(NDhcp4CConnection *connection) {
         _c_cleanup_(c_closep) int fd_packet = -1;
         int r;
 
+        if (connection->state == N_DHCP4_C_CONNECTION_STATE_PACKET)
+                return 0;
+
         c_assert(connection->state == N_DHCP4_C_CONNECTION_STATE_INIT);
 
         r = n_dhcp4_c_socket_packet_new(&fd_packet, connection->client_config->ifindex);
@@ -317,7 +320,6 @@ void n_dhcp4_c_connection_get_timeout(NDhcp4CConnection *connection,
         switch (connection->request->userdata.type) {
         case N_DHCP4_C_MESSAGE_DISCOVER:
         case N_DHCP4_C_MESSAGE_SELECT:
-        case N_DHCP4_C_MESSAGE_REBOOT:
         case N_DHCP4_C_MESSAGE_INFORM:
                 /*
                  * Resend with an exponential backoff and a one second random
@@ -336,6 +338,7 @@ void n_dhcp4_c_connection_get_timeout(NDhcp4CConnection *connection,
                 break;
         case N_DHCP4_C_MESSAGE_REBIND:
         case N_DHCP4_C_MESSAGE_RENEW:
+        case N_DHCP4_C_MESSAGE_REBOOT:
                 /*
                  * Resend every sixty seconds with a one second random slack.
                  *
