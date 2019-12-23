@@ -358,13 +358,13 @@ static void test_connection(void) {
                 test_discover(&connection_server, &connection_client, &addr_server, &addr_client, &offer);
                 test_select(&connection_server, &connection_client, offer, &addr_server, &addr_client);
                 test_reboot(&connection_server, &connection_client, &addr_server, &addr_client, &ack);
+                test_rebind(&connection_server, &connection_client, &addr_server, &addr_client);
                 test_decline(&connection_server, &connection_client, ack);
 
                 link_add_ip4(&link_client, &addr_client, 8);
                 test_c_connection_connect(ns_client, &connection_client, &addr_client, &addr_server);
 
                 test_renew(&connection_server, &connection_client, &addr_server, &addr_client);
-                test_rebind(&connection_server, &connection_client, &addr_server, &addr_client);
                 test_release(&connection_server, &connection_client, &addr_server, &addr_client);
 
                 n_dhcp4_c_connection_deinit(&connection_client);
