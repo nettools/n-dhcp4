@@ -368,6 +368,8 @@ _c_public_ int n_dhcp4_client_new(NDhcp4Client **clientp, NDhcp4ClientConfig *co
                 return -errno;
 
         client->fd_timer = timerfd_create(CLOCK_BOOTTIME, TFD_CLOEXEC | TFD_NONBLOCK);
+        if (client->fd_timer < 0 && errno == EINVAL)
+                client->fd_timer = timerfd_create(CLOCK_MONOTONIC, TFD_CLOEXEC | TFD_NONBLOCK);
         if (client->fd_timer < 0)
                 return -errno;
 
@@ -472,19 +474,39 @@ int n_dhcp4_client_raise(NDhcp4Client *client, NDhcp4CEventNode **nodep, unsigne
  * must be called whenever a timeout on @client might have changed.
  */
 void n_dhcp4_client_arm_timer(NDhcp4Client *client) {
-        uint64_t timeout = 0;
+        uint64_t now, offset, timeout = 0;
         int r;
 
         if (client->current_probe)
                 n_dhcp4_client_probe_get_timeout(client->current_probe, &timeout);
 
         if (timeout != client->scheduled_timeout) {
+                /*
+                 * Across our codebase, timeouts are specified as absolute
+                 * timestamps on CLOCK_BOOTTIME. Unfortunately, there are
+                 * systems with CLOCK_BOOTTIME support, but timerfd lacks it
+                 * (in particular RHEL). Therefore, our timerfd might be on
+                 * CLOCK_MONOTONIC.
+                 * To account for this, we always schedule a relative timeout.
+                 * We fetch the current time and then calculate the offset
+                 * which we then schedule as relative timeout on the timerfd.
+                 * This works regardless which clock the timerfd runs on.
+                 * Once we no longer support CLOCK_MONOTONIC as fallback, we
+                 * can simply switch to TFD_TIMER_ABSTIME here and specify
+                 * `timeout` directly as value.
+                 */
+                now = n_dhcp4_gettime(CLOCK_BOOTTIME);
+                if (now >= timeout)
+                        offset = 1; /* 0 would disarm the timerfd */
+                else
+                        offset = timeout - now;
+
                 r = timerfd_settime(client->fd_timer,
-                                    TFD_TIMER_ABSTIME,
+                                    0,
                                     &(struct itimerspec){
                                         .it_value = {
-                                                .tv_sec = timeout / UINT64_C(1000000000),
-                                                .tv_nsec = timeout % UINT64_C(1000000000),
+                                                .tv_sec = offset / UINT64_C(1000000000),
+                                                .tv_nsec = offset % UINT64_C(1000000000),
                                         },
                                     },
                                     NULL);
