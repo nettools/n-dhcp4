@@ -227,27 +227,38 @@ _c_public_ void n_dhcp4_client_config_set_broadcast_mac(NDhcp4ClientConfig *conf
  * n_dhcp4_client_config_set_client_id() - set client-id property
  * @config:                     client configuration to operate on
  * @id:                         client id
- * @n_id:                       length of the client id in bytes
+ * @n_id:                       length of the client id in bytes. The length
+ *                              must be from 2 up to 255 bytes. Set it to 0
+ *                              to unset the client-id.
  *
  * This sets the client-id property of @config. It copies the entire client-id
  * buffer into the configuration.
+ * See RFC 2132 (section 9.14) for the format of the Client Identifier.
  *
  * Return: 0 on success, negative error code on failure.
  */
 _c_public_ int n_dhcp4_client_config_set_client_id(NDhcp4ClientConfig *config, const uint8_t *id, size_t n_id) {
         uint8_t *t;
 
+        if (n_id == 0) {
+                config->client_id = c_free(config->client_id);
+                config->n_client_id = 0;
+                return 0;
+        }
+
+        if (n_id < 2 || n_id > 255)
+                return -EINVAL;
+
         t = malloc(n_id + 1);
         if (!t)
                 return -ENOMEM;
 
+        memcpy(t, id, n_id);
+        t[n_id] = 0; /* safety 0 for debugging */
+
         free(config->client_id);
         config->client_id = t;
         config->n_client_id = n_id;
-
-        memcpy(config->client_id, id, n_id);
-        config->client_id[n_id] = 0; /* safety 0 for debugging */
-
         return 0;
 }
 
