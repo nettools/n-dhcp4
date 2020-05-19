@@ -94,9 +94,6 @@ int n_dhcp4_client_config_dup(NDhcp4ClientConfig *config, NDhcp4ClientConfig **d
         dup->n_mac = config->n_mac;
         memcpy(dup->broadcast_mac, config->broadcast_mac, sizeof(dup->broadcast_mac));
         dup->n_broadcast_mac = config->n_broadcast_mac;
-        dup->log.level = config->log.level;
-        dup->log.func = config->log.func;
-        dup->log.data = config->log.data;
 
         r = n_dhcp4_client_config_set_client_id(dup,
                                                 config->client_id,
@@ -262,13 +259,29 @@ _c_public_ int n_dhcp4_client_config_set_client_id(NDhcp4ClientConfig *config, c
         return 0;
 }
 
-_c_public_ void n_dhcp4_client_config_set_log_level(NDhcp4ClientConfig *config, int level) {
-        config->log.level = level;
-}
-
-_c_public_ void n_dhcp4_client_config_set_log_func(NDhcp4ClientConfig *config, NDhcp4LogFunc func, void *data) {
-        config->log.func = func;
-        config->log.data = data;
+/**
+ * n_dhcp4_client_set_log_level() - set the logging level of the client
+ * @client:                         the client to operate on
+ * @level:                          the minimum syslog logging level that is
+ *                                  still logged. For example, set to LOG_NOTICE
+ *                                  to receive logging events with level LOG_NOTICE
+ *                                  and higher. Set to -1 to disable generating
+ *                                  logging events (which is also the default).
+ *
+ * By enabling logging, you can get N_DHCP4_CLIENT_EVENT_LOG events.
+ *
+ * From the logging event you may steal the message if (and only if) is_static_message
+ * is false. In that case, clear the message field and free the message yourself.
+ *
+ * If a logging event cannot be logged due to out of memory, one message
+ * gets logged that messages are missing. Until the event with that message
+ * gets dropped, no further logging events will be queued.
+ *
+ * You may change the logging level at any time, but it does not affect
+ * logging events that are already queued.
+  */
+_c_public_ void n_dhcp4_client_set_log_level(NDhcp4Client *client, int level) {
+        client->log_queue.log_level = level;
 }
 
 /**
@@ -324,6 +337,13 @@ NDhcp4CEventNode *n_dhcp4_c_event_node_free(NDhcp4CEventNode *node) {
         case N_DHCP4_CLIENT_EVENT_EXTENDED:
                 node->event.extended.lease = n_dhcp4_client_lease_unref(node->event.extended.lease);
                 break;
+        case N_DHCP4_CLIENT_EVENT_LOG:
+                if (_c_unlikely_(node->event.log.is_static_message)) {
+                        c_list_unlink(&node->client_link);
+                        node->is_public = false;
+                        return NULL;
+                }
+                node->event.log.message = c_free((char *)node->event.log.message);
         default:
                 break;
         }
@@ -498,6 +518,77 @@ int n_dhcp4_client_raise(NDhcp4Client *client, NDhcp4CEventNode **nodep, unsigne
         if (nodep)
                 *nodep = node;
         return 0;
+}
+
+/**
+ * n_dhcp4_log_queue_fmt() - add a logging event.
+ * @client:                  the NDhcp4LogQueue to operate on
+ * @level:                   the syslog logging level
+ * @fmt:                     the format string for the message
+ * @...                      printf arguments for logging
+ *
+ * Appends a logging event to the event queue if logging is
+ * enabled and the logging level sufficiently high.
+ *
+ * This might silently fail if memory cannot be allocated.
+ * In that case, no error is reported because what would
+ * you do about it? Log a message?
+ */
+void n_dhcp4_log_queue_fmt(NDhcp4LogQueue *log_queue,
+                           int level,
+                           const char *fmt,
+                           ...) {
+        NDhcp4CEventNode *node;
+        char *message;
+        va_list ap;
+        int r;
+
+        if (level > log_queue->log_level)
+                return;
+
+        /* Currently the logging queue is only implemented for
+         * the client. Nobody would enable logging except a
+         * client instance. */
+        c_assert(log_queue->is_client);
+
+        if (!c_list_is_empty (&log_queue->nomem_node.client_link)) {
+                /* we have the nomem_node queued after a recent out
+                 * of memory. This disables all logging messages until
+                 * the event gets popped.
+                 *
+                 * The reason is that we can only queue the nomem_node once,
+                 * so if we now try to append another event and succeed, the
+                 * user wouldn't know which messages got dropped. Instead,
+                 * drop them all!! */
+                return;
+        }
+
+        r = n_dhcp4_c_event_node_new(&node);
+        if (r < 0)
+                goto handle_nomem;
+
+        va_start(ap, fmt);
+        r = vasprintf(&message, fmt, ap);
+        va_end(ap);
+
+        if (r < 0) {
+                n_dhcp4_c_event_node_free(node);
+                goto handle_nomem;
+        }
+
+        node->event = (NDhcp4ClientEvent) {
+                .event = N_DHCP4_CLIENT_EVENT_LOG,
+                .log = {
+                        .level = level,
+                        .message = message,
+                },
+        };
+
+        c_list_link_tail(log_queue->event_list, &node->client_link);
+        return;
+
+handle_nomem:
+        c_list_link_tail(log_queue->event_list, &log_queue->nomem_node.client_link);
 }
 
 /**
@@ -696,9 +787,10 @@ _c_public_ int n_dhcp4_client_dispatch(NDhcp4Client *client) {
                                 /* continue normally */
                         } else if (r) {
                                 if (r >= _N_DHCP4_E_INTERNAL) {
-                                        n_dhcp4_c_log(client->config, LOG_ERR,
-                                                      "invalid internal error code %d after dispatch",
-                                                      r);
+                                        n_dhcp4_log(&client->log_queue,
+                                                    LOG_ERR,
+                                                    "invalid internal error code %d after dispatch",
+                                                    r);
                                         return N_DHCP4_E_INTERNAL;
                                 }
                                 return r;
