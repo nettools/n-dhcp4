@@ -310,7 +310,7 @@ struct NDhcp4LogQueue {
                                 .log = {                                        \
                                         .level = LOG_CRIT,                      \
                                         .message = "one or more logging messages dropped due to out of memory", \
-                                        .is_static_message = true,              \
+                                        .allow_steal_message = false,           \
                                 },                                              \
                         },                                                      \
                         .is_public = false,                                     \

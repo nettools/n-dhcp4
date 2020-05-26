@@ -88,12 +88,12 @@ struct NDhcp4ClientEvent {
                         NDhcp4ClientProbe *probe;
                 } retracted, expired, cancelled;
                 struct {
-                        /* If is_static_message is false, then the user may steal the message when handling
+                        /* If allow_steal_message is true, then the user may steal the message when handling
                          * the event. In that case, set the message field to %NULL and free it yourself
                          * with free(). */
                         const char *message;
                         int level;
-                        bool is_static_message;
+                        bool allow_steal_message;
                 } log;
         };
 };

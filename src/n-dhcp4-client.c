@@ -270,8 +270,8 @@ _c_public_ int n_dhcp4_client_config_set_client_id(NDhcp4ClientConfig *config, c
  *
  * By enabling logging, you can get N_DHCP4_CLIENT_EVENT_LOG events.
  *
- * From the logging event you may steal the message if (and only if) is_static_message
- * is false. In that case, clear the message field and free the message yourself.
+ * From the logging event you may steal the message if (and only if) "allow_steal_message"
+ * is true. In that case, clear the message field and free the message yourself.
  *
  * If a logging event cannot be logged due to out of memory, one message
  * gets logged that messages are missing. Until the event with that message
@@ -338,12 +338,15 @@ NDhcp4CEventNode *n_dhcp4_c_event_node_free(NDhcp4CEventNode *node) {
                 node->event.extended.lease = n_dhcp4_client_lease_unref(node->event.extended.lease);
                 break;
         case N_DHCP4_CLIENT_EVENT_LOG:
-                if (_c_unlikely_(node->event.log.is_static_message)) {
+                if (_c_unlikely_(!node->event.log.allow_steal_message)) {
+                        /* @node is the static node "nomem_node". It must not be
+                         * freed. */
                         c_list_unlink(&node->client_link);
                         node->is_public = false;
                         return NULL;
                 }
                 node->event.log.message = c_free((char *)node->event.log.message);
+                break;
         default:
                 break;
         }
@@ -530,9 +533,9 @@ int n_dhcp4_client_raise(NDhcp4Client *client, NDhcp4CEventNode **nodep, unsigne
  * Appends a logging event to the event queue if logging is
  * enabled and the logging level sufficiently high.
  *
- * This might silently fail if memory cannot be allocated.
- * In that case, no error is reported because what would
- * you do about it? Log a message?
+ * Queuing a logging event might fail with out of memory.
+ * In that case, a static event will be queued that informs
+ * about lost messages.
  */
 void n_dhcp4_log_queue_fmt(NDhcp4LogQueue *log_queue,
                            int level,
@@ -559,7 +562,7 @@ void n_dhcp4_log_queue_fmt(NDhcp4LogQueue *log_queue,
                  * The reason is that we can only queue the nomem_node once,
                  * so if we now try to append another event and succeed, the
                  * user wouldn't know which messages got dropped. Instead,
-                 * drop them all!! */
+                 * just drop them all!! */
                 return;
         }
 
@@ -581,6 +584,7 @@ void n_dhcp4_log_queue_fmt(NDhcp4LogQueue *log_queue,
                 .log = {
                         .level = level,
                         .message = message,
+                        .allow_steal_message = true,
                 },
         };
 
@@ -859,6 +863,8 @@ _c_public_ int n_dhcp4_client_dispatch(NDhcp4Client *client) {
  *                                   the client attempted several incompatible
  *                                   probes in parallel, then the most recent
  *                                   ones will be cancelled asynchronously.
+ * * N_DHCP4_CLIENT_EVENT_LOG:       A logging event if n_dhcp4_client_set_log_level()
+ *                                   is enabled.
  *
  * Return: 0 on success, negative error code on failure.
  */
