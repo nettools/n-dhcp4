@@ -278,7 +278,7 @@ _c_public_ int n_dhcp4_client_lease_get_server_identifier (NDhcp4ClientLease *le
  * be queried, and only options that were explicitly requested can be queried.
  *
  * Return: 0 on success,
- *         N_DCHP4_E_INTERNAL if an invalid option is queried,
+ *         N_DHCP4_E_INTERNAL if an invalid option is queried,
  *         N_DHCP4_E_UNSET if the lease did not contain the option, or
  *         a negative error code on failure.
  */
