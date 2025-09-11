@@ -704,7 +704,7 @@ static int n_dhcp4_client_probe_transition_deferred(NDhcp4ClientProbe *probe, ui
         switch (probe->state) {
         case N_DHCP4_CLIENT_PROBE_STATE_INIT:
                 /* reset client IP (CIADDR) */
-                probe->connection.client_ip = INADDR_ANY;
+                n_dhcp4_c_connection_clear_client_ip(&probe->connection);
                 r = n_dhcp4_c_connection_listen(&probe->connection);
                 if (r)
                         return r;
