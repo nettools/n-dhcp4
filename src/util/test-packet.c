@@ -33,9 +33,9 @@ static void test_checksum_one(Blob *blob, size_t size) {
          */
 
         blob->checksum = 0;
-        blob->checksum = packet_internet_checksum((uint8_t*)blob, size);
+        blob->checksum = packet_internet_checksum((uint8_t *)blob, size);
 
-        checksum = packet_internet_checksum((uint8_t*)blob, size);
+        checksum = packet_internet_checksum((uint8_t *)blob, size);
         c_assert(!checksum);
 }
 
@@ -51,16 +51,16 @@ static void test_checksum_udp_one(Blob *blob, size_t size) {
          * helpers and also avoid a 0 checksum in the original source.
          */
 
-        checksum = packet_internet_checksum_udp(&(struct in_addr){ htonl((10 << 24) | 2)},
-                                                &(struct in_addr){ htonl((10 << 24) | 1)},
+        checksum = packet_internet_checksum_udp(&(struct in_addr){ htonl((10 << 24) | 2) },
+                                                &(struct in_addr){ htonl((10 << 24) | 1) },
                                                 67,
                                                 68,
                                                 blob->data,
                                                 sizeof(blob->data),
                                                 0);
         checksum = checksum ?: 0xffff;
-        checksum = packet_internet_checksum_udp(&(struct in_addr){ htonl((10 << 24) | 2)},
-                                                &(struct in_addr){ htonl((10 << 24) | 1)},
+        checksum = packet_internet_checksum_udp(&(struct in_addr){ htonl((10 << 24) | 2) },
+                                                &(struct in_addr){ htonl((10 << 24) | 1) },
                                                 67,
                                                 68,
                                                 blob->data,
@@ -105,7 +105,7 @@ static void test_new_packet_socket(Link *link, int *skp) {
         r = setsockopt(*skp, SOL_PACKET, PACKET_AUXDATA, &on, sizeof(on));
         c_assert(r >= 0);
 
-        r = bind(*skp, (struct sockaddr*)&addr, sizeof(addr));
+        r = bind(*skp, (struct sockaddr *)&addr, sizeof(addr));
         c_assert(r >= 0);
 }
 
@@ -141,7 +141,7 @@ static void test_packet_broadcast(int ifindex, int sk, void *buf, size_t n_buf,
         size_t len;
         int r;
 
-        memcpy(addr.sll_addr, (unsigned char[]){ 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, }, ETH_ALEN);
+        memcpy(addr.sll_addr, (unsigned char[]){ 0xff, 0xff, 0xff, 0xff, 0xff, 0xff }, ETH_ALEN);
 
         r = packet_sendto_udp(sk, buf, n_buf, &len, paddr_src, &addr, paddr_dst, N_DHCP4_DSCP_DEFAULT);
         c_assert(!r);
@@ -185,7 +185,7 @@ static void test_packet_udp(Link *link_src,
         link_socket(link_dst, &sk_dst, AF_INET, SOCK_DGRAM | SOCK_CLOEXEC);
         link_add_ip4(link_dst, &paddr_dst->sin_addr, 8);
 
-        r = bind(sk_dst, (struct sockaddr*)paddr_dst, sizeof(*paddr_dst));
+        r = bind(sk_dst, (struct sockaddr *)paddr_dst, sizeof(*paddr_dst));
         c_assert(r >= 0);
 
         test_packet_unicast(link_src->ifindex, sk_src, buf, sizeof(buf) - 1, paddr_src, paddr_dst, &link_dst->mac);
@@ -216,7 +216,7 @@ static void test_udp_packet(Link *link_src,
         link_add_ip4(link_dst, &paddr_dst->sin_addr, 8);
 
         slen = sendto(sk_src, buf, sizeof(buf) - 1, 0,
-                      (struct sockaddr*)paddr_dst, sizeof(*paddr_dst));
+                      (struct sockaddr *)paddr_dst, sizeof(*paddr_dst));
         c_assert(slen == (ssize_t)sizeof(buf) - 1);
 
         r = packet_recv_udp(sk_dst, buf, sizeof(buf), &len);
@@ -241,11 +241,11 @@ static void test_udp_udp(Link *link_src,
         link_add_ip4(link_src, &paddr_src->sin_addr, 8);
         link_add_ip4(link_dst, &paddr_dst->sin_addr, 8);
 
-        r = bind(sk_dst, (struct sockaddr*)paddr_dst, sizeof(*paddr_dst));
+        r = bind(sk_dst, (struct sockaddr *)paddr_dst, sizeof(*paddr_dst));
         c_assert(r >= 0);
 
         len = sendto(sk_src, buf, sizeof(buf) - 1, 0,
-                     (struct sockaddr*)paddr_dst, sizeof(*paddr_dst));
+                     (struct sockaddr *)paddr_dst, sizeof(*paddr_dst));
         c_assert(len == (ssize_t)sizeof(buf) - 1);
 
         len = recv(sk_dst, buf, sizeof(buf), 0);
@@ -272,18 +272,18 @@ static void test_shutdown(Link *link_src,
 
         /* 1 - send only to the packet socket */
         slen = sendto(sk_src, buf, sizeof(buf), 0,
-                     (struct sockaddr*)paddr_dst, sizeof(*paddr_dst));
+                      (struct sockaddr *)paddr_dst, sizeof(*paddr_dst));
         c_assert(slen == (ssize_t)sizeof(buf));
 
         /* create a UDP socket */
         link_socket(link_dst, &sk_dst2, AF_INET, SOCK_DGRAM | SOCK_CLOEXEC);
 
-        r = bind(sk_dst2, (struct sockaddr*)paddr_dst, sizeof(*paddr_dst));
+        r = bind(sk_dst2, (struct sockaddr *)paddr_dst, sizeof(*paddr_dst));
         c_assert(r >= 0);
 
         /* 2 - send to both sockets */
         slen = sendto(sk_src, buf, sizeof(buf), 0,
-                     (struct sockaddr*)paddr_dst, sizeof(*paddr_dst));
+                      (struct sockaddr *)paddr_dst, sizeof(*paddr_dst));
         c_assert(slen == (ssize_t)sizeof(buf));
 
         /* shut down the packet socket */
@@ -292,7 +292,7 @@ static void test_shutdown(Link *link_src,
 
         /* 3 - send only to the UDP socket */
         slen = sendto(sk_src, buf, sizeof(buf), 0,
-                     (struct sockaddr*)paddr_dst, sizeof(*paddr_dst));
+                      (struct sockaddr *)paddr_dst, sizeof(*paddr_dst));
         c_assert(slen == (ssize_t)sizeof(buf));
 
         /* receive 1 and 2 on the packet socket */
@@ -331,9 +331,9 @@ static void test_shutdown(Link *link_src,
  */
 struct udp_len_case {
         uint16_t udp_len;
-        size_t   payload_len;
+        size_t payload_len;
         uint16_t udp_check;
-        bool     expect_drop;
+        bool expect_drop;
 };
 
 static void test_udp_packet_len_one(Link *link_src,
@@ -368,20 +368,20 @@ static void test_udp_packet_len_one(Link *link_src,
 
         memcpy(addr.sll_addr, &link_dst->mac, ETH_ALEN);
 
-        frame.ip.version  = IPVERSION;
-        frame.ip.ihl      = 5;
-        frame.ip.tot_len  = htons(frame_len);
-        frame.ip.ttl      = 64;
+        frame.ip.version = IPVERSION;
+        frame.ip.ihl = 5;
+        frame.ip.tot_len = htons(frame_len);
+        frame.ip.ttl = 64;
         frame.ip.protocol = IPPROTO_UDP;
-        frame.ip.saddr    = paddr_src->sin_addr.s_addr;
-        frame.ip.daddr    = paddr_dst->sin_addr.s_addr;
-        frame.ip.check    = packet_internet_checksum((uint8_t *)&frame.ip,
-                                                     sizeof(frame.ip));
+        frame.ip.saddr = paddr_src->sin_addr.s_addr;
+        frame.ip.daddr = paddr_dst->sin_addr.s_addr;
+        frame.ip.check = packet_internet_checksum((uint8_t *)&frame.ip,
+                                                  sizeof(frame.ip));
 
-        frame.udp.source  = paddr_src->sin_port;
-        frame.udp.dest    = paddr_dst->sin_port;
-        frame.udp.len     = htons(tc->udp_len);
-        frame.udp.check   = tc->udp_check;
+        frame.udp.source = paddr_src->sin_port;
+        frame.udp.dest = paddr_dst->sin_port;
+        frame.udp.len = htons(tc->udp_len);
+        frame.udp.check = tc->udp_check;
 
         slen = sendto(sk_src, &frame, frame_len, 0,
                       (struct sockaddr *)&addr, sizeof(addr));
@@ -419,15 +419,15 @@ static void test_udp_packet_short_len(Link *link_src,
                                       const struct sockaddr_in *paddr_dst) {
         static const struct udp_len_case cases[] = {
                 /* malformed, with a UDP checksum: an unguarded parser reaches the read */
-                { .udp_len = 0,                         .udp_check = 1, .expect_drop = true },
-                { .udp_len = 1,                         .udp_check = 1, .expect_drop = true },
+                { .udp_len = 0, .udp_check = 1, .expect_drop = true },
+                { .udp_len = 1, .udp_check = 1, .expect_drop = true },
                 { .udp_len = sizeof(struct udphdr) - 1, .udp_check = 1, .expect_drop = true },
                 /* malformed, without a UDP checksum: the checksum gate is skipped */
-                { .udp_len = 0,                         .udp_check = 0, .expect_drop = true },
-                { .udp_len = 1,                         .udp_check = 0, .expect_drop = true },
+                { .udp_len = 0, .udp_check = 0, .expect_drop = true },
+                { .udp_len = 1, .udp_check = 0, .expect_drop = true },
                 { .udp_len = sizeof(struct udphdr) - 1, .udp_check = 0, .expect_drop = true },
                 /* valid: the zero-payload boundary pins the check to '<' */
-                { .udp_len = sizeof(struct udphdr),     .expect_drop = false },
+                { .udp_len = sizeof(struct udphdr), .expect_drop = false },
                 /* valid: header plus payload */
                 { .udp_len = sizeof(struct udphdr) + 4, .payload_len = 4, .expect_drop = false },
         };
@@ -463,7 +463,7 @@ static void test_ip_hdr(Link *link_src,
         c_assert(r >= 0);
 
         slen = sendto(sk_src, buf, sizeof(buf) - 1, 0,
-                      (struct sockaddr*)paddr_dst, sizeof(*paddr_dst));
+                      (struct sockaddr *)paddr_dst, sizeof(*paddr_dst));
         c_assert(slen == (ssize_t)sizeof(buf) - 1);
 
         r = packet_recv_udp(sk_dst, buf, sizeof(buf), &len);
@@ -487,12 +487,12 @@ static void test_packet(void) {
         _c_cleanup_(link_deinit) Link link_dst = LINK_NULL(link_dst);
         struct sockaddr_in paddr_src = {
                 .sin_family = AF_INET,
-                .sin_addr = (struct in_addr){ htonl(10<<24 | 1) },
+                .sin_addr = (struct in_addr){ htonl(10 << 24 | 1) },
                 .sin_port = htons(10),
         };
         struct sockaddr_in paddr_dst = {
                 .sin_family = AF_INET,
-                .sin_addr = (struct in_addr){ htonl(10<<24 | 2) },
+                .sin_addr = (struct in_addr){ htonl(10 << 24 | 2) },
                 .sin_port = htons(11),
         };
 

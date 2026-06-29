@@ -199,14 +199,14 @@ int packet_sendto_udp(int sockfd,
                 },
         };
         struct msghdr msg = {
-                .msg_name = (void*)dest_haddr,
+                .msg_name = (void *)dest_haddr,
                 .msg_namelen = sizeof(*dest_haddr),
                 .msg_iov = iov,
                 .msg_iovlen = sizeof(iov) / sizeof(iov[0]),
         };
         ssize_t pktlen;
 
-        ip_hdr.check = packet_internet_checksum((void*)&ip_hdr, sizeof(ip_hdr));
+        ip_hdr.check = packet_internet_checksum((void *)&ip_hdr, sizeof(ip_hdr));
         udp_hdr.check = packet_internet_checksum_udp(&src_paddr->sin_addr,
                                                      &dest_paddr->sin_addr,
                                                      ntohs(src_paddr->sin_port),
@@ -405,15 +405,15 @@ int packet_recvfrom_udp(int sockfd,
                  * must yield 0. If it does not yield 0, the packet is invalid,
                  * in which case we discard it.
                  */
-               if (packet_internet_checksum_udp(&(struct in_addr){ ip_hdr.hdr.saddr },
-                                                &(struct in_addr){ ip_hdr.hdr.daddr },
-                                                ntohs(udp_hdr.source),
-                                                ntohs(udp_hdr.dest),
-                                                buf,
-                                                pktlen,
-                                                udp_hdr.check)) {
+                if (packet_internet_checksum_udp(&(struct in_addr){ ip_hdr.hdr.saddr },
+                                                 &(struct in_addr){ ip_hdr.hdr.daddr },
+                                                 ntohs(udp_hdr.source),
+                                                 ntohs(udp_hdr.dest),
+                                                 buf,
+                                                 pktlen,
+                                                 udp_hdr.check)) {
                         return 0;
-               }
+                }
         }
 
         if (src) {

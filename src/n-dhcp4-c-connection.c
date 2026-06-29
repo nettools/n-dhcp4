@@ -374,7 +374,7 @@ void n_dhcp4_c_connection_get_timeout(NDhcp4CConnection *connection,
         }
 
         if (connection->ns_drain_timeout != 0 && connection->ns_drain_timeout < timeout)
-            timeout = connection->ns_drain_timeout;
+                timeout = connection->ns_drain_timeout;
 
         *timeoutp = timeout;
 }
@@ -406,7 +406,7 @@ static int n_dhcp4_c_connection_udp_broadcast(NDhcp4CConnection *connection,
         int r;
 
         c_assert(connection->state == N_DHCP4_C_CONNECTION_STATE_DRAINING ||
-               connection->state == N_DHCP4_C_CONNECTION_STATE_UDP);
+                 connection->state == N_DHCP4_C_CONNECTION_STATE_UDP);
 
         r = n_dhcp4_c_socket_udp_broadcast(connection->fd_udp, message);
         if (r)
@@ -420,7 +420,7 @@ static int n_dhcp4_c_connection_udp_send(NDhcp4CConnection *connection,
         int r;
 
         c_assert(connection->state == N_DHCP4_C_CONNECTION_STATE_DRAINING ||
-               connection->state == N_DHCP4_C_CONNECTION_STATE_UDP);
+                 connection->state == N_DHCP4_C_CONNECTION_STATE_UDP);
 
         r = n_dhcp4_c_socket_udp_send(connection->fd_udp, message);
         if (r)
@@ -463,10 +463,10 @@ static void n_dhcp4_c_connection_init_header(NDhcp4CConnection *connection,
          * - must be client's IP for all other messages (RENEW, REBIND, RELEASE, INFORM)
          */
         switch (type) {
-        case N_DHCP4_C_MESSAGE_DISCOVER:    /* 4.4.1 - must be zero */
-        case N_DHCP4_C_MESSAGE_SELECT:      /* 4.3.2 - must be zero in SELECTING */
-        case N_DHCP4_C_MESSAGE_REBOOT:      /* 4.3.2 - must be zero in INIT-REBOOT */
-        case N_DHCP4_C_MESSAGE_DECLINE:     /* 4.4   - must be zero per RFC2131 table */
+        case N_DHCP4_C_MESSAGE_DISCOVER: /* 4.4.1 - must be zero */
+        case N_DHCP4_C_MESSAGE_SELECT:   /* 4.3.2 - must be zero in SELECTING */
+        case N_DHCP4_C_MESSAGE_REBOOT:   /* 4.3.2 - must be zero in INIT-REBOOT */
+        case N_DHCP4_C_MESSAGE_DECLINE:  /* 4.4   - must be zero per RFC2131 table */
                 header->ciaddr = INADDR_ANY;
                 break;
         default:
@@ -1097,10 +1097,7 @@ int n_dhcp4_c_connection_send_request(NDhcp4CConnection *connection,
                             LOG_INFO,
                             "send %s to %s%s",
                             message_type_to_str(request->userdata.message_type),
-                            broadcast ?
-                            "255.255.255.255" :
-                            inet_ntop(AF_INET, &connection->server_ip,
-                                      server_addr, sizeof(server_addr)),
+                            broadcast ? "255.255.255.255" : inet_ntop(AF_INET, &connection->server_ip, server_addr, sizeof(server_addr)),
                             error_msg);
         } else {
                 n_dhcp4_log(connection->log_queue,
@@ -1109,10 +1106,7 @@ int n_dhcp4_c_connection_send_request(NDhcp4CConnection *connection,
                             message_type_to_str(request->userdata.message_type),
                             inet_ntop(AF_INET, &request->userdata.client_addr,
                                       client_addr, sizeof(client_addr)),
-                            broadcast ?
-                            "255.255.255.255" :
-                            inet_ntop(AF_INET, &connection->server_ip,
-                                      server_addr, sizeof(server_addr)),
+                            broadcast ? "255.255.255.255" : inet_ntop(AF_INET, &connection->server_ip, server_addr, sizeof(server_addr)),
                             error_msg);
         }
 

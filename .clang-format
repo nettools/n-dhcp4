@@ -6,6 +6,7 @@ BasedOnStyle: LLVM
 BreakBeforeBraces: Attach
 ColumnLimit: 0
 ContinuationIndentWidth: 8
+Cpp11BracedListStyle: false
 IndentWidth: 8
 PointerAlignment: Right
 SortIncludes: false

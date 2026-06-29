@@ -35,6 +35,7 @@
  */
 int n_dhcp4_c_socket_packet_new(int *sockfdp, int ifindex) {
         _c_cleanup_(c_closep) int sockfd = -1;
+        /* clang-format off */
         struct sock_filter filter[] = {
                 /*
                  * IP
@@ -94,6 +95,7 @@ int n_dhcp4_c_socket_packet_new(int *sockfdp, int ifindex) {
 
                 BPF_STMT(BPF_RET + BPF_K, 65535),                                                               /* return all */
         };
+        /* clang-format on */
         struct sock_fprog fprog = {
                 .filter = filter,
                 .len = sizeof(filter) / sizeof(filter[0]),
@@ -118,7 +120,7 @@ int n_dhcp4_c_socket_packet_new(int *sockfdp, int ifindex) {
         if (r < 0)
                 return -errno;
 
-        r = bind(sockfd, (struct sockaddr*)&addr, sizeof(addr));
+        r = bind(sockfd, (struct sockaddr *)&addr, sizeof(addr));
         if (r < 0)
                 return -errno;
 
@@ -149,6 +151,7 @@ int n_dhcp4_c_socket_udp_new(int *sockfdp,
                              const struct in_addr *server_addr,
                              uint8_t dscp) {
         _c_cleanup_(c_closep) int sockfd = -1;
+        /* clang-format off */
         struct sock_filter filter[] = {
                 /*
                  * IP/UDP
@@ -177,6 +180,7 @@ int n_dhcp4_c_socket_udp_new(int *sockfdp,
 
                 BPF_STMT(BPF_RET + BPF_K, 65535),                                                               /* return all */
         };
+        /* clang-format on */
         struct sock_fprog fprog = {
                 .filter = filter,
                 .len = sizeof(filter) / sizeof(filter[0]),
@@ -218,11 +222,11 @@ int n_dhcp4_c_socket_udp_new(int *sockfdp,
         if (r < 0)
                 return -errno;
 
-        r = bind(sockfd, (struct sockaddr*)&saddr, sizeof(saddr));
+        r = bind(sockfd, (struct sockaddr *)&saddr, sizeof(saddr));
         if (r < 0)
                 return -errno;
 
-        r = connect(sockfd, (struct sockaddr*)&daddr, sizeof(daddr));
+        r = connect(sockfd, (struct sockaddr *)&daddr, sizeof(daddr));
         if (r < 0)
                 return -errno;
 
@@ -264,6 +268,7 @@ int n_dhcp4_s_socket_packet_new(int *sockfdp) {
  */
 int n_dhcp4_s_socket_udp_new(int *sockfdp, int ifindex) {
         _c_cleanup_(c_closep) int sockfd = -1;
+        /* clang-format off */
         struct sock_filter filter[] = {
                 /*
                  * IP/UDP
@@ -293,6 +298,7 @@ int n_dhcp4_s_socket_udp_new(int *sockfdp, int ifindex) {
 
                 BPF_STMT(BPF_RET + BPF_K, 65535),                                                               /* return all */
         };
+        /* clang-format on */
         struct sock_fprog fprog = {
                 .filter = filter,
                 .len = sizeof(filter) / sizeof(filter[0]),
@@ -328,7 +334,7 @@ int n_dhcp4_s_socket_udp_new(int *sockfdp, int ifindex) {
         if (r < 0)
                 return -errno;
 
-        r = bind(sockfd, (struct sockaddr*)&addr, sizeof(addr));
+        r = bind(sockfd, (struct sockaddr *)&addr, sizeof(addr));
         if (r < 0)
                 return -errno;
 
@@ -450,7 +456,7 @@ int n_dhcp4_c_socket_udp_broadcast(int sockfd, NDhcp4Outgoing *message) {
                      buf,
                      n_buf,
                      0,
-                     (struct sockaddr*)&sockaddr_dest,
+                     (struct sockaddr *)&sockaddr_dest,
                      sizeof(sockaddr_dest));
         if (len < 0) {
                 if (errno == EAGAIN || errno == ENOBUFS)
@@ -511,14 +517,14 @@ int n_dhcp4_s_socket_udp_send(int sockfd,
         };
         struct iovec iov = {};
         union {
-               struct cmsghdr align; /* ensure correct stack alignment */
-               char buf[CMSG_SPACE(sizeof(struct in_pktinfo))];
+                struct cmsghdr align; /* ensure correct stack alignment */
+                char buf[CMSG_SPACE(sizeof(struct in_pktinfo))];
         } control = {};
         struct in_pktinfo pktinfo = {
                 .ipi_spec_dst = *inaddr_src,
         };
         struct msghdr msg = {
-                .msg_name = (void*)&sockaddr_dest,
+                .msg_name = (void *)&sockaddr_dest,
                 .msg_namelen = sizeof(sockaddr_dest),
                 .msg_iov = &iov,
                 .msg_iovlen = 1,
@@ -554,7 +560,7 @@ int n_dhcp4_s_socket_udp_broadcast(int sockfd,
                                    NDhcp4Outgoing *message) {
         return n_dhcp4_s_socket_udp_send(sockfd,
                                          inaddr_src,
-                                         &(const struct in_addr){INADDR_BROADCAST},
+                                         &(const struct in_addr){ INADDR_BROADCAST },
                                          message);
 }
 
@@ -632,7 +638,7 @@ static int n_dhcp4_socket_udp_recv(int sockfd,
                 c_assert(cmsg->cmsg_type == IP_PKTINFO);
                 c_assert(cmsg->cmsg_len == CMSG_LEN(sizeof(struct in_pktinfo)));
 
-                memcpy(pktinfo, (void*)CMSG_DATA(cmsg), sizeof(struct in_pktinfo));
+                memcpy(pktinfo, (void *)CMSG_DATA(cmsg), sizeof(struct in_pktinfo));
         }
 
         *messagep = message;

@@ -221,7 +221,6 @@ static void test_decline(NDhcp4SConnection *connection_server,
         test_server_receive(connection_server, N_DHCP4_MESSAGE_DECLINE, NULL);
 }
 
-
 static void test_renew(NDhcp4SConnection *connection_server,
                        NDhcp4CConnection *connection_client,
                        const struct in_addr *addr_server,
@@ -337,8 +336,12 @@ static void test_connection(void) {
                 n_dhcp4_client_config_set_mac(client_config, link_client.mac.ether_addr_octet, ETH_ALEN);
                 n_dhcp4_client_config_set_broadcast_mac(client_config,
                                                         (const uint8_t[]){
-                                                                0xff, 0xff, 0xff,
-                                                                0xff, 0xff, 0xff,
+                                                                0xff,
+                                                                0xff,
+                                                                0xff,
+                                                                0xff,
+                                                                0xff,
+                                                                0xff,
                                                         },
                                                         ETH_ALEN);
                 r = n_dhcp4_client_config_set_client_id(client_config,

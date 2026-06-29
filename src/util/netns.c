@@ -127,7 +127,7 @@ void netns_pin(int netns, const char *name) {
         r = asprintf(&netns_path, "/run/netns/%s", name);
         c_assert(r >= 0);
 
-        fd = open(netns_path, O_RDONLY|O_CLOEXEC|O_CREAT|O_EXCL, 0);
+        fd = open(netns_path, O_RDONLY | O_CLOEXEC | O_CREAT | O_EXCL, 0);
         c_assert(fd >= 0);
         close(fd);
 

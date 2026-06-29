@@ -30,7 +30,7 @@ typedef struct NDhcp4LogQueue NDhcp4LogQueue;
 /* specs */
 
 #define N_DHCP4_NETWORK_IP_MAXIMUM_HEADER_SIZE (60) /* See RFC791 */
-#define N_DHCP4_NETWORK_IP_MINIMUM_MAX_SIZE (576) /* See RFC791 */
+#define N_DHCP4_NETWORK_IP_MINIMUM_MAX_SIZE (576)   /* See RFC791 */
 #define N_DHCP4_NETWORK_SERVER_PORT (67)
 #define N_DHCP4_NETWORK_CLIENT_PORT (68)
 #define N_DHCP4_MESSAGE_MAGIC ((uint32_t)(0x63825363))
@@ -38,68 +38,68 @@ typedef struct NDhcp4LogQueue NDhcp4LogQueue;
 #define N_DHCP4_DSCP_DEFAULT (IPTOS_CLASS_CS0 >> 2)
 
 enum {
-        N_DHCP4_OP_BOOTREQUEST                          = 1,
-        N_DHCP4_OP_BOOTREPLY                            = 2,
+        N_DHCP4_OP_BOOTREQUEST = 1,
+        N_DHCP4_OP_BOOTREPLY = 2,
 };
 
 enum {
-        N_DHCP4_OPTION_PAD                              = 0,
-        N_DHCP4_OPTION_SUBNET_MASK                      = 1,
-        N_DHCP4_OPTION_TIME_OFFSET                      = 2,
-        N_DHCP4_OPTION_ROUTER                           = 3,
-        N_DHCP4_OPTION_DOMAIN_NAME_SERVER               = 6,
-        N_DHCP4_OPTION_HOST_NAME                        = 12,
-        N_DHCP4_OPTION_BOOT_FILE_SIZE                   = 13,
-        N_DHCP4_OPTION_DOMAIN_NAME                      = 15,
-        N_DHCP4_OPTION_ROOT_PATH                        = 17,
-        N_DHCP4_OPTION_ENABLE_IP_FORWARDING             = 19,
-        N_DHCP4_OPTION_ENABLE_IP_FORWARDING_NL          = 20,
-        N_DHCP4_OPTION_POLICY_FILTER                    = 21,
-        N_DHCP4_OPTION_INTERFACE_MDR                    = 22,
-        N_DHCP4_OPTION_INTERFACE_TTL                    = 23,
-        N_DHCP4_OPTION_INTERFACE_MTU_AGING_TIMEOUT      = 24,
-        N_DHCP4_OPTION_INTERFACE_MTU                    = 26,
-        N_DHCP4_OPTION_BROADCAST                        = 28,
-        N_DHCP4_OPTION_STATIC_ROUTE                     = 33,
-        N_DHCP4_OPTION_NTP_SERVER                       = 42,
-        N_DHCP4_OPTION_VENDOR_SPECIFIC                  = 43,
-        N_DHCP4_OPTION_REQUESTED_IP_ADDRESS             = 50,
-        N_DHCP4_OPTION_IP_ADDRESS_LEASE_TIME            = 51,
-        N_DHCP4_OPTION_OVERLOAD                         = 52,
-        N_DHCP4_OPTION_MESSAGE_TYPE                     = 53,
-        N_DHCP4_OPTION_SERVER_IDENTIFIER                = 54,
-        N_DHCP4_OPTION_PARAMETER_REQUEST_LIST           = 55,
-        N_DHCP4_OPTION_ERROR_MESSAGE                    = 56,
-        N_DHCP4_OPTION_MAXIMUM_MESSAGE_SIZE             = 57,
-        N_DHCP4_OPTION_RENEWAL_T1_TIME                  = 58,
-        N_DHCP4_OPTION_REBINDING_T2_TIME                = 59,
-        N_DHCP4_OPTION_VENDOR_CLASS_IDENTIFIER          = 60,
-        N_DHCP4_OPTION_CLIENT_IDENTIFIER                = 61,
-        N_DHCP4_OPTION_FQDN                             = 81,
-        N_DHCP4_OPTION_NEW_POSIX_TIMEZONE               = 100,
-        N_DHCP4_OPTION_NEW_TZDB_TIMEZONE                = 101,
-        N_DHCP4_OPTION_CLASSLESS_STATIC_ROUTE           = 121,
-        N_DHCP4_OPTION_PRIVATE_BASE                     = 224,
-        N_DHCP4_OPTION_PRIVATE_LAST                     = 254,
-        N_DHCP4_OPTION_END                              = 255,
-        _N_DHCP4_OPTION_N                               = 256,
+        N_DHCP4_OPTION_PAD = 0,
+        N_DHCP4_OPTION_SUBNET_MASK = 1,
+        N_DHCP4_OPTION_TIME_OFFSET = 2,
+        N_DHCP4_OPTION_ROUTER = 3,
+        N_DHCP4_OPTION_DOMAIN_NAME_SERVER = 6,
+        N_DHCP4_OPTION_HOST_NAME = 12,
+        N_DHCP4_OPTION_BOOT_FILE_SIZE = 13,
+        N_DHCP4_OPTION_DOMAIN_NAME = 15,
+        N_DHCP4_OPTION_ROOT_PATH = 17,
+        N_DHCP4_OPTION_ENABLE_IP_FORWARDING = 19,
+        N_DHCP4_OPTION_ENABLE_IP_FORWARDING_NL = 20,
+        N_DHCP4_OPTION_POLICY_FILTER = 21,
+        N_DHCP4_OPTION_INTERFACE_MDR = 22,
+        N_DHCP4_OPTION_INTERFACE_TTL = 23,
+        N_DHCP4_OPTION_INTERFACE_MTU_AGING_TIMEOUT = 24,
+        N_DHCP4_OPTION_INTERFACE_MTU = 26,
+        N_DHCP4_OPTION_BROADCAST = 28,
+        N_DHCP4_OPTION_STATIC_ROUTE = 33,
+        N_DHCP4_OPTION_NTP_SERVER = 42,
+        N_DHCP4_OPTION_VENDOR_SPECIFIC = 43,
+        N_DHCP4_OPTION_REQUESTED_IP_ADDRESS = 50,
+        N_DHCP4_OPTION_IP_ADDRESS_LEASE_TIME = 51,
+        N_DHCP4_OPTION_OVERLOAD = 52,
+        N_DHCP4_OPTION_MESSAGE_TYPE = 53,
+        N_DHCP4_OPTION_SERVER_IDENTIFIER = 54,
+        N_DHCP4_OPTION_PARAMETER_REQUEST_LIST = 55,
+        N_DHCP4_OPTION_ERROR_MESSAGE = 56,
+        N_DHCP4_OPTION_MAXIMUM_MESSAGE_SIZE = 57,
+        N_DHCP4_OPTION_RENEWAL_T1_TIME = 58,
+        N_DHCP4_OPTION_REBINDING_T2_TIME = 59,
+        N_DHCP4_OPTION_VENDOR_CLASS_IDENTIFIER = 60,
+        N_DHCP4_OPTION_CLIENT_IDENTIFIER = 61,
+        N_DHCP4_OPTION_FQDN = 81,
+        N_DHCP4_OPTION_NEW_POSIX_TIMEZONE = 100,
+        N_DHCP4_OPTION_NEW_TZDB_TIMEZONE = 101,
+        N_DHCP4_OPTION_CLASSLESS_STATIC_ROUTE = 121,
+        N_DHCP4_OPTION_PRIVATE_BASE = 224,
+        N_DHCP4_OPTION_PRIVATE_LAST = 254,
+        N_DHCP4_OPTION_END = 255,
+        _N_DHCP4_OPTION_N = 256,
 };
 
 enum {
-        N_DHCP4_OVERLOAD_FILE                           = 1,
-        N_DHCP4_OVERLOAD_SNAME                          = 2,
+        N_DHCP4_OVERLOAD_FILE = 1,
+        N_DHCP4_OVERLOAD_SNAME = 2,
 };
 
 enum {
-        N_DHCP4_MESSAGE_DISCOVER                        = 1,
-        N_DHCP4_MESSAGE_OFFER                           = 2,
-        N_DHCP4_MESSAGE_REQUEST                         = 3,
-        N_DHCP4_MESSAGE_DECLINE                         = 4,
-        N_DHCP4_MESSAGE_ACK                             = 5,
-        N_DHCP4_MESSAGE_NAK                             = 6,
-        N_DHCP4_MESSAGE_RELEASE                         = 7,
-        N_DHCP4_MESSAGE_INFORM                          = 8,
-        N_DHCP4_MESSAGE_FORCERENEW                      = 9,
+        N_DHCP4_MESSAGE_DISCOVER = 1,
+        N_DHCP4_MESSAGE_OFFER = 2,
+        N_DHCP4_MESSAGE_REQUEST = 3,
+        N_DHCP4_MESSAGE_DECLINE = 4,
+        N_DHCP4_MESSAGE_ACK = 5,
+        N_DHCP4_MESSAGE_NAK = 6,
+        N_DHCP4_MESSAGE_RELEASE = 7,
+        N_DHCP4_MESSAGE_INFORM = 8,
+        N_DHCP4_MESSAGE_FORCERENEW = 9,
 };
 
 struct NDhcp4Header {
@@ -213,7 +213,8 @@ struct NDhcp4Outgoing {
         } userdata;
 };
 
-#define N_DHCP4_OUTGOING_NULL(_x) {                                             \
+#define N_DHCP4_OUTGOING_NULL(_x) \
+        {                         \
         }
 
 struct NDhcp4Incoming {
@@ -233,7 +234,8 @@ struct NDhcp4Incoming {
         /* @message must be the last member */
 };
 
-#define N_DHCP4_INCOMING_NULL(_x) {                                             \
+#define N_DHCP4_INCOMING_NULL(_x) \
+        {                         \
         }
 
 struct NDhcp4ClientConfig {
@@ -248,9 +250,9 @@ struct NDhcp4ClientConfig {
         size_t n_client_id;
 };
 
-#define N_DHCP4_CLIENT_CONFIG_NULL(_x) {                                        \
-                .transport = _N_DHCP4_TRANSPORT_N,                              \
-        }
+#define N_DHCP4_CLIENT_CONFIG_NULL(_x) {   \
+        .transport = _N_DHCP4_TRANSPORT_N, \
+}
 
 struct NDhcp4ClientProbeOption {
         uint8_t option;
@@ -258,9 +260,9 @@ struct NDhcp4ClientProbeOption {
         uint8_t data[];
 };
 
-#define N_DHCP4_CLIENT_PROBE_OPTION_NULL(_x) {                                  \
-                .option = N_DHCP4_OPTION_PAD,                                   \
-        }
+#define N_DHCP4_CLIENT_PROBE_OPTION_NULL(_x) { \
+        .option = N_DHCP4_OPTION_PAD,          \
+}
 
 struct NDhcp4ClientProbeConfig {
         bool inform_only;
@@ -268,16 +270,16 @@ struct NDhcp4ClientProbeConfig {
         uint8_t dscp;
         struct in_addr requested_ip;
         unsigned short int entropy[3];
-        uint64_t ms_start_delay;        /* max ms to wait before starting probe */
+        uint64_t ms_start_delay; /* max ms to wait before starting probe */
         NDhcp4ClientProbeOption *options[UINT8_MAX + 1];
         int8_t request_parameters[UINT8_MAX + 1];
         size_t n_request_parameters;
 };
 
-#define N_DHCP4_CLIENT_PROBE_CONFIG_NULL(_x) {                                  \
-                .ms_start_delay = N_DHCP4_CLIENT_START_DELAY_RFC2131,           \
-                .dscp = N_DHCP4_DSCP_DEFAULT,                                   \
-        }
+#define N_DHCP4_CLIENT_PROBE_CONFIG_NULL(_x) {                \
+        .ms_start_delay = N_DHCP4_CLIENT_START_DELAY_RFC2131, \
+        .dscp = N_DHCP4_DSCP_DEFAULT,                         \
+}
 
 struct NDhcp4CEventNode {
         CList client_link;
@@ -286,10 +288,10 @@ struct NDhcp4CEventNode {
         bool is_public : 1;
 };
 
-#define N_DHCP4_C_EVENT_NODE_NULL(_x) {                                         \
-                .client_link = C_LIST_INIT((_x).client_link),                   \
-                .probe_link = C_LIST_INIT((_x).probe_link),                     \
-        }
+#define N_DHCP4_C_EVENT_NODE_NULL(_x) {               \
+        .client_link = C_LIST_INIT((_x).client_link), \
+        .probe_link = C_LIST_INIT((_x).probe_link),   \
+}
 
 struct NDhcp4LogQueue {
         CList *event_list;
@@ -298,29 +300,29 @@ struct NDhcp4LogQueue {
         bool is_client : 1;
 };
 
-#define N_DHCP4_LOG_QUEUE_NULL_DEFUNCT() {                                      \
-                .log_level = -1,                                                \
-                .is_client = false,                                             \
-        }
+#define N_DHCP4_LOG_QUEUE_NULL_DEFUNCT() { \
+        .log_level = -1,                   \
+        .is_client = false,                \
+}
 
-#define N_DHCP4_LOG_QUEUE_NULL_CLIENT(client) {                                 \
-                .event_list = &((client).event_list),                           \
-                .log_level = -1,                                                \
-                .is_client = true,                                              \
-                .nomem_node = {                                                 \
-                        .client_link = C_LIST_INIT((client).log_queue.nomem_node.client_link), \
-                        .probe_link = C_LIST_INIT((client).log_queue.nomem_node.probe_link), \
-                        .event = {                                              \
-                                .event = N_DHCP4_CLIENT_EVENT_LOG,              \
-                                .log = {                                        \
-                                        .level = LOG_CRIT,                      \
-                                        .message = "one or more logging messages dropped due to out of memory", \
-                                        .allow_steal_message = false,           \
-                                },                                              \
-                        },                                                      \
-                        .is_public = false,                                     \
-                },                                                              \
-        }
+#define N_DHCP4_LOG_QUEUE_NULL_CLIENT(client) {                                                         \
+        .event_list = &((client).event_list),                                                           \
+        .log_level = -1,                                                                                \
+        .is_client = true,                                                                              \
+        .nomem_node = {                                                                                 \
+                .client_link = C_LIST_INIT((client).log_queue.nomem_node.client_link),                  \
+                .probe_link = C_LIST_INIT((client).log_queue.nomem_node.probe_link),                    \
+                .event = {                                                                              \
+                        .event = N_DHCP4_CLIENT_EVENT_LOG,                                              \
+                        .log = {                                                                        \
+                                .level = LOG_CRIT,                                                      \
+                                .message = "one or more logging messages dropped due to out of memory", \
+                                .allow_steal_message = false,                                           \
+                        },                                                                              \
+                },                                                                                      \
+                .is_public = false,                                                                     \
+        },                                                                                              \
+}
 
 struct NDhcp4CConnection {
         NDhcp4ClientConfig *client_config;
@@ -329,22 +331,22 @@ struct NDhcp4CConnection {
 
         int fd_epoll;
 
-        unsigned int state;             /* current connection state */
-        int fd_packet;                  /* packet socket */
-        int fd_udp;                     /* udp socket */
+        unsigned int state; /* current connection state */
+        int fd_packet;      /* packet socket */
+        int fd_udp;         /* udp socket */
 
-        NDhcp4Outgoing *request;        /* current request */
+        NDhcp4Outgoing *request; /* current request */
 
-        uint64_t ns_drain_timeout;      /* timeout for closing packet socket */
-        uint32_t client_ip;             /* client IP address, or 0 */
-        uint32_t server_ip;             /* server IP address, or 0 */
-        uint16_t mtu;                   /* client mtu, or 0 */
+        uint64_t ns_drain_timeout; /* timeout for closing packet socket */
+        uint32_t client_ip;        /* client IP address, or 0 */
+        uint32_t server_ip;        /* server IP address, or 0 */
+        uint16_t mtu;              /* client mtu, or 0 */
 };
 
-#define N_DHCP4_C_CONNECTION_NULL(_x) {                                         \
-                .fd_packet = -1,                                                \
-                .fd_udp = -1,                                                   \
-        }
+#define N_DHCP4_C_CONNECTION_NULL(_x) { \
+        .fd_packet = -1,                \
+        .fd_udp = -1,                   \
+}
 
 struct NDhcp4Client {
         unsigned long n_refs;
@@ -363,13 +365,13 @@ struct NDhcp4Client {
         bool preempted : 1;
 };
 
-#define N_DHCP4_CLIENT_NULL(_x) {                                               \
-                .n_refs = 1,                                                    \
-                .event_list = C_LIST_INIT((_x).event_list),                     \
-                .fd_epoll = -1,                                                 \
-                .fd_timer = -1,                                                 \
-                .log_queue = N_DHCP4_LOG_QUEUE_NULL_CLIENT(_x),                 \
-        }
+#define N_DHCP4_CLIENT_NULL(_x) {                       \
+        .n_refs = 1,                                    \
+        .event_list = C_LIST_INIT((_x).event_list),     \
+        .fd_epoll = -1,                                 \
+        .fd_timer = -1,                                 \
+        .log_queue = N_DHCP4_LOG_QUEUE_NULL_CLIENT(_x), \
+}
 
 struct NDhcp4ClientProbe {
         NDhcp4ClientProbeConfig *config;
@@ -378,22 +380,22 @@ struct NDhcp4ClientProbe {
         CList lease_list;
         void *userdata;
 
-        unsigned int state;                     /* current probe state */
-        struct in_addr last_address;            /* last address obtained */
-        uint64_t ns_deferred;                   /* timeout for deferred action */
+        unsigned int state;          /* current probe state */
+        struct in_addr last_address; /* last address obtained */
+        uint64_t ns_deferred;        /* timeout for deferred action */
         uint64_t ns_reinit;
-        uint64_t ns_nak_restart_delay;          /* restart delay after a nak */
-        uint64_t ns_decline_restart_delay;      /* restart delay after a decline */
-        NDhcp4ClientLease *current_lease;       /* current lease */
+        uint64_t ns_nak_restart_delay;     /* restart delay after a nak */
+        uint64_t ns_decline_restart_delay; /* restart delay after a decline */
+        NDhcp4ClientLease *current_lease;  /* current lease */
 
-        NDhcp4CConnection connection;           /* client connection wrapper */
+        NDhcp4CConnection connection; /* client connection wrapper */
 };
 
-#define N_DHCP4_CLIENT_PROBE_NULL(_x) {                                         \
-                .event_list = C_LIST_INIT((_x).event_list),                     \
-                .lease_list = C_LIST_INIT((_x).lease_list),                     \
-                .connection = N_DHCP4_C_CONNECTION_NULL((_x).connection),       \
-        }
+#define N_DHCP4_CLIENT_PROBE_NULL(_x) {                           \
+        .event_list = C_LIST_INIT((_x).event_list),               \
+        .lease_list = C_LIST_INIT((_x).lease_list),               \
+        .connection = N_DHCP4_C_CONNECTION_NULL((_x).connection), \
+}
 
 struct NDhcp4ClientLease {
         unsigned long n_refs;
@@ -408,16 +410,17 @@ struct NDhcp4ClientLease {
         uint64_t lifetime;
 };
 
-#define N_DHCP4_CLIENT_LEASE_NULL(_x) {                                         \
-                .n_refs = 1,                                                    \
-                .probe_link = C_LIST_INIT((_x).probe_link),                     \
-        }
+#define N_DHCP4_CLIENT_LEASE_NULL(_x) {             \
+        .n_refs = 1,                                \
+        .probe_link = C_LIST_INIT((_x).probe_link), \
+}
 
 struct NDhcp4ServerConfig {
         int ifindex;
 };
 
-#define N_DHCP4_SERVER_CONFIG_NULL(_x) {                                        \
+#define N_DHCP4_SERVER_CONFIG_NULL(_x) \
+        {                              \
         }
 
 struct NDhcp4SEventNode {
@@ -426,32 +429,33 @@ struct NDhcp4SEventNode {
         bool is_public : 1;
 };
 
-#define N_DHCP4_S_EVENT_NODE_NULL(_x) {                                         \
-                .server_link = C_LIST_INIT((_x).server_link),                   \
-        }
+#define N_DHCP4_S_EVENT_NODE_NULL(_x) {               \
+        .server_link = C_LIST_INIT((_x).server_link), \
+}
 
 struct NDhcp4SConnection {
-        int ifindex;                    /* interface index */
-        int fd_packet;                  /* packet socket */
-        int fd_udp;                     /* udp socket */
-        uint8_t buf[UINT16_MAX];        /* scratch recevie buffer */
+        int ifindex;             /* interface index */
+        int fd_packet;           /* packet socket */
+        int fd_udp;              /* udp socket */
+        uint8_t buf[UINT16_MAX]; /* scratch recevie buffer */
 
         /* XXX: support a set of server addresses */
-        NDhcp4SConnectionIp *ip;        /* server IP address, or NULL */
+        NDhcp4SConnectionIp *ip; /* server IP address, or NULL */
 };
 
-#define N_DHCP4_S_CONNECTION_NULL(_x) {                                         \
-                .fd_packet = -1,                                                \
-                .fd_udp = -1,                                                   \
-        }
+#define N_DHCP4_S_CONNECTION_NULL(_x) { \
+        .fd_packet = -1,                \
+        .fd_udp = -1,                   \
+}
 
 struct NDhcp4SConnectionIp {
         NDhcp4SConnection *connection;
         struct in_addr ip;
 };
 
-#define N_DHCP4_S_CONNECTION_IP_NULL(_x) {                                      \
-}
+#define N_DHCP4_S_CONNECTION_IP_NULL(_x) \
+        {                                \
+        }
 
 struct NDhcp4Server {
         unsigned long n_refs;
@@ -463,20 +467,20 @@ struct NDhcp4Server {
         NDhcp4SConnection connection;
 };
 
-#define N_DHCP4_SERVER_NULL(_x) {                                               \
-                .n_refs = 1,                                                    \
-                .event_list = C_LIST_INIT((_x).event_list),                     \
-                .lease_list = C_LIST_INIT((_x).lease_list),                     \
-                .connection = N_DHCP4_S_CONNECTION_NULL((_x).connection),       \
-        }
+#define N_DHCP4_SERVER_NULL(_x) {                                 \
+        .n_refs = 1,                                              \
+        .event_list = C_LIST_INIT((_x).event_list),               \
+        .lease_list = C_LIST_INIT((_x).lease_list),               \
+        .connection = N_DHCP4_S_CONNECTION_NULL((_x).connection), \
+}
 
 struct NDhcp4ServerIp {
-                NDhcp4SConnectionIp ip;
+        NDhcp4SConnectionIp ip;
 };
 
-#define N_DHCP4_SERVER_IP_NULL(_x) {                                            \
-                .ip = N_DHCP4_S_CONNECTION_IP_NULL((_x).ip),                    \
-        }
+#define N_DHCP4_SERVER_IP_NULL(_x) {                 \
+        .ip = N_DHCP4_S_CONNECTION_IP_NULL((_x).ip), \
+}
 
 struct NDhcp4ServerLease {
         unsigned long n_refs;
@@ -488,10 +492,10 @@ struct NDhcp4ServerLease {
         NDhcp4Incoming *reply;
 };
 
-#define N_DHCP4_SERVER_LEASE_NULL(_x) {                                         \
-                .n_refs = 1,                                                    \
-                .server_link = C_LIST_INIT((_x).server_link),                   \
-        }
+#define N_DHCP4_SERVER_LEASE_NULL(_x) {               \
+        .n_refs = 1,                                  \
+        .server_link = C_LIST_INIT((_x).server_link), \
+}
 
 /* outgoing messages */
 
@@ -694,11 +698,11 @@ int n_dhcp4_s_connection_offer_new(NDhcp4SConnection *connection,
                                    const struct in_addr *client_address,
                                    uint32_t lifetime);
 int n_dhcp4_s_connection_ack_new(NDhcp4SConnection *connection,
-                                   NDhcp4Outgoing **replyp,
-                                   NDhcp4Incoming *request,
-                                   const struct in_addr *server_address,
-                                   const struct in_addr *client_address,
-                                   uint32_t lifetime);
+                                 NDhcp4Outgoing **replyp,
+                                 NDhcp4Incoming *request,
+                                 const struct in_addr *server_address,
+                                 const struct in_addr *client_address,
+                                 uint32_t lifetime);
 int n_dhcp4_s_connection_nak_new(NDhcp4SConnection *connection,
                                  NDhcp4Outgoing **replyp,
                                  NDhcp4Incoming *request,
@@ -752,14 +756,14 @@ void n_dhcp4_log_queue_fmt(NDhcp4LogQueue *log_queue,
  * Warning: this macro only evaluates the format arguments if the logging
  * level is enabled.
  */
-#define n_dhcp4_log(x_log_queue, x_level, ...)                                 \
-        do {                                                                   \
-                NDhcp4LogQueue *const _log_queue = (x_log_queue);              \
-                const int _level = (x_level);                                  \
-                                                                               \
-                if (_level <= _log_queue->log_level) {                         \
-                        n_dhcp4_log_queue_fmt(_log_queue,                      \
-                                              _level,                          \
-                                              __VA_ARGS__);                    \
-                }                                                              \
+#define n_dhcp4_log(x_log_queue, x_level, ...)                    \
+        do {                                                      \
+                NDhcp4LogQueue *const _log_queue = (x_log_queue); \
+                const int _level = (x_level);                     \
+                                                                  \
+                if (_level <= _log_queue->log_level) {            \
+                        n_dhcp4_log_queue_fmt(_log_queue,         \
+                                              _level,             \
+                                              __VA_ARGS__);       \
+                }                                                 \
         } while (0)
