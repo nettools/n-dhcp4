@@ -1330,7 +1330,7 @@ int n_dhcp4_client_probe_update_mtu(NDhcp4ClientProbe *probe, uint16_t mtu) {
  *
  * Return: 0 if successful otherwise non-zero value is returned.
  */
- int n_dhcp4_client_probe_release(NDhcp4ClientProbe *probe) {
+int n_dhcp4_client_probe_release(NDhcp4ClientProbe *probe) {
         _c_cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *request_out = NULL;
         int r;
 
