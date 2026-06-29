@@ -7,6 +7,26 @@ on:
   - cron:  '0 0 * * *'
 
 jobs:
+  format:
+    name: clang-format
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+    - name: Check formatting of changed lines
+      run: |
+        sudo apt-get update && sudo apt-get install -y clang-format
+        base="${{ github.event.pull_request.base.sha }}"
+        [ -n "$base" ] || base="$(git rev-parse HEAD^)"
+        fmt="$(git diff -U0 --no-color "$base"...HEAD -- 'src/*.c' 'src/*.h' \
+                 | clang-format-diff -p1 -style=file)"
+        if [ -n "$fmt" ]; then
+          echo "Changed lines are not clang-formatted:"
+          echo "$fmt"
+          exit 1
+        fi
+
   ci:
     name: CI with Default Configuration
     runs-on: ubuntu-latest
