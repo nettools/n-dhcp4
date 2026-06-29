@@ -34,7 +34,7 @@ static void n_dhcp4_incoming_prefetch(NDhcp4Incoming *incoming, size_t *offset, 
         uint8_t o, l;
         size_t pos;
 
-        for (pos = 0; pos < n_raw; ) {
+        for (pos = 0; pos < n_raw;) {
                 o = raw[pos++];
                 if (o == N_DHCP4_OPTION_PAD)
                         continue;

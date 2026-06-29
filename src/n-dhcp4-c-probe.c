@@ -19,11 +19,10 @@
 #include "n-dhcp4.h"
 #include "n-dhcp4-private.h"
 
-
 static int n_dhcp4_client_probe_option_new(NDhcp4ClientProbeOption **optionp,
-                                    uint8_t option,
-                                    const void *data,
-                                    uint8_t n_data) {
+                                           uint8_t option,
+                                           const void *data,
+                                           uint8_t n_data) {
         NDhcp4ClientProbeOption *op;
 
         op = malloc(sizeof(*op) + n_data);
@@ -292,9 +291,9 @@ _c_public_ void n_dhcp4_client_probe_config_request_option(NDhcp4ClientProbeConf
  *         a negative error code on failure.
  */
 _c_public_ int n_dhcp4_client_probe_config_append_option(NDhcp4ClientProbeConfig *config,
-                                                       uint8_t option,
-                                                       const void *data,
-                                                       uint8_t n_data) {
+                                                         uint8_t option,
+                                                         const void *data,
+                                                         uint8_t n_data) {
         int r;
 
         /* XXX: filter internal options */
@@ -322,10 +321,12 @@ _c_public_ int n_dhcp4_client_probe_config_append_option(NDhcp4ClientProbeConfig
 }
 
 static void n_dhcp4_client_probe_config_initialize_random_seed(NDhcp4ClientProbeConfig *config) {
+        /* clang-format off */
         uint8_t hash_seed[] = {
                 0x25, 0x3f, 0x02, 0x75, 0x3a, 0xb8, 0x4f, 0x91,
                 0x9d, 0x0a, 0xd6, 0x15, 0x9d, 0x72, 0x7b, 0xcb,
         };
+        /* clang-format on */
         CSipHash hash = C_SIPHASH_NULL;
         unsigned short int seed16v[3];
         const uint8_t *p;
@@ -369,8 +370,8 @@ static void n_dhcp4_client_probe_config_initialize_random_seed(NDhcp4ClientProbe
 
         u64 = c_siphash_finalize(&hash);
 
-        seed16v[0] = (u64 >>  0) ^ (u64 >> 48);
-        seed16v[1] = (u64 >> 16) ^ (u64 >>  0);
+        seed16v[0] = (u64 >> 0) ^ (u64 >> 48);
+        seed16v[1] = (u64 >> 16) ^ (u64 >> 0);
         seed16v[2] = (u64 >> 32) ^ (u64 >> 16);
 
         memcpy(config->entropy, seed16v, sizeof(seed16v));
@@ -860,7 +861,7 @@ static int n_dhcp4_client_probe_transition_lifetime(NDhcp4ClientProbe *probe) {
                 probe->current_lease = n_dhcp4_client_lease_unref(probe->current_lease);
 
                 probe->state = N_DHCP4_CLIENT_PROBE_STATE_INIT;
-                probe->ns_deferred =  n_dhcp4_gettime(CLOCK_BOOTTIME) + UINT64_C(1);
+                probe->ns_deferred = n_dhcp4_gettime(CLOCK_BOOTTIME) + UINT64_C(1);
 
                 break;
 
@@ -1021,7 +1022,7 @@ static int n_dhcp4_client_probe_transition_nak(NDhcp4ClientProbe *probe) {
                 probe->state = N_DHCP4_CLIENT_PROBE_STATE_INIT;
                 probe->ns_deferred = n_dhcp4_gettime(CLOCK_BOOTTIME) + probe->ns_nak_restart_delay;
                 probe->ns_nak_restart_delay = C_CLAMP(probe->ns_nak_restart_delay * 2u,
-                                                      UINT64_C(2)   * UINT64_C(1000000000),
+                                                      UINT64_C(2) * UINT64_C(1000000000),
                                                       UINT64_C(300) * UINT64_C(1000000000));
                 break;
         case N_DHCP4_CLIENT_PROBE_STATE_SELECTING:
@@ -1155,9 +1156,9 @@ int n_dhcp4_client_probe_transition_decline(NDhcp4ClientProbe *probe, NDhcp4Inco
                  *
                  * Let's go beyond that, and use an exponential backoff. */
                 probe->ns_decline_restart_delay = C_CLAMP(probe->ns_decline_restart_delay * 2u,
-                                                          UINT64_C(10)  * UINT64_C(1000000000),
+                                                          UINT64_C(10) * UINT64_C(1000000000),
                                                           UINT64_C(300) * UINT64_C(1000000000));
-                probe->ns_deferred =  n_dhcp4_gettime(CLOCK_BOOTTIME) + probe->ns_decline_restart_delay;
+                probe->ns_deferred = n_dhcp4_gettime(CLOCK_BOOTTIME) + probe->ns_decline_restart_delay;
 
                 n_dhcp4_client_arm_timer(probe->client);
                 return 0;
@@ -1334,8 +1335,7 @@ int n_dhcp4_client_probe_release(NDhcp4ClientProbe *probe) {
         _c_cleanup_(n_dhcp4_outgoing_freep) NDhcp4Outgoing *request_out = NULL;
         int r;
 
-        if (probe->connection.state != N_DHCP4_C_CONNECTION_STATE_DRAINING
-                && probe->connection.state != N_DHCP4_C_CONNECTION_STATE_UDP)
+        if (probe->connection.state != N_DHCP4_C_CONNECTION_STATE_DRAINING && probe->connection.state != N_DHCP4_C_CONNECTION_STATE_UDP)
                 return -ENOTRECOVERABLE;
 
         r = n_dhcp4_c_connection_release_new(&probe->connection, &request_out, NULL);

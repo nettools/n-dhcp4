@@ -106,8 +106,7 @@ static int n_dhcp4_s_connection_verify_incoming(NDhcp4SConnection *connection,
                                 message->userdata.type = N_DHCP4_C_MESSAGE_IGNORE;
                         }
                 }
-        }
-                break;
+        } break;
         case N_DHCP4_MESSAGE_DECLINE:
                 message->userdata.type = N_DHCP4_C_MESSAGE_DECLINE;
                 break;
@@ -127,10 +126,10 @@ int n_dhcp4_s_connection_dispatch_io(NDhcp4SConnection *connection, NDhcp4Incomi
         int r;
 
         r = n_dhcp4_s_socket_udp_recv(connection->fd_udp,
-                                          connection->buf,
-                                          sizeof(connection->buf),
-                                          &message,
-                                          &dest);
+                                      connection->buf,
+                                      sizeof(connection->buf),
+                                      &message,
+                                      &dest);
         if (r)
                 return r;
 
@@ -201,7 +200,7 @@ int n_dhcp4_s_connection_send_reply(NDhcp4SConnection *connection,
                                                  server_addr,
                                                  header->chaddr,
                                                  header->hlen,
-                                                 &(struct in_addr){header->yiaddr},
+                                                 &(struct in_addr){ header->yiaddr },
                                                  N_DHCP4_DSCP_DEFAULT,
                                                  message);
                 if (r)
@@ -226,8 +225,8 @@ static void n_dhcp4_s_connection_init_reply_header(NDhcp4SConnection *connection
 }
 
 static int n_dhcp4_s_connection_outgoing_set_yiaddr(NDhcp4Outgoing *message,
-                                                     uint32_t yiaddr,
-                                                     uint32_t lifetime) {
+                                                    uint32_t yiaddr,
+                                                    uint32_t lifetime) {
         uint32_t t1 = lifetime / 2;
         uint32_t t2 = ((uint64_t)lifetime * 7) / 8;
         struct in_addr addr = { .s_addr = yiaddr };

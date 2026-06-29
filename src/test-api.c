@@ -45,17 +45,17 @@ static void test_api_constants(void) {
 }
 
 static void test_api_types(void) {
-        assert(sizeof(NDhcp4ClientConfig*) > 0);
-        assert(sizeof(NDhcp4ClientProbeConfig*) > 0);
-        assert(sizeof(NDhcp4Client*) > 0);
+        assert(sizeof(NDhcp4ClientConfig *) > 0);
+        assert(sizeof(NDhcp4ClientProbeConfig *) > 0);
+        assert(sizeof(NDhcp4Client *) > 0);
         assert(sizeof(NDhcp4ClientEvent) > 0);
-        assert(sizeof(NDhcp4ClientProbe*) > 0);
-        assert(sizeof(NDhcp4ClientLease*) > 0);
-        assert(sizeof(NDhcp4Server*) > 0);
-        assert(sizeof(NDhcp4ServerConfig*) > 0);
+        assert(sizeof(NDhcp4ClientProbe *) > 0);
+        assert(sizeof(NDhcp4ClientLease *) > 0);
+        assert(sizeof(NDhcp4Server *) > 0);
+        assert(sizeof(NDhcp4ServerConfig *) > 0);
         assert(sizeof(NDhcp4ServerEvent) > 0);
-        assert(sizeof(NDhcp4ServerIp*) > 0);
-        assert(sizeof(NDhcp4ServerLease*) > 0);
+        assert(sizeof(NDhcp4ServerIp *) > 0);
+        assert(sizeof(NDhcp4ServerLease *) > 0);
 }
 
 static void test_api_functions(void) {

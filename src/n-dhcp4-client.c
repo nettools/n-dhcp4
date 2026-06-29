@@ -279,7 +279,7 @@ _c_public_ int n_dhcp4_client_config_set_client_id(NDhcp4ClientConfig *config, c
  *
  * You may change the logging level at any time, but it does not affect
  * logging events that are already queued.
-  */
+ */
 _c_public_ void n_dhcp4_client_set_log_level(NDhcp4Client *client, int level) {
         client->log_queue.log_level = level;
 }
@@ -554,7 +554,7 @@ void n_dhcp4_log_queue_fmt(NDhcp4LogQueue *log_queue,
          * client instance. */
         c_assert(log_queue->is_client);
 
-        if (!c_list_is_empty (&log_queue->nomem_node.client_link)) {
+        if (!c_list_is_empty(&log_queue->nomem_node.client_link)) {
                 /* we have the nomem_node queued after a recent out
                  * of memory. This disables all logging messages until
                  * the event gets popped.
@@ -579,7 +579,7 @@ void n_dhcp4_log_queue_fmt(NDhcp4LogQueue *log_queue,
                 goto handle_nomem;
         }
 
-        node->event = (NDhcp4ClientEvent) {
+        node->event = (NDhcp4ClientEvent){
                 .event = N_DHCP4_CLIENT_EVENT_LOG,
                 .log = {
                         .level = level,
@@ -633,10 +633,10 @@ void n_dhcp4_client_arm_timer(NDhcp4Client *client) {
                 r = timerfd_settime(client->fd_timer,
                                     0,
                                     &(struct itimerspec){
-                                        .it_value = {
-                                                .tv_sec = offset / UINT64_C(1000000000),
-                                                .tv_nsec = offset % UINT64_C(1000000000),
-                                        },
+                                            .it_value = {
+                                                    .tv_sec = offset / UINT64_C(1000000000),
+                                                    .tv_nsec = offset % UINT64_C(1000000000),
+                                            },
                                     },
                                     NULL);
                 c_assert(r >= 0);
@@ -970,8 +970,8 @@ _c_public_ int n_dhcp4_client_update_mtu(NDhcp4Client *client, uint16_t mtu) {
  * Return: 0 on success, negative error code on failure.
  */
 _c_public_ int n_dhcp4_client_probe(NDhcp4Client *client,
-                                  NDhcp4ClientProbe **probep,
-                                  NDhcp4ClientProbeConfig *config) {
+                                    NDhcp4ClientProbe **probep,
+                                    NDhcp4ClientProbeConfig *config) {
         _c_cleanup_(n_dhcp4_client_probe_freep) NDhcp4ClientProbe *probe = NULL;
         uint64_t ns_now;
         int r;

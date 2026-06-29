@@ -23,9 +23,9 @@ struct Link {
         struct ether_addr mac;
 };
 
-#define LINK_NULL(_x) {                                                         \
-                .netns = -1,                                                    \
-        }
+#define LINK_NULL(_x) { \
+        .netns = -1,    \
+}
 
 void link_deinit(Link *link);
 

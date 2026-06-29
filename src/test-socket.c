@@ -93,7 +93,7 @@ static void test_client_server_packet(Link *link_server, Link *link_client) {
 
         r = n_dhcp4_c_socket_packet_send(sk_client,
                                          link_client->ifindex,
-                                         (const unsigned char[]){0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
+                                         (const unsigned char[]){ 0xff, 0xff, 0xff, 0xff, 0xff, 0xff },
                                          ETH_ALEN,
                                          -1,
                                          outgoing);
@@ -186,8 +186,7 @@ static void test_server_client_packet(Link *link_server, Link *link_client) {
                                          link_server->ifindex,
                                          &addr_server,
                                          (const unsigned char[]){
-                                                0xff, 0xff, 0xff, 0xff, 0xff, 0xff
-                                         },
+                                                 0xff, 0xff, 0xff, 0xff, 0xff, 0xff },
                                          ETH_ALEN,
                                          &addr_client,
                                          N_DHCP4_DSCP_DEFAULT,

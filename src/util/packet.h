@@ -18,13 +18,13 @@
  * addresses.
  */
 struct packet_sockaddr_ll {
-        unsigned short  sll_family;
-        __be16          sll_protocol;
-        int             sll_ifindex;
-        unsigned short  sll_hatype;
-        unsigned char   sll_pkttype;
-        unsigned char   sll_halen;
-        unsigned char   sll_addr[32]; /* MAX_ADDR_LEN */
+        unsigned short sll_family;
+        __be16 sll_protocol;
+        int sll_ifindex;
+        unsigned short sll_hatype;
+        unsigned char sll_pkttype;
+        unsigned char sll_halen;
+        unsigned char sll_addr[32]; /* MAX_ADDR_LEN */
 };
 
 uint16_t packet_internet_checksum(const uint8_t *data, size_t len);

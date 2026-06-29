@@ -35,21 +35,23 @@ struct Manager {
         NDhcp4ClientProbe *probe;
 };
 
-#define MANAGER_NULL(_x) {}
+#define MANAGER_NULL(_x) \
+        {                \
+        }
 
-static struct ether_addr        main_arg_broadcast_mac = {};
-static bool                     main_arg_broadcast_mac_set = false;
-static uint8_t*                 main_arg_client_id = NULL;
-static size_t                   main_arg_n_client_id = 0;
-static int                      main_arg_ifindex = 0;
-static struct in_addr           main_arg_requested_ip = { INADDR_ANY };
-static long long int            main_arg_requested_lifetime = -1;
-static uint8_t                  main_arg_requested_parameters[UINT8_MAX] = {};
-static size_t                   main_arg_n_requested_parameters = 0;
-static struct ether_addr        main_arg_mac = {};
-static bool                     main_arg_mac_set = false;
-static bool                     main_arg_request_broadcast = false;
-static bool                     main_arg_test = false;
+static struct ether_addr main_arg_broadcast_mac = {};
+static bool main_arg_broadcast_mac_set = false;
+static uint8_t *main_arg_client_id = NULL;
+static size_t main_arg_n_client_id = 0;
+static int main_arg_ifindex = 0;
+static struct in_addr main_arg_requested_ip = { INADDR_ANY };
+static long long int main_arg_requested_lifetime = -1;
+static uint8_t main_arg_requested_parameters[UINT8_MAX] = {};
+static size_t main_arg_n_requested_parameters = 0;
+static struct ether_addr main_arg_mac = {};
+static bool main_arg_mac_set = false;
+static bool main_arg_request_broadcast = false;
+static bool main_arg_test = false;
 
 static Manager *manager_free(Manager *manager) {
         if (!manager)
@@ -163,7 +165,7 @@ static int manager_lease_get_prefix(NDhcp4ClientLease *lease, unsigned int *pref
         if (r)
                 return r;
 
-        postfix =__builtin_ctz(ntohl(mask.s_addr));
+        postfix = __builtin_ctz(ntohl(mask.s_addr));
         c_assert(postfix <= 32);
 
         if (postfix < 32) {
@@ -443,8 +445,8 @@ static void print_help(void) {
                "     --requested-ip IP                 Requested IP address\n"
                "     --requested-lifetime SECS         Requested lease lifetime in seconds\n"
                "     --requested-parameters P1,P2,...  Requested parameters\n"
-               "     --client-id HEX                   Client Identifier to use\n"
-               , program_invocation_short_name);
+               "     --client-id HEX                   Client Identifier to use\n",
+               program_invocation_short_name);
 }
 
 static int setup_test(void) {
@@ -483,13 +485,13 @@ static int parse_hexstr(const char *in, uint8_t **outp, size_t *n_outp) {
                 uint8_t v = 0;
 
                 switch (in[i]) {
-                case '0'...'9':
+                case '0' ... '9':
                         v = in[i] - '0';
                         break;
-                case 'a'...'f':
+                case 'a' ... 'f':
                         v = in[i] - 'a' + 0xa;
                         break;
-                case 'A'...'F':
+                case 'A' ... 'F':
                         v = in[i] - 'A' + 0xa;
                         break;
                 }
@@ -521,6 +523,7 @@ static int parse_argv(int argc, char **argv) {
                 ARG_REQUESTED_PARAMETERS,
                 ARG_TEST,
         };
+        /* clang-format off */
         static const struct option options[] = {
                 { "help",                       no_argument,            NULL,   'h'                             },
                 { "broadcast-mac",              required_argument,      NULL,   ARG_BROADCAST_MAC               },
@@ -534,6 +537,7 @@ static int parse_argv(int argc, char **argv) {
                 { "test",                       no_argument,            NULL,   ARG_TEST                        },
                 {}
         };
+        /* clang-format on */
         struct ether_addr *addr;
         long long int lli;
         size_t n;
@@ -620,7 +624,7 @@ static int parse_argv(int argc, char **argv) {
                         break;
 
                 case ARG_REQUESTED_PARAMETERS:
-                        for (const char *param = optarg; param; param = strchr(param, ',') ? strchr(param, ',')  + 1 : NULL) {
+                        for (const char *param = optarg; param; param = strchr(param, ',') ? strchr(param, ',') + 1 : NULL) {
                                 c_assert(main_arg_n_requested_parameters <= UINT8_MAX);
 
                                 lli = atoll(param);

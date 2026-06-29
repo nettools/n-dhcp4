@@ -59,7 +59,7 @@ int n_dhcp4_outgoing_new(NDhcp4Outgoing **outgoingp, size_t max_size, uint8_t ov
          * header plus the DHCP-message-header plus a single OPTION_END byte.
          */
         static_assert(N_DHCP4_NETWORK_IP_MINIMUM_MAX_SIZE >= N_DHCP4_OUTGOING_MAX_PHDR +
-                                                             sizeof(NDhcp4Message) + 1,
+                                                                     sizeof(NDhcp4Message) + 1,
                       "Invalid minimum IP packet limit");
 
         c_assert(!(overload & ~(N_DHCP4_OVERLOAD_FILE | N_DHCP4_OVERLOAD_SNAME)));
