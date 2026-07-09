@@ -21,3 +21,9 @@ dep_csiphash = sub_csiphash.get_variable('libcsiphash_dep')
 dep_cstdaux = sub_cstdaux.get_variable('libcstdaux_dep')
 
 subdir('src')
+
+if get_option('check_dhcp')
+    gio_unix_dep = dependency('gio-unix-2.0', version: '>= 2.44')
+    src_inc = include_directories('src')
+    subdir('tool')
+endif

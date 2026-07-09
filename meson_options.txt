@@ -1,0 +1,4 @@
+option('check_dhcp',
+       type: 'boolean',
+       value: false,
+       description: 'Build the check_dhcp tool')
