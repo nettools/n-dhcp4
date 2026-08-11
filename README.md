@@ -18,6 +18,7 @@ The requirements for this project are:
 
  * `Linux kernel >= 3.19`
  * `libc` (e.g., `glibc >= 2.16`)
+ * `glib-2.0` (if you build the check-dhcp4 tool)
 
 At build-time, the following software is required:
 
@@ -39,7 +40,12 @@ meson test
 ninja install
 ```
 
-No custom configuration options are available.
+### Build check_dhcp
+
+With the meson option -Dcheck_dhcp=true, check_dhcp binary is built around
+the n-dhcp4 library, this binary broadcase a DHCP DISCOVER message
+and listen for OFFER answer. His primary usage is for some kind of ping to
+a DHCP server to know if it is currently responsive.
 
 ### Repository:
 
