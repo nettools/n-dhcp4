@@ -196,6 +196,7 @@ struct NDhcp4Outgoing {
         NDhcp4Message *message;
         size_t n_message;
         size_t i_message;
+        size_t i_options_end;
         size_t max_size;
 
         uint8_t overload : 2;
