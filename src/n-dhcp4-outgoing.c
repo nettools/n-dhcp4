@@ -144,7 +144,15 @@ size_t n_dhcp4_outgoing_get_raw(NDhcp4Outgoing *outgoing, const void **rawp) {
          * trailing padding. We overallocate during append, so the
          * allocated message might be bigger than what we want to
          * send on the wire.
+         *
+         * Once the OPTIONs field is full and overloading is in use, the
+         * iterator points into the FILE or SNAME field, which precede the
+         * OPTIONs field. The message still ends with the END option of the
+         * OPTIONs field then.
          */
+        if (outgoing->i_message < offsetof(NDhcp4Message, options))
+                return outgoing->i_options_end + 1;
+
         return outgoing->i_message + 1;
 }
 
@@ -251,6 +259,7 @@ int n_dhcp4_outgoing_append(NDhcp4Outgoing *outgoing,
                  */
                 overload = outgoing->overload;
                 n_dhcp4_outgoing_append_option(outgoing, N_DHCP4_OPTION_OVERLOAD, &overload, 1);
+                outgoing->i_options_end = outgoing->i_message;
 
                 if (overload & N_DHCP4_OVERLOAD_FILE)
                         outgoing->message->file[0] = N_DHCP4_OPTION_END;

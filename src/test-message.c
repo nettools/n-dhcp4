@@ -7,6 +7,7 @@
 #include <c-stdaux.h>
 #include <endian.h>
 #include <errno.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -25,6 +26,62 @@ static void test_outgoing(void) {
 
         outgoing = n_dhcp4_outgoing_free(outgoing);
         c_assert(!outgoing);
+}
+
+static void test_outgoing_overload_one(uint8_t overload) {
+        NDhcp4Outgoing *outgoing = NULL;
+        NDhcp4Incoming *incoming = NULL;
+        uint8_t data[40], *v;
+        unsigned int i, n;
+        const void *raw;
+        size_t l;
+        int r;
+
+        r = n_dhcp4_outgoing_new(&outgoing, 0, overload);
+        c_assert(!r);
+
+        /* fill the message until no option fits anymore */
+
+        for (n = 0; n < 32; ++n) {
+                memset(data, 100 + n, sizeof(data));
+                r = n_dhcp4_outgoing_append(outgoing, 100 + n, data, sizeof(data));
+                if (r == N_DHCP4_E_NO_SPACE)
+                        break;
+                c_assert(!r);
+        }
+
+        /* the last options must have been put into FILE or SNAME */
+
+        c_assert(outgoing->i_message < offsetof(NDhcp4Message, options));
+
+        /* the raw message must contain the OPTIONs field, and all options */
+
+        l = n_dhcp4_outgoing_get_raw(outgoing, &raw);
+        c_assert(l > offsetof(NDhcp4Message, options));
+
+        r = n_dhcp4_incoming_new(&incoming, raw, l);
+        c_assert(!r);
+
+        r = n_dhcp4_incoming_query(incoming, N_DHCP4_OPTION_OVERLOAD, &v, &l);
+        c_assert(!r);
+        c_assert(l == 1 && v[0] == overload);
+
+        for (i = 0; i < n; ++i) {
+                memset(data, 100 + i, sizeof(data));
+                r = n_dhcp4_incoming_query(incoming, 100 + i, &v, &l);
+                c_assert(!r);
+                c_assert(l == sizeof(data));
+                c_assert(!memcmp(v, data, sizeof(data)));
+        }
+
+        incoming = n_dhcp4_incoming_free(incoming);
+        outgoing = n_dhcp4_outgoing_free(outgoing);
+}
+
+static void test_outgoing_overload(void) {
+        test_outgoing_overload_one(N_DHCP4_OVERLOAD_FILE);
+        test_outgoing_overload_one(N_DHCP4_OVERLOAD_SNAME);
+        test_outgoing_overload_one(N_DHCP4_OVERLOAD_FILE | N_DHCP4_OVERLOAD_SNAME);
 }
 
 static void test_incoming(void) {
@@ -154,6 +211,7 @@ static void test_incoming(void) {
 
 int main(int argc, char **argv) {
         test_outgoing();
+        test_outgoing_overload();
         test_incoming();
         return 0;
 }
